@@ -1,0 +1,35 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+library QuantumPortalLib {
+    struct RemoteBalance {
+        uint64 remoteChainId;
+        address remoteAddress;
+        address remoteToken;
+        uint256 remoteBalance;
+    }
+
+    struct Block {
+        uint64 chainId;
+        uint64 nonce;
+        uint64 timestamp;
+    }
+
+    struct RemoteTransaction {
+        uint64 timestamp;
+        address remoteContract;
+        address sourceMsgSender;
+        address sourceBeneficiary; // This can be set by the contract. Revert refunds will be made to this
+        address token;
+        uint256 amount;
+        bytes method;
+        uint256 gas; // provided gas in FRM
+    }
+
+    struct Context {
+        uint64 index; // TODO: See what are the most used fields and move them in a substruct to reduce mem access
+        Block blockMetadata;
+        RemoteTransaction transaction;
+        uint256 uncommitedBalance; // Balance for transaction.token
+    }
+}
