@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 import "../IQuantumPortalPoc.sol";
 import "../IQuantumPortalFeeManager.sol";
 import "../../../common/IFerrumDeployer.sol";
-import "../../../common/ERC20/ERC20.sol";
+import "./ERC20.sol";
 import "../../../common/SafeAmount.sol";
 import "../../../common/math/FullMath.sol";
 import "./MultiChainBase.sol";
@@ -21,8 +21,8 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
  */
 contract MultiChainStakingMaster is MultiChainMasterBase {
     // Staking related state
-    mapping (uint256 => address) public baseTokens; // Token address for each chain
-    mapping (uint256 => mapping (address => uint256)) public stakes; // User address (chin+addr) => stake
+    mapping(uint256 => address) public baseTokens; // Token address for each chain
+    mapping(uint256 => mapping(address => uint256)) public stakes; // User address (chin+addr) => stake
     address rewardToken;
     uint256 public totalRewards; // Total rewards
     uint256 public totalStakes; // Total stakes
@@ -45,8 +45,8 @@ contract MultiChainStakingMaster is MultiChainMasterBase {
         uint256[] calldata remoteChainIds,
         address[] calldata stakingContracts,
         address[] calldata _baseTokens
-    ) onlyOwner external{
-        for (uint i=0; i < remoteChainIds.length; i++) {
+    ) external onlyOwner {
+        for (uint i = 0; i < remoteChainIds.length; i++) {
             remotes[remoteChainIds[i]] = stakingContracts[i];
             baseTokens[remoteChainIds[i]] = _baseTokens[i];
         }
@@ -56,7 +56,12 @@ contract MultiChainStakingMaster is MultiChainMasterBase {
      @notice UI should check the master chain to make sure staking period is open. Otherwise the x-chain transaction will fail.
      */
     function stake(uint256 amount) external nonReentrant {
-        amount = SafeAmount.safeTransferFrom(baseTokens[CHAIN_ID], msg.sender, address(this), amount);
+        amount = SafeAmount.safeTransferFrom(
+            baseTokens[CHAIN_ID],
+            msg.sender,
+            address(this),
+            amount
+        );
         require(amount != 0, "No stake");
         doStake(CHAIN_ID, msg.sender, amount);
     }
@@ -65,22 +70,34 @@ contract MultiChainStakingMaster is MultiChainMasterBase {
      @notice To be called by QP
      */
     function stakeRemote() external {
-        (uint netId, address sourceMsgSender, address beneficiary) = portal.msgSender();
+        (uint netId, address sourceMsgSender, address beneficiary) = portal
+            .msgSender();
         require(sourceMsgSender == remotes[netId], "Not allowed");
-        QuantumPortalLib.RemoteTransaction memory _tx = portal.txContext().transaction;
+        QuantumPortalLib.RemoteTransaction memory _tx = portal
+            .txContext()
+            .transaction;
         require(_tx.token == baseTokens[netId], "Unexpected token");
         doStake(netId, beneficiary, _tx.amount);
     }
 
-    function doStake(uint256 chainId, address staker, uint256 amount) internal {
+    function doStake(
+        uint256 chainId,
+        address staker,
+        uint256 amount
+    ) internal {
         require(!stakeClosed && !distributeRewards, "Stake closed");
         stakes[chainId][staker] += amount;
         totalStakes += amount;
     }
-    
+
     function addRewards(uint256 amount) external nonReentrant {
         require(!distributeRewards, "Already distributed/(ing) rewards");
-        amount = SafeAmount.safeTransferFrom(rewardToken, msg.sender, address(this), amount);
+        amount = SafeAmount.safeTransferFrom(
+            rewardToken,
+            msg.sender,
+            address(this),
+            amount
+        );
         require(amount != 0, "No rewards");
         totalRewards += amount;
     }
@@ -97,7 +114,7 @@ contract MultiChainStakingMaster is MultiChainMasterBase {
         }
     }
 
-    function remoteAddress(uint256 chainId) public view returns(address rv) {
+    function remoteAddress(uint256 chainId) public view returns (address rv) {
         rv = remotes[chainId];
         rv = rv == address(0) ? address(this) : rv;
     }
@@ -110,7 +127,7 @@ contract MultiChainStakingMaster is MultiChainMasterBase {
         IERC20(baseTokens[CHAIN_ID]).transfer(msg.sender, staked);
         // Transfer rewards
         IERC20(rewardToken).transfer(msg.sender, reward);
-     }
+    }
 
     function closePositionRemote(uint256 fee, uint256 chainId) internal {
         uint256 staked = stakes[chainId][msg.sender];
@@ -120,7 +137,12 @@ contract MultiChainStakingMaster is MultiChainMasterBase {
         IERC20(rewardToken).transfer(msg.sender, reward);
         // This should initiate a withdaw on the remote side...
         portal.runWithdraw(
-            fee, uint64(chainId), msg.sender, baseTokens[chainId], staked);
+            fee,
+            uint64(chainId),
+            msg.sender,
+            baseTokens[chainId],
+            staked
+        );
     }
 
     function calcReward(uint256 stakeAmount) private view returns (uint256) {
@@ -132,10 +154,30 @@ contract MultiChainStakingClient is MultiChainClientBase {
     /**
      @notice It is up to UI to make sure the token is correct. Otherwise the tx will fail.
      */
-    function stake(address token, uint256 amount, uint256 fee) external {
-        require(SafeAmount.safeTransferFrom(token, msg.sender, address(portal), amount) != 0, "Nothing transferred");
-        bytes memory method = abi.encodeWithSelector(MultiChainStakingMaster.stakeRemote.selector);
+    function stake(
+        address token,
+        uint256 amount,
+        uint256 fee
+    ) external {
+        require(
+            SafeAmount.safeTransferFrom(
+                token,
+                msg.sender,
+                address(portal),
+                amount
+            ) != 0,
+            "Nothing transferred"
+        );
+        bytes memory method = abi.encodeWithSelector(
+            MultiChainStakingMaster.stakeRemote.selector
+        );
         portal.runWithValue(
-            fee, uint64(MASTER_CHAIN_ID), masterContract, msg.sender, token, method);
+            fee,
+            uint64(MASTER_CHAIN_ID),
+            masterContract,
+            msg.sender,
+            token,
+            method
+        );
     }
 }

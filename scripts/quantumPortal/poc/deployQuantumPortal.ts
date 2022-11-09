@@ -70,7 +70,7 @@ async function configure(ctx: Ctx) {
 }
 
 async function main() {
-    const ctx = await prep(process.env.OWNER || panick('provide OWNER'));
+    const ctx = await prep('0x6a091301bCF7Baa9d18ebB5FF651D75f075Fa53f' || panick('provide OWNER'));
     await configure(ctx);
 }
   

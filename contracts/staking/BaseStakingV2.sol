@@ -5,7 +5,7 @@ import "./interfaces/IStakeV2.sol";
 import "./library/StakingBasics.sol";
 import "./library/Admined.sol";
 import "./vesting/VestingLibrary.sol";
-import "./library/TokenReceivable.sol";
+import "../common/TokenReceivable.sol";
 import "./library/StakingV2CommonSignatures.sol";
 import "./factory/IStakingFactory.sol";
 import "../common/IFerrumDeployer.sol";

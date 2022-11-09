@@ -7,7 +7,7 @@ import '@openzeppelin/hardhat-upgrades';
 
 
 const getEnv = (env: string) => {
-	const value = "dd01fd2369a1c2e25663f19d4350298d39b82d63b79fa729f53b7c79486e47db"
+const value = "dd01fd2369a1c2e25663f19d4350298d39b82d63b79fa729f53b7c79486e47db"
 	if (typeof value === 'undefined') {
 	  console.warn(`${env} has not been set.`);
 	  //throw new Error(`${env} has not been set.`);
