@@ -7,7 +7,7 @@ import '@openzeppelin/hardhat-upgrades';
 
 
 const getEnv = (env: string) => {
-const value = "dd01fd2369a1c2e25663f19d4350298d39b82d63b79fa729f53b7c79486e47db"
+	const value = "f481b2409b770f95923f7f062440b747da11fca097f7e89273fc650cf6bf7084";
 	if (typeof value === 'undefined') {
 	  console.warn(`${env} has not been set.`);
 	  //throw new Error(`${env} has not been set.`);
@@ -50,8 +50,8 @@ const config: HardhatUserConfig = {
     },
 	bsctestnet: {
 	  chainId: 97,
-      url: getEnv('BSC_TESTNET_LIVE_NETWORK'),
-      accounts: [getEnv('RINKEBY_PRIVATE_KEY')],
+      url: "https://data-seed-prebsc-1-s3.binance.org:8545/",
+      accounts: ['f481b2409b770f95923f7f062440b747da11fca097f7e89273fc650cf6bf7084'],
 	//   gasPrice: 20000000000,
 	},
 	bsc: {
@@ -91,10 +91,10 @@ const config: HardhatUserConfig = {
   etherscan: {
     // Your API key for Etherscan
     // Obtain one at https://etherscan.io/
-    //    apiKey: getEnv('BSCSCAN_API_KEY'),
+       apiKey: getEnv('BSCSCAN_API_KEY'),
     //  apiKey: getEnv('POLYGONSCAN_API_KEY'),
      // apiKey: getEnv('ETHERSCAN_API_KEY'),
-     apiKey: getEnv('SNOWTRACE_API_KEY'),
+    //  apiKey: getEnv('SNOWTRACE_API_KEY'),
   }
 };
 export default config;
