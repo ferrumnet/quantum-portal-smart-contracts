@@ -4015,6 +4015,24 @@ forwarded@0.2.0:
   resolved "https://registry.yarnpkg.com/forwarded/-/forwarded-0.2.0.tgz#2269936428aad4c15c7ebe9779a84bf0b2a81811"
   integrity sha512-buRG0fpBtRHSTCOASe6hD258tEubFoRLb4ZNA6NxMVHNw2gOcwHo9wyablzMzOA5z9xA9L1KNjk/Nt6MT9aYow==
 
+"foundary-contracts@git+https://github.com/ferrumnet/foundry-contracts#4e37dcc6ad5d2ebf4c6786cd60f31f192c80d81c":
+  version "0.1.0"
+  resolved "git+https://github.com/ferrumnet/foundry-contracts#4e37dcc6ad5d2ebf4c6786cd60f31f192c80d81c"
+  dependencies:
+    "@openzeppelin/contracts" "^4.1.0"
+    "@openzeppelin/contracts-upgradeable" "^4.3.2"
+    "@openzeppelin/hardhat-upgrades" "^1.10.0"
+    "@types/mocha" "^8.2.2"
+    "@types/node" "^15.12.4"
+    "@uniswap/sdk" "^3.0.3"
+    "@uniswap/v2-core" "^1.0.1"
+    "@uniswap/v2-periphery" "^1.1.0-beta.0"
+    chai "^4.3.4"
+    ethers "^5.0.0"
+    hardhat "^2.11.2"
+    ts-node "^10.0.0"
+    typescript "^4.3.4"
+
 fp-ts@1.19.3:
   version "1.19.3"
   resolved "https://registry.yarnpkg.com/fp-ts/-/fp-ts-1.19.3.tgz#261a60d1088fbff01f91256f91d21d0caaaaa96f"

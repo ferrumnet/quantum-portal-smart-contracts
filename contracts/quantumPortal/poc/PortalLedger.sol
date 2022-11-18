@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./IQuantumPortalLedgerMgr.sol";
-import "../../common/WithAdmin.sol";
+import "foundary-contracts/contracts/common/WithAdmin.sol";
 import "./QuantumPortalLib.sol";
 import "hardhat/console.sol";
 

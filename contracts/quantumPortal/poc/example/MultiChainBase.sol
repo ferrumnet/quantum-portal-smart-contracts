@@ -3,7 +3,7 @@
 pragma solidity ^0.8.0;
 import "../IQuantumPortalPoc.sol";
 import "../IQuantumPortalFeeManager.sol";
-import "../../../common/IFerrumDeployer.sol";
+import "foundary-contracts/contracts/common/IFerrumDeployer.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 
