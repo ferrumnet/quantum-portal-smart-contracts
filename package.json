@@ -10,6 +10,7 @@
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "chai": "^4.3.4",
     "ethers": "^5.0.0",
+    "foundary-contracts": "git+https://github.com/ferrumnet/foundry-contracts#4e37dcc6ad5d2ebf4c6786cd60f31f192c80d81c",
     "hardhat": "^2.11.2",
     "ts-node": "^10.0.0",
     "typescript": "^4.3.4"
