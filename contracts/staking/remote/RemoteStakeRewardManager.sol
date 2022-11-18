@@ -2,8 +2,8 @@
 pragma solidity 0.8.2;
 
 import "./IRemoteStake.sol";
-import "../../common/IFerrumDeployer.sol";
-import "../../common/math/FullMath.sol";
+import "foundary-contracts/contracts/common/IFerrumDeployer.sol";
+import "foundary-contracts/contracts/math/FullMath.sol";
 import "../library/TokenReceivable.sol";
 
 /**

@@ -3,9 +3,9 @@ pragma solidity ^0.8.0;
 
 import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../library/StakingBasics.sol";
-import "../../common/math/FullMath.sol";
-import "../../common/math/SafeCast.sol";
-import "../../common/math/FixedPoint128.sol";
+import "foundary-contracts/contracts/math/FullMath.sol";
+import "foundary-contracts/contracts/math/SafeCast.sol";
+import "foundary-contracts/contracts/math/FixedPoint128.sol";
 
 library VestingLibrary {
   using SafeMath for uint256;
