@@ -34,8 +34,8 @@ class PairMiner {
     async init() {
         await this.provider1.ready;
         await this.provider2.ready;
-        const signer1 = new ethers.Wallet(process.env.RINKEBY_PRIVATE_KEY || panick('PRIVATE KEY'), this.provider1);
-        const signer2 = new ethers.Wallet(process.env.RINKEBY_PRIVATE_KEY || panick('PRIVATE KEY'), this.provider2);
+        const signer1 = new ethers.Wallet(process.env.TEST_ACCOUNT_PRIVATE_KEY || panick('PRIVATE KEY'), this.provider1);
+        const signer2 = new ethers.Wallet(process.env.TEST_ACCOUNT_PRIVATE_KEY || panick('PRIVATE KEY'), this.provider2);
         this.portal1 = {
             // poc: QuantumPortalPoc__factory.connect(poc1, this.provider1),
             mgr: QuantumPortalLedgerMgr__factory.connect(this.mgr1, signer1),
@@ -72,8 +72,8 @@ async function main() {
     // and chain 2
     // and do mine and finalize in a loop from 1 -> 2
     // and 2 -> 1
-    const rinkeby = `https://eth-rinkeby.alchemyapi.io/v2/${getEnv('ALCHEMY_API_KEY') || '123123123'}`;
-    const frm = 'https://data-seed-prebsc-1-s1.binance.org:8545/';
+    const rinkeby = "https://data-seed-prebsc-2-s3.binance.org:8545";
+    const frm = 'https://rpc-mumbai.maticvigil.com/';
     // const frm = 'http://localhost:9933/';
     const mgr = '0x3d7d171d02d5f37c8eb0d3eea72859d5fc758ffb';
     const pair1 = new PairMiner(frm, rinkeby, mgr, mgr);
