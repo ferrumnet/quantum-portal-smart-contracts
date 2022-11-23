@@ -25,12 +25,12 @@ async function configClient(helper: DeployTestHelper<Args, Contracts>) {
 async function main() {
     const helper = new DeployTestHelper<Args, Contracts>(['owner','mode;provide MODE = MASTER or CLIENT']);
     helper.MASTER_CHAIN_ID = 97; // bsc testnet
-    helper.CLIENT_CHAIN_ID = 43113; // avax fuji testnet
+    helper.CLIENT_CHAIN_ID = 80001; // avax fuji testnet
     await helper.init(
         (helper.args.mode === 'MASTER' || helper.args.mode === 'INIT_MASTER') ? helper.MASTER_CHAIN_ID : helper.CLIENT_CHAIN_ID,
         [
-            {name: 'MultiChainStakingMaster', address: '0x945d3ba840dc51e35bedc50540391f94e902ab46', netId: helper.MASTER_CHAIN_ID},
-            {name: 'MultiChainStakingClient', address: '0x51d24d051562e9a511e1ea7bfa2b3321b8a3a4d5', netId: helper.CLIENT_CHAIN_ID},
+            {name: 'MultiChainStakingMaster', address: '', netId: helper.MASTER_CHAIN_ID},
+            {name: 'MultiChainStakingClient', address: '', netId: helper.CLIENT_CHAIN_ID},
         ]);
 
     if (helper.args.mode === 'MASTER') {
