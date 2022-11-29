@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "../../../staking/interfaces/IStakeInfo.sol";
-import "foundary-contracts/contracts/signature/MultiSigCheckable.sol";
+import "foundry-contracts/contracts/signature/MultiSigCheckable.sol";
 
 interface IQuantumPortalMinerMgr {
     enum ValidationResult {

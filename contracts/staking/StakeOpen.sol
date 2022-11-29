@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 import "./interfaces/IStakeV2.sol";
 import "./interfaces/IRewardPool.sol";
-import "foundary-contracts/contracts/common/Sweepable.sol";
+import "foundry-contracts/contracts/common/Sweepable.sol";
 import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./BaseStakingV2.sol";
 
