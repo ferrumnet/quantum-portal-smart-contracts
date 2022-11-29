@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 import "../interfaces/IStakeV2.sol";
-import "foundary-contracts/contracts/signature/SigCheckable.sol";
+import "foundry-contracts/contracts/signature/SigCheckable.sol";
 
 // Todo: Use multisig checkable...
 abstract contract StakingV2CommonSignatures is SigCheckable {
