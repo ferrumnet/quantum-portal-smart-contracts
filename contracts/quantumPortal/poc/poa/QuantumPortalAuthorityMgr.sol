@@ -13,8 +13,8 @@ interface IQuantumPortalAuthorityMgr {
     ) external;
 }
 
-/**
- @notice Authority manager, provides authority signature verification, for 
+/** 
+ @notice Authority manager,provides authority signature verification, for 
     different actions.
  */
 contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, MultiSigCheckable {
@@ -24,7 +24,7 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, MultiSigChecka
     constructor() EIP712(NAME, VERSION) {}
 
     bytes32 constant VALIDATE_AUTHORITY_SIGNATURE =
-        keccak256("ValidateAuthoritySignature(uint256 action,bytes32 msgHash,bytes32 salt)");
+        keccak256("ValidateAuthoritySignature(uint8 action,bytes32 msgHash,uint64 expiry,bytes32 salt)");
 
     /**
      @notice Validates an authority signature
@@ -33,17 +33,28 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, MultiSigChecka
      */
     function validateAuthoritySignature(
         Action action,
-        bytes32 msgHash,
+        bytes32  msgHash,
         uint64 expiry,
         bytes32 salt,
         bytes memory signature
     ) external override {
         require(action != Action.NONE, "QPAM: action required");
         require(msgHash != bytes32(0), "QPAM: msgHash required");
-        require(expiry != 0, "QPAM: expiry required");
+        require (expiry != 0, "QPAM: expiry required");
         require(salt != 0, "QPAM: salt required");
         require(expiry > block.timestamp, "QPAM: signature expired");
-        bytes32 message = keccak256(abi.encode(VALIDATE_AUTHORITY_SIGNATURE, uint256(action), msgHash, salt));
+        bytes32 message = keccak256(abi.encode(VALIDATE_AUTHORITY_SIGNATURE, uint256(action), msgHash, expiry, salt));
         verifyUniqueSalt(message, salt, 1, signature);
+    }
+
+       function messageHash(
+        Action action,
+        bytes32  msgHash,
+        uint64 expiry,
+        bytes32 salt
+    ) external  pure returns(bytes32){
+        
+        bytes32 message = keccak256(abi.encode(VALIDATE_AUTHORITY_SIGNATURE, uint256(action), msgHash, expiry, salt));
+        return message;
     }
 }
