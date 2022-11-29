@@ -1,10 +1,9 @@
-import { ChainId } from "@uniswap/sdk";
-import { randomBytes } from "crypto";
 import { ethers } from "hardhat";
 import { DummyToken } from "../../../typechain/DummyToken";
 import { QuantumPortalLedgerMgrTest } from "../../../typechain/QuantumPortalLedgerMgrTest";
 import { QuantumPortalPocTest } from "../../../typechain/QuantumPortalPocTest";
-import { randomSalt } from "../../common/Eip712Utils";
+import { QuantumPortalAuthorityMgr } from '../../../typechain/QuantumPortalAuthorityMgr';
+import { randomSalt } from "foundry-contracts/test/common/Eip712Utils";
 import { abi, deployWithOwner, getCtx, isAllZero, Salt, TestContext, ZeroAddress } from "../../common/Utils";
 
 export class QuantumPortalUtils {
@@ -107,12 +106,14 @@ export interface PortalContext extends TestContext {
         ledgerMgr: QuantumPortalLedgerMgrTest;
         poc: QuantumPortalPocTest;
         token: DummyToken;
+        autorityMgr: QuantumPortalAuthorityMgr;
     },
     chain2: {
         chainId: number;
         ledgerMgr: QuantumPortalLedgerMgrTest;
         poc: QuantumPortalPocTest;
         token: DummyToken;
+        autorityMgr: QuantumPortalAuthorityMgr;
     },
 }
 
