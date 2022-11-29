@@ -9,13 +9,12 @@ import { panick, sleep } from "../../../test/common/Utils";
 // require("dotenv").config();
 
 const getEnv = (env: string) => {
-  const value =
-    "f481b2409b770f95923f7f062440b747da11fca097f7e89273fc650cf6bf7084";
-  if (typeof value === "undefined") {
-    console.warn(`${env} has not been set.`);
-    //throw new Error(`${env} has not been set.`);
-  }
-  return value || "0x123123123";
+	const value = process.env[env];
+	if (typeof value === 'undefined') {
+	  console.warn(`${env} has not been set.`);
+	  throw new Error(`${env} has not been set.`);
+	}
+	return value;
 };
 
 interface Portal {
@@ -38,30 +37,22 @@ class PairMiner {
     this.provider2 = new ethers.providers.JsonRpcProvider(rpc2);
   }
 
-  async init() {
-    await this.provider1.ready;
-    await this.provider2.ready;
-    const signer1 = new ethers.Wallet(
-      "f481b2409b770f95923f7f062440b747da11fca097f7e89273fc650cf6bf7084" ||
-        panick("PRIVATE KEY"),
-      this.provider1
-    );
-    const signer2 = new ethers.Wallet(
-      "f481b2409b770f95923f7f062440b747da11fca097f7e89273fc650cf6bf7084" ||
-        panick("PRIVATE KEY"),
-      this.provider2
-    );
-    this.portal1 = {
-      // poc: QuantumPortalPoc__factory.connect(poc1, this.provider1),
-      mgr: QuantumPortalLedgerMgr__factory.connect(this.mgr1, signer1),
-    };
-    this.portal2 = {
-      // poc: QuantumPortalPoc__factory.connect(poc2, this.provider2),
-      mgr: QuantumPortalLedgerMgr__factory.connect(this.mgr2, signer2),
-    };
-    // console.log('SiG IS', this.portal1.mgr.signer, signer1);
-    // console.log('SiG IS', this.portal2.mgr.signer, signer2);
-  }
+    async init() {
+        await this.provider1.ready;
+        await this.provider2.ready;
+        const signer1 = new ethers.Wallet(getEnv("TEST_ACCOUNT_PRIVATE_KEY"), this.provider1);
+        const signer2 = new ethers.Wallet(getEnv("TEST_ACCOUNT_PRIVATE_KEY"), this.provider2);
+        this.portal1 = {
+            // poc: QuantumPortalPoc__factory.connect(poc1, this.provider1),
+            mgr: QuantumPortalLedgerMgr__factory.connect(this.mgr1, signer1),
+        };
+        this.portal2 = {
+            // poc: QuantumPortalPoc__factory.connect(poc2, this.provider2),
+            mgr: QuantumPortalLedgerMgr__factory.connect(this.mgr2, signer2),
+        };
+        // console.log('SiG IS', this.portal1.mgr.signer, signer1);
+        // console.log('SiG IS', this.portal2.mgr.signer, signer2);
+    }
 
   async mine() {
     const chain1 = this.provider1.network.chainId;
@@ -85,22 +76,21 @@ class PairMiner {
 }
 
 async function main() {
-  // Connect to chain 1
-  // and chain 2
-  // and do mine and finalize in a loop from 1 -> 2
-  // and 2 -> 1
-  const rinkeby = `https://rpc-mumbai.maticvigil.com/`;
-  const frm = "https://data-seed-prebsc-1-s1.binance.org:8545/";
-  // const frm = 'http://localhost:9933/';
-  const mgr = "0x3AaA3Cfb269A9F60d0B43d3f06A7FBD0Ced484c0";
-  const pair1 = new PairMiner(frm, rinkeby, mgr, mgr);
-  await pair1.init();
-  console.log("FRM Poc -> Rinkeby");
-  await pair1.mine();
-  const pair2 = new PairMiner(rinkeby, frm, mgr, mgr);
-  await pair2.init();
-  console.log("Rinkeby -> FRM Poc");
-  await pair2.mine();
+    // Connect to chain 1
+    // and chain 2
+    // and do mine and finalize in a loop from 1 -> 2
+    // and 2 -> 1
+    const chain1 = getEnv("BSC_TESTNET_LIVE_NETWORK");
+    const frm = getEnv("POLYGON_TEST_NETWORK");
+    const mgr = '0xcfeAFD9Fa0D42114597Ca78C6943aE8fEC8ddD42';
+    const pair1 = new PairMiner(frm, chain1, mgr, mgr);
+    await pair1.init();
+    console.log('FRM Poc -> Chain1');
+    await pair1.mine();
+    const pair2 = new PairMiner(chain1, frm, mgr, mgr);
+    await pair2.init();
+    console.log('Chain1 -> FRM Poc');
+    await pair2.mine();
 }
 
 main()

@@ -40,13 +40,13 @@ A user will do the following:
 Before running any deploy command you need to set the private key
 
 ```
-$ export RINKEBY_PRIVATE_KEY=0x...
+$ export TEST_ACCOUNT_PRIVATE_KEY=0x...
 ```
 
 Then:
 
 ```
-$ mode=MASTER owner=0x... npx hardhat run ./scripts/quantumPortal/poc/examples/deployMultiChainStaking.ts
+$ mode=MASTER owner=0xD164F5DD60d11100771BAB79B0868Ae835DD23f0 npx hardhat run --network <network_name> ./scripts/quantumPortal/poc/examples/deployMultiChainStaking.ts
 ```
 
 ## Deploying the client
@@ -63,7 +63,7 @@ await helper.init([
 Then:
 
 ```
-$ mode=CLIENT owner=0x... npx hardhat run ./scripts/quantumPortal/poc/examples/deployMultiChainStaking.ts
+$ mode=CLIENT owner=0xD164F5DD60d11100771BAB79B0868Ae835DD23f0 npx hardhat run --network <network_name> ./scripts/quantumPortal/poc/examples/deployMultiChainStaking.ts
 ```
 
 Then enter the client address in init function above

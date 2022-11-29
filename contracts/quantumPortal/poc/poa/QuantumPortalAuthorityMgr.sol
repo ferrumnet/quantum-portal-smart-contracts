@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-import "../../../common/signature/MultiSigCheckable.sol";
+
+import "foundary-contracts/contracts/signature/MultiSigCheckable.sol";
 
 interface IQuantumPortalAuthorityMgr {
     enum Action { NONE, FINALIZE, SLASH }

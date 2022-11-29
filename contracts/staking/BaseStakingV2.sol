@@ -8,7 +8,7 @@ import "./vesting/VestingLibrary.sol";
 import "../common/TokenReceivable.sol";
 import "./library/StakingV2CommonSignatures.sol";
 import "./factory/IStakingFactory.sol";
-import "../common/IFerrumDeployer.sol";
+import "foundary-contracts/contracts/common/IFerrumDeployer.sol";
 import "./interfaces/IStakeInfo.sol";
 import "../taxing/IGeneralTaxDistributor.sol";
 
