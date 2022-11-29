@@ -1,7 +1,8 @@
-import { expiryInFuture, Salt, seed0x as salt0x, Wei, ZeroAddress } from "../../common/Utils";
+import { expiryInFuture, seed0x as salt0x, Wei, ZeroAddress } from 
+    'foundry-contracts/dist/test/common/Utils';
 import { expect } from "chai";
 import { advanceTimeAndBlock } from "../../common/TimeTravel";
-import { deployAll } from "./QuantumPortalUtils";
+import { deployAll, QuantumPortalUtils } from "./QuantumPortalUtils";
 
 function blockMetadata(m: any): { chainId: number,  nonce: number, timestamp: number } {
     return {
@@ -65,7 +66,16 @@ describe("Test qp", function () {
         let minedBlock = await ctx.chain2.ledgerMgr.minedBlockByNonce(ctx.chain1.chainId, 1);
         console.log('Mined block is ', JSON.stringify(minedBlock, undefined, 2));
         console.log('Now finalizing on chain2');
-        await ctx.chain2.ledgerMgr.finalize(ctx.chain1.chainId, 1, Salt, [], salt0x(), expiryInFuture(), '0x');
+        await QuantumPortalUtils.callFinalizeWithSignature(
+            ctx.chainId,
+            ctx.chain1.chainId,
+            '1',
+            ctx.chain2.ledgerMgr,
+            ctx.chain2.autorityMgr.address,
+            [ctx.wallets[0]],
+            [ctx.sks[0]],
+        );
+        // await ctx.chain2.ledgerMgr.finalize(ctx.chain1.chainId, 1, Salt, [], salt0x(), expiryInFuture(), '0x');
         // let remoteBalance = Wei.to((await ctx.chain2.poc.remoteBalanceOf(ctx.chain1.chainId, ctx.chain1.token.address, ctx.acc1)).toString());
         let remoteBalance = Wei.to((await ctx.chain2.poc.remoteBalanceOf(ctx.chain1.chainId, ctx.chain1.token.address, tx.remoteContract.toString())).toString());
         console.log('Remote balance for acc1, token1 is', remoteBalance.toString());

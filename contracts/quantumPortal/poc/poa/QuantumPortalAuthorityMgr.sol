@@ -1,18 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "./IQuantumPortalAuthorityMgr.sol";
 import "foundry-contracts/contracts/signature/MultiSigCheckable.sol";
-
-interface IQuantumPortalAuthorityMgr {
-    enum Action { NONE, FINALIZE, SLASH }
-    function validateAuthoritySignature(
-        Action action,
-        bytes32 msgHash,
-        bytes32 salt,
-        uint64 expiry,
-        bytes memory signature
-    ) external;
-}
 
 /**
  @notice Authority manager, provides authority signature verification, for 
