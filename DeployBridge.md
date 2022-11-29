@@ -2,15 +2,15 @@
 
 ```
 # Deploy bridge
-$ CONTRACT_OWNER=0xa6F55AA418C9F312f58E36776e8173eE0B1cF32B npx hardhat run ./scripts/deployBridge.ts --network rinkeby
+$ CONTRACT_OWNER=0xa6F55AA418C9F312f58E36776e8173eE0B1cF32B npx hardhat run ./scripts/deployBridge.ts --network bsctestnet
 
 # address: 0x89262B7bd8244b01fbce9e1610bF1D9F5D97C877
-$ npx hardhat verify 0x89262B7bd8244b01fbce9e1610bF1D9F5D97C877 --network rinkeby
+$ npx hardhat verify 0x89262B7bd8244b01fbce9e1610bF1D9F5D97C877 --network bsctestnet
 
-$ CONTRACT_OWNER=0xa6F55AA418C9F312f58E36776e8173eE0B1cF32B npx hardhat run ./scripts/deployTaxDistributor.ts --network rinkeby
+$ CONTRACT_OWNER=0xa6F55AA418C9F312f58E36776e8173eE0B1cF32B npx hardhat run ./scripts/deployTaxDistributor.ts --network bsctestnet
 
 # 0x3C31720D705C59B3BA7F1aaD743B727Db77a3Cfc
-$ npx hardhat verify 0x3C31720D705C59B3BA7F1aaD743B727Db77a3Cfc --network rinkeby
+$ npx hardhat verify 0x3C31720D705C59B3BA7F1aaD743B727Db77a3Cfc --network bsctestnet
 ```
 
 #### Bridge configs

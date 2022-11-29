@@ -11,9 +11,9 @@ const getEnv = (env: string) => {
 	const value = process.env[env];
 	if (typeof value === 'undefined') {
 	  console.warn(`${env} has not been set.`);
-	  //throw new Error(`${env} has not been set.`);
+	  throw new Error(`${env} has not been set.`);
 	}
-	return value || '0x123123123';
+	return value;
 };
 
 interface Portal {
@@ -34,8 +34,8 @@ class PairMiner {
     async init() {
         await this.provider1.ready;
         await this.provider2.ready;
-        const signer1 = new ethers.Wallet(process.env.RINKEBY_PRIVATE_KEY || panick('PRIVATE KEY'), this.provider1);
-        const signer2 = new ethers.Wallet(process.env.RINKEBY_PRIVATE_KEY || panick('PRIVATE KEY'), this.provider2);
+        const signer1 = new ethers.Wallet(getEnv("TEST_ACCOUNT_PRIVATE_KEY"), this.provider1);
+        const signer2 = new ethers.Wallet(getEnv("TEST_ACCOUNT_PRIVATE_KEY"), this.provider2);
         this.portal1 = {
             // poc: QuantumPortalPoc__factory.connect(poc1, this.provider1),
             mgr: QuantumPortalLedgerMgr__factory.connect(this.mgr1, signer1),
@@ -72,17 +72,16 @@ async function main() {
     // and chain 2
     // and do mine and finalize in a loop from 1 -> 2
     // and 2 -> 1
-    const rinkeby = `https://eth-rinkeby.alchemyapi.io/v2/${getEnv('ALCHEMY_API_KEY') || '123123123'}`;
-    const frm = 'https://data-seed-prebsc-1-s1.binance.org:8545/';
-    // const frm = 'http://localhost:9933/';
-    const mgr = '0x3d7d171d02d5f37c8eb0d3eea72859d5fc758ffb';
-    const pair1 = new PairMiner(frm, rinkeby, mgr, mgr);
+    const chain1 = getEnv("BSC_TESTNET_LIVE_NETWORK");
+    const frm = getEnv("POLYGON_TEST_NETWORK");
+    const mgr = '0xcfeAFD9Fa0D42114597Ca78C6943aE8fEC8ddD42';
+    const pair1 = new PairMiner(frm, chain1, mgr, mgr);
     await pair1.init();
-    console.log('FRM Poc -> Rinkeby');
+    console.log('FRM Poc -> Chain1');
     await pair1.mine();
-    const pair2 = new PairMiner(rinkeby, frm, mgr, mgr);
+    const pair2 = new PairMiner(chain1, frm, mgr, mgr);
     await pair2.init();
-    console.log('Rinkeby -> FRM Poc');
+    console.log('Chain1 -> FRM Poc');
     await pair2.mine();
 }
   

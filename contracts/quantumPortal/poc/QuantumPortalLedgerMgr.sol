@@ -2,14 +2,13 @@
 pragma solidity ^0.8.0;
 
 import "./IQuantumPortalLedgerMgr.sol";
+import "foundary-contracts/contracts/common/IVersioned.sol";
+import "foundary-contracts/contracts/common/WithAdmin.sol";
+import "foundary-contracts/contracts/math/FullMath.sol";
+import "foundary-contracts/contracts/math/FixedPoint128.sol";
 import "./poa/QuantumPortalMinerMgr.sol";
-import "../../common/IVersioned.sol";
-import "../../common/math/FullMath.sol";
-import "../../common/math/FixedPoint128.sol";
-import "../../common/WithAdmin.sol";
 import "./QuantumPortalLib.sol";
 import "./PortalLedger.sol";
-
 import "hardhat/console.sol";
 
 /**

@@ -168,6 +168,7 @@ export async function deployUsingDeployer(contract: string, owner: string, initD
 	const depFac = await ethers.getContractFactory("FerrumDeployer");
 	const deployer = await depFac.attach(deployerAddr);
     console.log('DEPLOYADDR IS ', deployerAddr);
+	console.log("owner is", owner);
 
 	const res = await deployer.deployOwnable(salt, owner, initData, contr.bytecode);
 	console.log(`Deploy tx hash: ${res.hash}`)
