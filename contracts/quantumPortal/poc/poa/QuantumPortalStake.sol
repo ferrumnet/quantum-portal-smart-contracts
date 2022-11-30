@@ -24,7 +24,8 @@ contract QuantumPortalStake is StakeOpen {
     address slashTarget;
     IQuantumPortalAuthorityMgr auth;
     mapping(address => Pair) public withdrawItemsQueueParam;
-    mapping(address => mapping (uint => WithdrawItem)) public withdrawItemsQueue;
+    mapping(address => mapping(uint256 => WithdrawItem))
+        public withdrawItemsQueue;
 
     /**
      @notice This will first, release all the available withdraw items, 
@@ -56,11 +57,15 @@ contract QuantumPortalStake is StakeOpen {
         pushToQueue(staker, wi);
     }
 
-    function releaseWithdrawItems(address staker, address receiver, uint256 max) public nonReentrant returns(uint256 total) {
+    function releaseWithdrawItems(
+        address staker,
+        address receiver,
+        uint256 max
+    ) public nonReentrant returns (uint256 total) {
         require(staker != address(0), "QPS: staker requried");
         address token = baseInfo.baseToken[DEFAULT_ID];
         (Pair memory pair, WithdrawItem memory wi) = peekQueue(staker);
-        while(wi.opensAt != 0 && wi.opensAt < block.timestamp) {
+        while (wi.opensAt != 0 && wi.opensAt < block.timestamp) {
             popFromQueue(staker, pair);
             sendToken(token, receiver, wi.amount);
             total += wi.amount;
@@ -74,6 +79,7 @@ contract QuantumPortalStake is StakeOpen {
 
     bytes32 constant SLASH_STAKE =
         keccak256("SlashStake(address user,uint256 amount)");
+
     function slashUser(
         address user,
         uint256 amount,
@@ -82,33 +88,44 @@ contract QuantumPortalStake is StakeOpen {
         bytes memory multiSignature
     ) external returns (uint256) {
         bytes32 message = keccak256(abi.encode(SLASH_STAKE, user, amount));
-        auth.validateAuthoritySignature(IQuantumPortalAuthorityMgr.Action.SLASH, message, expiry, salt, multiSignature);
+        auth.validateAuthoritySignature(
+            IQuantumPortalAuthorityMgr.Action.SLASH,
+            message,
+            expiry,
+            salt,
+            multiSignature
+        );
         amount = slashWithdrawItem(user, amount);
         return slashStake(user, amount);
     }
 
-    function slashStake(
-        address staker,
-        uint256 amount
-    ) internal returns (uint256 remaining) {
-		uint stake = state.stakes[DEFAULT_ID][staker];
+    function slashStake(address staker, uint256 amount)
+        internal
+        returns (uint256 remaining)
+    {
+        uint256 stake = state.stakes[DEFAULT_ID][staker];
         stake = amount < stake ? amount : stake;
         remaining = amount - stake;
-        _withdrawOnlyUpdateStateAndPayRewards(slashTarget, DEFAULT_ID, staker, stake);
+        _withdrawOnlyUpdateStateAndPayRewards(
+            slashTarget,
+            DEFAULT_ID,
+            staker,
+            stake
+        );
         address token = baseInfo.baseToken[DEFAULT_ID];
         sendToken(token, slashTarget, amount);
     }
 
-    function slashWithdrawItem(
-        address staker,
-        uint256 amount
-    ) internal returns (uint256) {
-        uint released = releaseWithdrawItems(staker, slashTarget, amount);
+    function slashWithdrawItem(address staker, uint256 amount)
+        internal
+        returns (uint256)
+    {
+        uint256 released = releaseWithdrawItems(staker, slashTarget, amount);
         return amount > released ? amount - released : 0;
     }
 
     function pushToQueue(address staker, WithdrawItem memory wi) private {
-        uint end = withdrawItemsQueueParam[staker].end;
+        uint256 end = withdrawItemsQueueParam[staker].end;
         withdrawItemsQueueParam[staker].end = uint64(end) + 1;
         withdrawItemsQueue[staker][end + 1] = wi;
     }
@@ -118,7 +135,10 @@ contract QuantumPortalStake is StakeOpen {
         delete withdrawItemsQueue[staker][pair.start];
     }
 
-    function peekQueue(address staker) private returns (Pair memory pair, WithdrawItem memory wi) {
+    function peekQueue(address staker)
+        private
+        returns (Pair memory pair, WithdrawItem memory wi)
+    {
         pair = withdrawItemsQueueParam[staker];
         wi = withdrawItemsQueue[staker][pair.start];
     }
