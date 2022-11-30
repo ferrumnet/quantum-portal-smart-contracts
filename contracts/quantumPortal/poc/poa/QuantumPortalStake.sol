@@ -78,13 +78,13 @@ contract QuantumPortalStake is StakeOpen {
     }
 
     bytes32 constant SLASH_STAKE =
-        keccak256("SlashStake(address user,uint256 amount)");
+        keccak256("SlashStake(address user,uint256 amount,bytes32 salt,int64 expiry)");
 
     function slashUser(
         address user,
         uint256 amount,
-        uint64 expiry,
         bytes32 salt,
+        uint64 expiry,
         bytes memory multiSignature
     ) external returns (uint256) {
         bytes32 message = keccak256(abi.encode(SLASH_STAKE, user, amount));

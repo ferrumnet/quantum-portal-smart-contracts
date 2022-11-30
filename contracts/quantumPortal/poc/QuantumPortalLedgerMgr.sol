@@ -258,8 +258,8 @@ contract QuantumPortalLedgerMgr is
         // TODO: implement
     }
 
-    bytes32 constant FINALIZE_METHOD =
-        keccak256("Finalize(uint256 remoteChainId,uint256 blockNonce,bytes32 finalizersHash,address[] finalizers,bytes32 salt,uint64 expiry)");
+    // bytes32 constant FINALIZE_METHOD =
+    //     keccak256("Finalize(uint256 remoteChainId,uint256 blockNonce,bytes32 finalizersHash,address[] finalizers,bytes32 salt,uint64 expiry)");
 
     /**
      @notice Finalize unfinalized blocks

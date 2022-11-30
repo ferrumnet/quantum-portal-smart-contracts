@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./IQuantumPortalPoc.sol";
 import "foundry-contracts/contracts/common/IVersioned.sol";
-import "../../staking/library/TokenReceivable.sol";
+import "../../common/TokenReceivable.sol";
 import "./PortalLedger.sol";
 import "./QuantumPortalLib.sol";
 
