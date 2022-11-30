@@ -1,18 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "foundary-contracts/contracts/signature/MultiSigCheckable.sol";
-
-interface IQuantumPortalAuthorityMgr {
-    enum Action { NONE, FINALIZE, SLASH }
-    function validateAuthoritySignature(
-        Action action,
-        bytes32 msgHash,
-        uint64 expiry,
-        bytes32 salt,
-        bytes memory signature
-    ) external;
-}
+import "./IQuantumPortalAuthorityMgr.sol";
+import "foundry-contracts/contracts/signature/MultiSigCheckable.sol";
 
 /** 
  @notice Authority manager,provides authority signature verification, for 
@@ -25,7 +15,7 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, MultiSigChecka
     constructor() EIP712(NAME, VERSION) {}
 
     bytes32 constant VALIDATE_AUTHORITY_SIGNATURE =
-        keccak256("ValidateAuthoritySignature(uint8 action,bytes32 msgHash,uint64 expiry,bytes32 salt)");
+        keccak256("ValidateAuthoritySignature(uint256 action,bytes32 msgHash,bytes32 salt,uint64 expiry)");
 
     /**
      @notice Validates an authority signature
@@ -34,9 +24,9 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, MultiSigChecka
      */
     function validateAuthoritySignature(
         Action action,
-        bytes32  msgHash,
-        uint64 expiry,
+        bytes32 msgHash,
         bytes32 salt,
+        uint64 expiry,
         bytes memory signature
     ) external override {
         require(action != Action.NONE, "QPAM: action required");
@@ -44,7 +34,7 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, MultiSigChecka
         require (expiry != 0, "QPAM: expiry required");
         require(salt != 0, "QPAM: salt required");
         require(expiry > block.timestamp, "QPAM: signature expired");
-        bytes32 message = keccak256(abi.encode(VALIDATE_AUTHORITY_SIGNATURE, uint256(action), msgHash, expiry, salt));
+        bytes32 message = keccak256(abi.encode(VALIDATE_AUTHORITY_SIGNATURE, uint256(action), msgHash, salt, expiry));
         verifyUniqueSalt(message, salt, 1, signature);
     }
 

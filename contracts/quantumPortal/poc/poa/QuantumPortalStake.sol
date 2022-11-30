@@ -88,13 +88,7 @@ contract QuantumPortalStake is StakeOpen {
         bytes memory multiSignature
     ) external returns (uint256) {
         bytes32 message = keccak256(abi.encode(SLASH_STAKE, user, amount));
-        auth.validateAuthoritySignature(
-            IQuantumPortalAuthorityMgr.Action.SLASH,
-            message,
-            expiry,
-            salt,
-            multiSignature
-        );
+        auth.validateAuthoritySignature(IQuantumPortalAuthorityMgr.Action.SLASH, message, salt, expiry, multiSignature);
         amount = slashWithdrawItem(user, amount);
         return slashStake(user, amount);
     }

@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 import "../IQuantumPortalPoc.sol";
 import "../IQuantumPortalFeeManager.sol";
-import "foundary-contracts/contracts/common/IFerrumDeployer.sol";
-import "foundary-contracts/contracts/token/ERC20/ERC20.sol";
-import "foundary-contracts/contracts/common/SafeAmount.sol";
-import "foundary-contracts/contracts/math/FullMath.sol";
+import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
+import "foundry-contracts/contracts/token/ERC20/ERC20.sol";
+import "foundry-contracts/contracts/common/SafeAmount.sol";
+import "foundry-contracts/contracts/math/FullMath.sol";
 import "./MultiChainBase.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";

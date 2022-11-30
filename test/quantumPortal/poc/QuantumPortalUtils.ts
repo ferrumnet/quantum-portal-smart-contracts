@@ -1,11 +1,13 @@
-import { ChainId } from "@uniswap/sdk";
-import { randomBytes } from "crypto";
 import { ethers } from "hardhat";
 import { DummyToken } from "../../../typechain/DummyToken";
 import { QuantumPortalLedgerMgrTest } from "../../../typechain/QuantumPortalLedgerMgrTest";
 import { QuantumPortalPocTest } from "../../../typechain/QuantumPortalPocTest";
-import { randomSalt } from "../../common/Eip712Utils";
-import { abi, deployWithOwner, getCtx, isAllZero, Salt, TestContext, ZeroAddress } from "../../common/Utils";
+import { QuantumPortalAuthorityMgr } from '../../../typechain/QuantumPortalAuthorityMgr';
+import { randomSalt } from "foundry-contracts/dist/test/common/Eip712Utils";
+import { abi, deployWithOwner, expiryInFuture, getCtx, isAllZero, Salt, TestContext, ZeroAddress,  } from 
+    'foundry-contracts/dist/test/common/Utils';
+import { getBridgeMethodCall } from 'foundry-contracts/dist/test/common/Eip712Utils';
+import { keccak256 } from "ethers/lib/utils";
 
 export class QuantumPortalUtils {
     static async mine(
@@ -90,6 +92,52 @@ export class QuantumPortalUtils {
         }
     }
 
+    static async callFinalizeWithSignature(
+        realChainId: number, // used for EIP-712 signature generation
+        remoteChainId: number,
+        blockNonce: string,
+        mgr: QuantumPortalLedgerMgrTest,
+        authMgrAddr: string,
+        finalizers: string[],
+        finalizersSk: string[],
+    ) {
+        console.log(`Calling mgr.finalize(${remoteChainId}, ${blockNonce})`);
+        const expiry = expiryInFuture().toString();
+        const salt = randomSalt();
+        const finalizersHash = randomSalt();
+        const FINALIZE_METHOD = 
+            keccak256(
+                Buffer.from("Finalize(uint256 remoteChainId,uint256 blockNonce,bytes32 finalizersHash,address[] finalizers,bytes32 salt,uint64 expiry)", 'utf-8')
+            );
+        const msgHash = keccak256(abi.encode(['bytes32', 'uint256', 'uint256', 'bytes32', 'address[]', 'bytes32', 'uint64'],
+            [FINALIZE_METHOD, remoteChainId, blockNonce, finalizersHash, finalizers, salt, expiry]));
+
+        const name = "FERRUM_QUANTUM_PORTAL_AUTHORITY_MGR";
+        const version = "000.010";
+
+        // Create the signature for the authority mgr contract
+        let multiSig = await getBridgeMethodCall(
+            name, version, realChainId,
+            authMgrAddr,
+            'ValidateAuthoritySignature',
+			[
+				{ type: 'uint256', name: 'action', value: '1' },
+				{ type: 'bytes32', name: 'msgHash', value: msgHash },
+                { type: 'bytes32', name:'salt', value: salt},
+				{ type: 'uint64', name: 'expiry', value: expiry },
+			]
+			, finalizersSk);
+
+        await mgr.finalize(remoteChainId,
+            blockNonce,
+            finalizersHash,
+            finalizers,
+            salt,
+            expiry,
+            multiSig.signature!,
+            );
+    }
+
     static async minedBlockHash(
         chain: number,
         nonce: number,
@@ -107,12 +155,14 @@ export interface PortalContext extends TestContext {
         ledgerMgr: QuantumPortalLedgerMgrTest;
         poc: QuantumPortalPocTest;
         token: DummyToken;
+        autorityMgr: QuantumPortalAuthorityMgr;
     },
     chain2: {
         chainId: number;
         ledgerMgr: QuantumPortalLedgerMgrTest;
         poc: QuantumPortalPocTest;
         token: DummyToken;
+        autorityMgr: QuantumPortalAuthorityMgr;
     },
 }
 
@@ -128,6 +178,17 @@ export async function deployAll(): Promise<PortalContext> {
     const poc1 = await pocFac.deploy(26000) as QuantumPortalPocTest;
     const poc2 = await pocFac.deploy(2) as QuantumPortalPocTest;
 
+    // By default, both test ledger mgrs use the same authority mgr.
+	const autorityMgrF = await ethers.getContractFactory("QuantumPortalAuthorityMgr");
+	console.log('About to deploy the ledger managers');
+    const autorityMgr = await autorityMgrF.deploy() as QuantumPortalAuthorityMgr;
+
+    console.log(`Registering a single authority ("${ctx.wallets[0]}"`);
+    await autorityMgr.initialize(ctx.owner, 1, 1, 0, [ctx.wallets[0]]); 
+
+    await mgr1.updateAuthorityMgr(autorityMgr.address);
+    await mgr2.updateAuthorityMgr(autorityMgr.address);
+
     await poc1.setManager(mgr1.address);
     await poc2.setManager(mgr2.address);
     await mgr1.updateLedger(poc1.address);
@@ -142,12 +203,14 @@ export async function deployAll(): Promise<PortalContext> {
             chainId: 2600,
             ledgerMgr: mgr1,
             poc: poc1,
+            autorityMgr,
             token: tok1,
         },
         chain2: {
             chainId: 2,
             ledgerMgr: mgr2,
             poc: poc2,
+            autorityMgr,
             token: tok1,
         }
     } as PortalContext;
