@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 import "./MultiChainBase.sol";
-import "foundary-contracts/contracts/token/ERC20/ERC20.sol";
+import "foundry-contracts/contracts/token/ERC20/ERC20.sol";
 
 contract MitlChainToken2Master is ERC20, MultiChainMasterBase {
     uint256 public TOTAL_SUPPLY = 100000 * 10**18;

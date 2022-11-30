@@ -2,13 +2,16 @@
 pragma solidity ^0.8.0;
 
 import "./IQuantumPortalLedgerMgr.sol";
-import "foundary-contracts/contracts/common/IVersioned.sol";
-import "foundary-contracts/contracts/common/WithAdmin.sol";
-import "foundary-contracts/contracts/math/FullMath.sol";
-import "foundary-contracts/contracts/math/FixedPoint128.sol";
+import "./poa/IQuantumPortalAuthorityMgr.sol";
+import "foundry-contracts/contracts/common/IVersioned.sol";
+import "foundry-contracts/contracts/common/WithAdmin.sol";
+import "foundry-contracts/contracts/math/FullMath.sol";
+import "foundry-contracts/contracts/math/FixedPoint128.sol";
 import "./poa/QuantumPortalMinerMgr.sol";
 import "./QuantumPortalLib.sol";
 import "./PortalLedger.sol";
+import "./poa/QuantumPortalAuthorityMgr.sol";
+
 import "hardhat/console.sol";
 
 /**
@@ -48,6 +51,11 @@ contract QuantumPortalLedgerMgr is
     }
 
     string public constant override VERSION = "000.001";
+    bytes32 constant FINALIZE_METHOD =
+        keccak256(
+            "finalize(uint256 remoteChainId, uint256 blockNonce, bytes32 finalizersHash, address[] memory finalizers, bytes32 salt, uint64 expiry, bytes memory multiSignature)"
+        );
+    IQuantumPortalAuthorityMgr auth;
     uint256 constant BLOCK_PERIOD = 60; // One block per minute?
     uint256 immutable CHAIN_ID;
     uint256 public minerMinimumStake = 10**18 * 1000000; // Minimum 1M tokens to become miner
@@ -65,6 +73,7 @@ contract QuantumPortalLedgerMgr is
     mapping(uint256 => FinalizerStake[]) public finalizationStakes;
     address public ledger;
     address public minerMgr;
+    address public authorityMgr;
 
     modifier onlyLedger() {
         require(msg.sender == ledger, "QPLM: Not allowed");
@@ -73,6 +82,10 @@ contract QuantumPortalLedgerMgr is
 
     function updateLedger(address _ledger) external onlyAdmin {
         ledger = _ledger;
+    }
+
+    function updateAuthorityMgr(address _authorityMgr) external onlyAdmin {
+        authorityMgr = _authorityMgr;
     }
 
     constructor(uint256 overrideChainId) {
@@ -161,9 +174,7 @@ contract QuantumPortalLedgerMgr is
     }
 
     bytes32 constant MINE_REMOTE_BLOCK =
-        keccak256(
-            "MineRemoteBlock(uint64 remoteChainId, uint64 blockNonce, bytes32 transactions, bytes32 salt)"
-        );
+        keccak256("MineRemoteBlock(uint64 remoteChainId,uint64 blockNonce,bytes32 transactions,bytes32 salt)");
 
     /**
      @notice To mine a block we currently follow this algorithm:
@@ -197,7 +208,7 @@ contract QuantumPortalLedgerMgr is
             transactions
         );
         uint256 totalValue = 0;
-        for (uint i = 0; i < transactions.length; i++) {
+        for (uint256 i = 0; i < transactions.length; i++) {
             totalValue += _transactionValue(transactions[i]);
         }
 
@@ -227,7 +238,7 @@ contract QuantumPortalLedgerMgr is
         });
         uint256 key = blockIdx(remoteChainId, blockNonce);
         minedBlocks[key] = mb;
-        for (uint i = 0; i < transactions.length; i++) {
+        for (uint256 i = 0; i < transactions.length; i++) {
             minedBlockTransactions[key].push(transactions[i]);
         }
     }
@@ -247,6 +258,9 @@ contract QuantumPortalLedgerMgr is
         // TODO: implement
     }
 
+    // bytes32 constant FINALIZE_METHOD =
+    //     keccak256("Finalize(uint256 remoteChainId,uint256 blockNonce,bytes32 finalizersHash,address[] finalizers,bytes32 salt,uint64 expiry)");
+
     /**
      @notice Finalize unfinalized blocks
      @param remoteChainId The remote chain ID. For chain that we need to finalized mined blocks
@@ -261,9 +275,11 @@ contract QuantumPortalLedgerMgr is
         uint64 expiry,
         bytes memory multiSignature
     ) external {
-        // bytes32 msgHash = abi.encode(FINALIZE_METHOD, remoteChainId, blockNonce, finalizersHash, salt, expiry);
-        // authMgr.validateAuthoritySignature(Action.FINALIZE, msgHash, expiry, salt, multiSignature);
-        // TODO: Validaate finalizers produce the right hash.
+        bytes32 msgHash = keccak256(abi.encode(FINALIZE_METHOD, remoteChainId, blockNonce, finalizersHash, finalizers, salt, expiry));
+        console.log("MSG_HASH");
+        console.logBytes32(FINALIZE_METHOD);
+        console.logBytes32(msgHash);
+        IQuantumPortalAuthorityMgr(authorityMgr).validateAuthoritySignature(IQuantumPortalAuthorityMgr.Action.FINALIZE, msgHash, salt, expiry, multiSignature);
         doFinalize(remoteChainId, blockNonce, finalizersHash, finalizers);
     }
 
@@ -290,7 +306,7 @@ contract QuantumPortalLedgerMgr is
         bytes32 finHash = 0;
         uint256 totalBlockStake = 0;
         uint256 finalizeFrom = lastFinB.chainId == 0 ? 0 : lastFinB.nonce + 1;
-        for (uint i = finalizeFrom; i <= blockNonce; i++) {
+        for (uint256 i = finalizeFrom; i <= blockNonce; i++) {
             uint256 bkey = blockIdx(uint64(remoteChainId), uint64(i));
             // uint256 stake;
             // uint256 totalValue;
@@ -310,7 +326,7 @@ contract QuantumPortalLedgerMgr is
         uint256 key = blockIdx(uint64(remoteChainId), uint64(blockNonce));
         finalizations[key] = fin;
 
-        for (uint i = 0; i < finalizers.length; i++) {
+        for (uint256 i = 0; i < finalizers.length; i++) {
             finalizationStakes[key].push(
                 FinalizerStake({
                     finalizer: finalizers[i],
@@ -350,7 +366,7 @@ contract QuantumPortalLedgerMgr is
         uint256 gasPrice = localChainGasTokenPrice();
         QuantumPortalLib.RemoteTransaction[]
             memory transactions = minedBlockTransactions[key];
-        for (uint i = 0; i < transactions.length; i++) {
+        for (uint256 i = 0; i < transactions.length; i++) {
             QuantumPortalLib.RemoteTransaction memory t = transactions[i];
             uint256 txGas = FullMath.mulDiv(
                 gasPrice,

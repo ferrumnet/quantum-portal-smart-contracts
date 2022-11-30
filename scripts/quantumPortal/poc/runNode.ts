@@ -1,11 +1,12 @@
 import { ethers } from "ethers";
 import { QuantumPortalLedgerMgr } from "../../../typechain/QuantumPortalLedgerMgr";
 import { QuantumPortalPoc } from "../../../typechain/QuantumPortalPoc";
-import { QuantumPortalPoc__factory } from '../../../typechain/factories/QuantumPortalPoc__factory';
-import { QuantumPortalLedgerMgr__factory } from '../../../typechain/factories/QuantumPortalLedgerMgr__factory';
+import { QuantumPortalPoc__factory } from "../../../typechain/factories/QuantumPortalPoc__factory";
+import { QuantumPortalLedgerMgr__factory } from "../../../typechain/factories/QuantumPortalLedgerMgr__factory";
 import { QuantumPortalUtils } from "../../../test/quantumPortal/poc/QuantumPortalUtils";
 import { ethers as hardhatEthers } from "hardhat";
 import { panick, sleep } from "../../../test/common/Utils";
+// require("dotenv").config();
 
 const getEnv = (env: string) => {
 	const value = process.env[env];
@@ -17,19 +18,24 @@ const getEnv = (env: string) => {
 };
 
 interface Portal {
-    mgr: QuantumPortalLedgerMgr;
-    // poc: QuantumPortalPoc;
+  mgr: QuantumPortalLedgerMgr;
+  // poc: QuantumPortalPoc;
 }
 
 class PairMiner {
-    provider1: ethers.providers.JsonRpcProvider;
-    provider2: ethers.providers.JsonRpcProvider;
-    portal1: Portal;
-    portal2: Portal;
-    constructor(rpc1: string, rpc2: string, private mgr1: string, private mgr2: string) {
-        this.provider1 = new ethers.providers.JsonRpcProvider(rpc1);
-        this.provider2 = new ethers.providers.JsonRpcProvider(rpc2);
-    }
+  provider1: ethers.providers.JsonRpcProvider;
+  provider2: ethers.providers.JsonRpcProvider;
+  portal1: Portal;
+  portal2: Portal;
+  constructor(
+    rpc1: string,
+    rpc2: string,
+    private mgr1: string,
+    private mgr2: string
+  ) {
+    this.provider1 = new ethers.providers.JsonRpcProvider(rpc1);
+    this.provider2 = new ethers.providers.JsonRpcProvider(rpc2);
+  }
 
     async init() {
         await this.provider1.ready;
@@ -48,23 +54,25 @@ class PairMiner {
         // console.log('SiG IS', this.portal2.mgr.signer, signer2);
     }
 
-    async mine() {
-        const chain1 = this.provider1.network.chainId;
-        const chain2 = this.provider2.network.chainId;
-        console.log(`Mining from ${chain1} -> ${chain2}`);
-        // Try to finalize if any
-        await QuantumPortalUtils.finalize(chain1, this.portal2.mgr as any);
-        if (await QuantumPortalUtils.mine(
-            chain1,
-            chain2,
-            this.portal1.mgr as any,
-            this.portal2.mgr as any,
-        )) {
-            console.log(`Mined!`)
-        } else {
-            console.log('Didn\'t mine');
-        }
+  async mine() {
+    const chain1 = this.provider1.network.chainId;
+    const chain2 = this.provider2.network.chainId;
+    console.log(`Mining from ${chain1} -> ${chain2}`);
+    // Try to finalize if any
+    await QuantumPortalUtils.finalize(chain1, this.portal2.mgr as any);
+    if (
+      await QuantumPortalUtils.mine(
+        chain1,
+        chain2,
+        this.portal1.mgr as any,
+        this.portal2.mgr as any
+      )
+    ) {
+      console.log(`Mined!`);
+    } else {
+      console.log("Didn't mine");
     }
+  }
 }
 
 async function main() {
@@ -84,10 +92,10 @@ async function main() {
     console.log('Chain1 -> FRM Poc');
     await pair2.mine();
 }
-  
+
 main()
-	.then(() => process.exit(0))
-	.catch(error => {
-	  console.error(error);
-	  process.exit(1);
-});
+  .then(() => process.exit(0))
+  .catch((error) => {
+    console.error(error);
+    process.exit(1);
+  });
