@@ -4,43 +4,58 @@ import { expect } from "chai";
 import { advanceTimeAndBlock } from "../../common/TimeTravel";
 import { deployAll, QuantumPortalUtils } from "./QuantumPortalUtils";
 
-function blockMetadata(m: any): { chainId: number,  nonce: number, timestamp: number } {
-    return {
-        chainId: m.chainId.toNumber(),
-        nonce: m.nonce.toNumber(),
-        timestamp: m.timestamp.toNumber(),
-    }
+function blockMetadata(m: any): {
+  chainId: number;
+  nonce: number;
+  timestamp: number;
+} {
+  return {
+    chainId: m.chainId.toNumber(),
+    nonce: m.nonce.toNumber(),
+    timestamp: m.timestamp.toNumber(),
+  };
 }
 
 describe("Test qp", function () {
-	it('Create an x-chain tx, mine and finalize!', async function() {
-        const ctx = await deployAll();
-        await ctx.chain1.token.transfer(ctx.chain1.poc.address, Wei.from('20'));
-        await ctx.chain1.poc.runWithValue(
-            Wei.from('1'),
-            ctx.chain2.chainId,
-            ctx.acc1,
-            ZeroAddress,
-            ctx.chain1.token.address,
-            '0x');
-        // Check the block
-        let isBlockReady = await ctx.chain1.ledgerMgr.isLocalBlockReady(ctx.chain2.chainId);
-        console.log('Is block ready on chain 1? ', isBlockReady);
-        expect(isBlockReady).to.be.false;
-        let lastNonce = await ctx.chain1.ledgerMgr.lastLocalBlock(ctx.chain2.chainId);
-        console.log('Last nonce is ', lastNonce.nonce);
-        let block = (await ctx.chain1.ledgerMgr.localBlockByNonce(ctx.chain2.chainId, 1))[0];
-        console.log('Local block is: ', blockMetadata(block.metadata));
-        let key = (await ctx.chain1.ledgerMgr.getBlockIdx(ctx.chain2.chainId, 1)).toString();
-        console.log('Key is', ctx.chain2.chainId, ',', key);
-        let tx = await ctx.chain1.ledgerMgr.localBlockTransactions(key, 0);
-        console.log('Local block txs.0', tx);
+  it("Create an x-chain tx, mine and finalize!", async function () {
+    const ctx = await deployAll();
+    await ctx.chain1.token.transfer(ctx.chain1.poc.address, Wei.from("20"));
+    await ctx.chain1.poc.runWithValue(
+      Wei.from("1"),
+      ctx.chain2.chainId,
+      ctx.acc1,
+      ZeroAddress,
+      ctx.chain1.token.address,
+      "0x"
+    );
+    // Check the block
+    let isBlockReady = await ctx.chain1.ledgerMgr.isLocalBlockReady(
+      ctx.chain2.chainId
+    );
+    console.log("Is block ready on chain 1? ", isBlockReady);
+    expect(isBlockReady).to.be.false;
+    let lastNonce = await ctx.chain1.ledgerMgr.lastLocalBlock(
+      ctx.chain2.chainId
+    );
+    console.log("Last nonce is ", lastNonce.nonce);
+    let block = (
+      await ctx.chain1.ledgerMgr.localBlockByNonce(ctx.chain2.chainId, 1)
+    )[0];
+    console.log("Local block is: ", blockMetadata(block.metadata));
+    let key = (
+      await ctx.chain1.ledgerMgr.getBlockIdx(ctx.chain2.chainId, 1)
+    ).toString();
+    console.log("Key is", ctx.chain2.chainId, ",", key);
+    let tx = await ctx.chain1.ledgerMgr.localBlockTransactions(key, 0);
+    console.log("Local block txs.0", tx);
 
-        console.log('Moving time forward');
-        await advanceTimeAndBlock(120); // Two minutes
-        isBlockReady = await ctx.chain1.ledgerMgr.isLocalBlockReady(ctx.chain2.chainId);
-        console.log('Is block ready on chain 1? ', isBlockReady);
-        expect(isBlockReady).to.be.true;
+    console.log("Moving time forward");
+    await advanceTimeAndBlock(120); // Two minutes
+    isBlockReady = await ctx.chain1.ledgerMgr.isLocalBlockReady(
+      ctx.chain2.chainId
+    );
+    console.log("Is block ready on chain 1? ", isBlockReady);
+    expect(isBlockReady).to.be.true;
 
         console.log('Now, mining a block on chain 2');
         await ctx.chain2.ledgerMgr.mineRemoteBlock(
