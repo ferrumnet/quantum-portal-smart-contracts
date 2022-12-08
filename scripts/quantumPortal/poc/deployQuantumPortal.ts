@@ -3,10 +3,12 @@ import { panick, _WETH, deployUsingDeployer, contractExists, isAllZero } from ".
 import { QuantumPortalPoc } from "../../../typechain/QuantumPortalPoc";
 import { QuantumPortalLedgerMgr } from "../../../typechain/QuantumPortalLedgerMgr";
 import { DEPLOYER_CONTRACT, DEPLPOY_SALT_1 } from "../../consts";
+import { QuantumPortalAuthorityMgr } from "../../../typechain/QuantumPortalAuthorityMgr";
 
 const deployed = {
     QuantumPortalPoc: '',
     QuantumPortalLedgerMgr: '',
+    QuantumPortalAuthorityMgr: '',
     // QuantumPortalPoc: '0x735af3bb15e4110cbbad0d74652da4f076879b97',
     // QuantumPortalLedgerMgr: '0x907383f7186d8b9ab51b7c879dbad7d71c56220e',
     // QuantumPortalPoc: '0x2c24a6b225b4c82d3241f5c7c037cc374a979b17',
@@ -19,6 +21,7 @@ const deployed = {
 interface Ctx {
     poc: QuantumPortalPoc;
     mgr: QuantumPortalLedgerMgr;
+    auth: QuantumPortalAuthorityMgr;
 }
 
 async function prep(owner: string) {
@@ -48,6 +51,17 @@ async function prep(owner: string) {
         console.log(`Deployed poc at `, deped.address);
         ctx.mgr = deped as any;
     }
+    if (deployed.QuantumPortalAuthorityMgr &&
+        await (contractExists('QuantumPortalAuthorityMgr', deployed.QuantumPortalAuthorityMgr))) {
+        console.log(`QuantumPortalAuthorityMgr exists on `, deployed.QuantumPortalAuthorityMgr);
+	    const authM = await ethers.getContractFactory("QuantumPortalAuthorityMgr");
+        ctx.auth = await authM.attach(deployed.QuantumPortalAuthorityMgr) as any;
+    } else {
+        const deped = await deployUsingDeployer('QuantumPortalAuthorityMgr', owner, '0x',
+        DEPLOYER_CONTRACT, DEPLPOY_SALT_1) as QuantumPortalPoc;
+        console.log(`Deployed auth at `, deped.address);
+        ctx.auth = deped as any;
+    }
     return ctx;
 }
 
@@ -66,6 +80,11 @@ async function configure(ctx: Ctx) {
     // if (isAllZero(mgr)) {
         console.log('Updating to ', ctx.mgr.address);
         await ctx.poc.setManager(ctx.mgr.address);
+    }
+    const auth = (await ctx.mgr.authorityMgr()).toString();
+    if (auth != ctx.auth.address) {
+        console.log('Updating auth to ', ctx.auth.address);
+        await ctx.mgr.updateAuthorityMgr(ctx.auth.address);
     }
 }
 
