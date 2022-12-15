@@ -48,7 +48,7 @@ async function prep(owner: string) {
     } else {
         const deped = await deployUsingDeployer('QuantumPortalLedgerMgrImpl', owner, '0x',
         DEPLOYER_CONTRACT, DEPLPOY_SALT_1) as QuantumPortalPoc;
-        console.log(`Deployed poc at `, deped.address);
+        console.log(`Deployed QuantumPortalLedgerMgr  at `, deped.address);
         ctx.mgr = deped as any;
     }
     if (deployed.QuantumPortalAuthorityMgr &&

@@ -6,7 +6,7 @@ import { QuantumPortalAuthorityMgr } from '../../../typechain/QuantumPortalAutho
 import { randomSalt } from "foundry-contracts/dist/test/common/Eip712Utils";
 import { abi, deployWithOwner, expiryInFuture, getCtx, isAllZero, Salt, TestContext, ZeroAddress,  } from 
     'foundry-contracts/dist/test/common/Utils';
-import { getBridgeMethodCall } from 'foundry-contracts/dist/test/common/Eip712Utils';
+import { getBridgeMethodCall } from '../../bridge/BridgeUtilsV12';
 import { keccak256 } from "ethers/lib/utils";
 
 export class QuantumPortalUtils {
@@ -95,12 +95,18 @@ export class QuantumPortalUtils {
     static async callFinalizeWithSignature(
         realChainId: number, // used for EIP-712 signature generation
         remoteChainId: number,
-        blockNonce: string,
         mgr: QuantumPortalLedgerMgrTest,
+        sourceManager: QuantumPortalLedgerMgrTest,
         authMgrAddr: string,
         finalizers: string[],
         finalizersSk: string[],
     ) {
+        const block = await mgr.lastRemoteMinedBlock(remoteChainId);
+        const lastFin = await mgr.lastFinalizedBlock(remoteChainId);
+        console.log(block);
+        const blockNonce = block.nonce.toNumber();
+        const fin = lastFin.nonce.toNumber();
+        if (blockNonce > fin) {
         console.log(`Calling mgr.finalize(${remoteChainId}, ${blockNonce})`);
         const expiry = expiryInFuture().toString();
         const salt = randomSalt();
@@ -116,6 +122,7 @@ export class QuantumPortalUtils {
         const version = "000.010";
 
         // Create the signature for the authority mgr contract
+        console.log("Going to call bridgeMethodCall");
         let multiSig = await getBridgeMethodCall(
             name, version, realChainId,
             authMgrAddr,
@@ -128,6 +135,7 @@ export class QuantumPortalUtils {
 			]
 			, finalizersSk);
 
+        console.log("Returned from bridgeMethodCall");
         await mgr.finalize(remoteChainId,
             blockNonce,
             finalizersHash,
@@ -136,6 +144,9 @@ export class QuantumPortalUtils {
             expiry,
             multiSig.signature!,
             );
+        }else {
+            console.log('Nothing to finalize...')
+        }
     }
 
     static async minedBlockHash(
