@@ -255,6 +255,33 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         doFinalize(remoteChainId, blockNonce, finalizersHash, finalizers);
     }
 
+    /**
+     * Will call doFinalize if the minimum number of signatures are received
+     @notice Finalize unfinalized blocks
+     @param remoteChainId The remote chain ID. For chain that we need to finalized mined blocks
+     @param blockNonce The nonce for the last block to be finalized
+     */
+    function finalizeSingleSigner(
+        uint256 remoteChainId,
+        uint256 blockNonce,
+        bytes32 finalizersHash,
+        address[] memory finalizers,
+        bytes32 salt,
+        uint64 expiry,
+        bytes memory multiSignature
+    ) external {
+        bytes32 msgHash = keccak256(abi.encode(FINALIZE_METHOD, remoteChainId, blockNonce, finalizersHash, finalizers, salt, expiry));
+        console.log("MSG_HASH");
+        console.logBytes32(FINALIZE_METHOD);
+        console.logBytes32(msgHash);
+        (bool sigVerified, bool quorumComplete) = IQuantumPortalAuthorityMgr(authorityMgr).validateAuthoritySignatureSingleSigner(IQuantumPortalAuthorityMgr.Action.FINALIZE, msgHash, salt, expiry, multiSignature);
+        
+        if (quorumComplete) {
+            console.log("Quorum complete, calling finalize");
+            doFinalize(remoteChainId, blockNonce, finalizersHash, finalizers);
+        }
+    }
+
     function doFinalize(
         uint256 remoteChainId,
         uint256 blockNonce,

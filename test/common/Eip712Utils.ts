@@ -54,16 +54,18 @@ export function produceSignature(
 
     // ['bytes32', 'address', 'address', 'uint256', 'bytes32'];
     const params = ['bytes32'].concat(eipParams.args.map(p => p.type));
+    console.log("params", params);
 	// console.log('methodSig: ', methodSig, params);
     const structure = eth.abi.encodeParameters(params, [methodHash, ...eipParams.args.map(p => p.value)]);
     const structureHash = Web3.utils.keccak256(structure);
     const ds = domainSeparator(eth, eipParams.contractName, eipParams.contractVersion, netId, contractAddress);
-	// console.log('Method hash is ', methodHash, methodSig);
-	// console.log('Structure hash is ', structureHash, {params});
-    // console.log('values area', [methodHash, ...eipParams.args.map(p => p.value)]);
-	// console.log('Domain separator is ', ds);
-    // console.log('Chain ID is', netId);
+	console.log('Method hash is ', methodHash, methodSig);
+	console.log('Structure hash is ', structureHash, {params});
+    console.log('values area', [methodHash, ...eipParams.args.map(p => p.value)]);
+	console.log('Domain separator is ', ds);
+    console.log('Chain ID is', netId);
     const hash = Web3.utils.soliditySha3("\x19\x01", ds, structureHash) as HexString;
+    console.log('EIP hash is', hash);
     return {...eipParams, hash, signature: ''};
 }
 
