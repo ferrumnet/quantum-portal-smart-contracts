@@ -14,5 +14,5 @@ interface IQuantumPortalAuthorityMgr {
         bytes32 salt,
         uint64 expiry,
         bytes memory signature
-    ) external returns (bool sigVerified, bool quorumComplete);
+    ) external returns (address[] memory signers, bool quorumComplete);
 }

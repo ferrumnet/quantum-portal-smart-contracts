@@ -60,7 +60,7 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, MultiSigChecka
         bytes32 salt,
         uint64 expiry,
         bytes memory signature
-    ) external override returns (bool sigVerified, bool quorumComplete) {
+    ) external override returns (address[] memory signers, bool quorumComplete) {
 
         // ensure that the current msgHash matches the one in process or msgHash is empty
         if (currentMsgHash != bytes32(0)) {
@@ -103,10 +103,17 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, MultiSigChecka
                 alreadySigned[completedSigners[i]] = false;
             }
             delete completedSigners;
-            return (true, true);
+            return (completedSigners, true);
         } else { 
-            return (true, false);
+            return (completedSigners, false);
         }
 
+    }
+
+    /**
+     @notice Clears the currentMsgHash to unblock invalid states
+     */
+    function clearCurrentMsgHash() external {
+        currentMsgHash = bytes32(0);
     }
 }
