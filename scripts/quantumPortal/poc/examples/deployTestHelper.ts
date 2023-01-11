@@ -25,10 +25,10 @@ export function readLine(questionText: string) {
 }
 
 export class DeployTestHelper<T extends DeployCliArgs, C> {
-    MASTER_CHAIN_ID = 4;
-    CLIENT_CHAIN_ID = 97;
+    MASTER_CHAIN_ID = 97;
+    CLIENT_CHAIN_ID = 80001;
     FERRUM_CHAIN_ID = 2600;
-    qpPoc = '0x6abd9239779a3c55f1c671d43bc89da784acb2df';
+    qpPoc = '0x18e1788d16946d87B50cd13C9091992B740F00Ee';
     args: T = {} as any;
     netId: number;
     private _deployed: C = {} as any;
