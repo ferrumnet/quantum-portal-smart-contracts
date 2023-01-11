@@ -53,7 +53,7 @@ class PairMiner {
         const chain2 = this.provider2.network.chainId;
         console.log(`Mining from ${chain1} -> ${chain2}`);
         // Try to finalize if any
-        let authorityMgr = "0x6ed18E5598650113D56B8Bc02B5C0e2852332c87";
+        let authorityMgr = "0xA8900b24cf4284d9017C9Ee976C294b623fB07c8";
         let signer_addresses = [getEnv("OWNER")];
         let signer_pks = [getEnv("TEST_ACCOUNT_PRIVATE_KEY")];
         await QuantumPortalUtils.callFinalizeWithSignature(chain2, chain1, this.portal2.mgr as any, this.portal1.mgr as any, authorityMgr, 
@@ -78,7 +78,7 @@ async function main() {
     // and 2 -> 1
     const chain1 = getEnv("BSC_TESTNET_LIVE_NETWORK");
     const frm = getEnv("POLYGON_TEST_NETWORK");
-    const mgr = '0x78eae1c19a415f050e2EFafEDc396Cf4F463cB79';
+    const mgr = '0x7Ae040f581bAc2876A2D32Fa4b8f668F029e04CD';
     const pair1 = new PairMiner(frm, chain1, mgr, mgr);
     await pair1.init();
     console.log('FRM Poc -> Chain1');
