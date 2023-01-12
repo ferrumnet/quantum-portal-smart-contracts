@@ -3,10 +3,10 @@ import { DummyToken } from "../../../typechain/DummyToken";
 import { QuantumPortalLedgerMgrTest } from "../../../typechain/QuantumPortalLedgerMgrTest";
 import { QuantumPortalPocTest } from "../../../typechain/QuantumPortalPocTest";
 import { QuantumPortalAuthorityMgr } from '../../../typechain/QuantumPortalAuthorityMgr';
-import { randomSalt } from "../../common/Eip712Utils";
+import { randomSalt } from "foundry-contracts/dist/test/common/Eip712Utils";
 import { abi, deployWithOwner, expiryInFuture, getCtx, isAllZero, Salt, TestContext, ZeroAddress} from 
-    "../../common/Utils";
-import { getBridgeMethodCall } from '../../bridge/BridgeUtilsV12';
+    'foundry-contracts/dist/test/common/Utils';
+import { getBridgeMethodCall } from 'foundry-contracts/dist/test/common/Eip712Utils';
 import { keccak256 } from "ethers/lib/utils";
 
 export class QuantumPortalUtils {
@@ -95,8 +95,8 @@ export class QuantumPortalUtils {
     static async callFinalizeWithSignature(
         realChainId: number, // used for EIP-712 signature generation
         remoteChainId: number,
-        mgr: QuantumPortalLedgerMgrTest,
-        sourceManager: QuantumPortalLedgerMgrTest,
+        mgr: QuantumPortalLedgerMgr,
+        sourceManager: QuantumPortalLedgerMgr,
         authMgrAddr: string,
         finalizers: string[],
         finalizersSk: string[],

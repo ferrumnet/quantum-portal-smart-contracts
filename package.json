@@ -11,7 +11,7 @@
     "chai": "^4.3.4",
     "dotenv": "^16.0.3",
     "ethers": "^5.0.0",
-    "foundry-contracts": "git+https://github.com/3ierratango/foundry-contracts#multisig-multiple",
+    "foundry-contracts": "git+https://github.com/ferrumnet/foundry-contracts#develop",
     "hardhat": "^2.11.2",
     "ts-node": "^10.0.0",
     "typescript": "^4.3.4"
