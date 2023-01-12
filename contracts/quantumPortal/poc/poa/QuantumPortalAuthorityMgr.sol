@@ -73,7 +73,7 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, MultiSigChecka
         require(salt != 0, "QPAM: salt required");
         require(expiry > block.timestamp, "QPAM: signature expired");
         bytes32 message = keccak256(abi.encode(VALIDATE_AUTHORITY_SIGNATURE, uint256(action), msgHash, salt, expiry));
-        address signer = verifyUniqueSaltSingleSigner(message, salt, 1, signature);
+        address signer = validateSignature(message, 1, signature);
 
         address signerQuorumId = quorumSubscriptions[signer].id;
 
@@ -100,7 +100,7 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, MultiSigChecka
 
             // remove all signed mapping
             for (uint i=0; i<completedSigners.length; i++) {
-                alreadySigned[completedSigners[i]] = false;
+                delete alreadySigned[completedSigners[i]];
             }
             delete completedSigners;
             return (completedSigners, true);
