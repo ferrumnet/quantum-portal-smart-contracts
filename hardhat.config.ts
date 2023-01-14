@@ -16,6 +16,8 @@ const getEnv = (env: string) => {
 	return value;
 };
 
+const TEST_MNEMONICS = 'body sound phone helmet train more almost piano motor define basic retire play detect force ten bamboo swift among cinnamon humor earn coyote adjust';
+
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
   solidity: {
@@ -28,13 +30,17 @@ const config: HardhatUserConfig = {
   },
   networks: {
 		hardhat: {
-			gas: 10000000,
+      accounts: {
+        mnemonic: TEST_MNEMONICS,
+      }
 		},
     local: {
-	  chainId: 31337,
+	    chainId: 31337,
       url: `http://127.0.0.1:8545/`,
-      accounts: [getEnv('TEST_ACCOUNT_PRIVATE_KEY')],
-	  gasPrice: 18000000000,
+      accounts: {
+        mnemonic: TEST_MNEMONICS,
+      },
+	    // gasPrice: 18000000000,
     },
     mainnet: {
 	  chainId: 1,
