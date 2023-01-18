@@ -3994,7 +3994,7 @@ forwarded@0.2.0:
 
 "foundry-contracts@git+https://github.com/ferrumnet/foundry-contracts#develop":
   version "0.1.0"
-  resolved "git+https://github.com/ferrumnet/foundry-contracts#298e62bb5b714110a84d5ffff6cf8a3f3ba67444"
+  resolved "git+https://github.com/ferrumnet/foundry-contracts#d09fe7b3dcc2a6ac73461b526b588ce25c9a5755"
   dependencies:
     "@openzeppelin/contracts" "^4.1.0"
     "@openzeppelin/contracts-upgradeable" "^4.3.2"
