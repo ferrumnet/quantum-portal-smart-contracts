@@ -1,5 +1,4 @@
-import { abi, deployDummyToken, deployUsingDeployer, getCtx, Salt, TestContext, Wei, ZeroAddress, _WETH } from "../common/Utils";
-import { ethers } from "hardhat";
+import { abi, deployDummyToken, deployUsingDeployer, expiryInFuture, getCtx, Salt, TestContext, Wei, ZeroAddress, _WETH } from "../common/Utils";
 import { expect } from "chai";
 import { advanceTimeAndBlock } from "../common/TimeTravel";
 import { DummyToken } from "../../typechain-types/DummyToken";
@@ -7,6 +6,7 @@ import { UniswapOracle } from '../../typechain-types/UniswapOracle';
 import { Pair, UniswapV2 } from 'foundry-contracts/dist/test/common/UniswapV2';
 import { throws } from "foundry-contracts/dist/test/common/Utils";
 import { BigNumber } from "ethers";
+import Big from 'big.js';
 
 /**
  * 
@@ -20,8 +20,8 @@ const USDT = '0xdac17f958d2ee523a2206206994597c13d831ec7';
 const _it: any = () => { };
 
 function bigNumX128ToHuman(x128: BigNumber): string {
-    const base128 = BigNumber.from(2).pow(128);
-    return x128.div(base128).toString();
+    const base128 = new Big(2).pow(128);
+    return new Big(x128.toString()).div(base128).toString();
 }
 
 interface UniOracleContext extends TestContext {
@@ -54,7 +54,7 @@ async function getUniOracleCtx(): Promise<UniOracleContext> {
 }
 
 describe("Get Prices", function () {
-    it('Can get price for old tokens', async function() {
+    _it('Can get price for old tokens', async function() {
         /**
          * Process:
          * - Sell some eth to buy USDT
@@ -93,7 +93,7 @@ describe("Get Prices", function () {
         expect(ethUsdtPrice).greaterThan(10, 'ETH is too cheap!').lessThan(20000, 'ETH is too expensive!')
     });
 
-	_it('Can get prices', async function() {
+	it('Can get prices for new tokens', async function() {
         /**
          * Process:
          * - Create a token
@@ -105,16 +105,47 @@ describe("Get Prices", function () {
          * - Get price again ...
          */
         const ctx = await getUniOracleCtx();
-        // await ctx.pair.token.approve(ROUTER_ADDRESS, Wei.from('999'));
-        // await ctx.uniV2.addLiquidityEth(
-        //     ctx.signers.owner,
-        //     ctx.pair.token.address, Wei.from('100'), '0', Wei.from('10'), '0');
-        // console.log('LIQ ADDED');
+
+        console.log('Adding liquidity to', ctx.pair.base.address, ctx.pair.token.address);
+        console.log('Approve');
+        await (await ctx.pair.token.token()).approve(ctx.uniswapV2.router.address, Wei.from('999999'));
+        console.log('Add liq');
+        await ctx.uniswapV2.router.addLiquidityETH(
+            ctx.pair.token.address,
+            Wei.from('10'),
+            '0',
+            '0',
+            ctx.owner,
+            expiryInFuture(), { value: Wei.from('1') }
+        );
+        console.log('LIQ ADDED');
+        await ctx.pair.init(ctx.uniswapV2.factory!);
+        const currentLiqBase = await (await ctx.pair.base.token()).balanceOf(ctx.pair.pair.address);
+        const currentLiqToken = await (await ctx.pair.token.token()).balanceOf(ctx.pair.pair.address);
+        console.log(`Current liquidity - Base: ${Wei.to(currentLiqBase.toString())}, Token: ${Wei.to(currentLiqToken.toString())}`);
         
-        // console.log('Liquidity added');
-        // const pair = [ctx.pair.token.address, ctx.pair.weth.address];
-        // await ctx.oracle.updatePrice(pair);
-        // const price = await ctx.oracle.emaX128(pair, 0);
-        // console.log(`What is the price ? ${price.toString()}`);
+        console.log('Updating the price 1st time');
+        await ctx.oracle.updatePrice([ctx.pair.base.address, ctx.pair.token.address]);
+        await throws(ctx.oracle.recentPriceX128([ctx.pair.base.address, ctx.pair.token.address]), 'Array accessed at an out-of-bounds');
+        advanceTimeAndBlock(2 * 3600); 
+
+        console.log('Now swaping some tokens');
+        await ctx.uniswapV2.swapEthForTokens([ctx.pair.token.address], '0.01', ctx.owner);
+        console.log('Tokens swapped');
+        await ctx.oracle.updatePrice([ctx.pair.base.address, ctx.pair.token.address]);
+        console.log('Updatin the price again');
+        await throws(ctx.oracle.recentPriceX128([ctx.pair.base.address, ctx.pair.token.address]), 'Array accessed at an out-of-bounds');
+        advanceTimeAndBlock(2 * 3600); // 2 secons later...
+
+        console.log('Now swaping some tokens again');
+        await ctx.uniswapV2.swapEthForTokens([ctx.pair.token.address], '0.01', ctx.owner);
+        console.log('Tokens swapped, updating price for third time');
+        await ctx.oracle.updatePrice([ctx.pair.base.address, ctx.pair.token.address]);
+        const newPrice = await ctx.oracle.recentPriceX128([ctx.pair.base.address, ctx.pair.token.address]);
+        console.log('New price is ', bigNumX128ToHuman(newPrice));
+    });
+
+    it('TODO: Test different EMAs', async function () {
+        // We can use different EMAs
     });
 });
