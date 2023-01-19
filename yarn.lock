@@ -4150,7 +4150,7 @@ forwarded@0.2.0:
 
 "foundry-contracts@git+https://github.com/3ierratango/foundry-contracts#multisig-multiple":
   version "0.1.0"
-  resolved "git+https://github.com/3ierratango/foundry-contracts#e77c0c0c8e57a91da8ef6af281d44550d9558d4a"
+  resolved "git+https://github.com/ferrumnet/foundry-contracts#298e62bb5b714110a84d5ffff6cf8a3f3ba67444"
   dependencies:
     "@openzeppelin/contracts" "^4.1.0"
     "@openzeppelin/contracts-upgradeable" "^4.3.2"
