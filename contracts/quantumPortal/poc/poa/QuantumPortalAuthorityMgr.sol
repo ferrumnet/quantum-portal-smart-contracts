@@ -73,7 +73,13 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, MultiSigChecka
         require(salt != 0, "QPAM: salt required");
         require(expiry > block.timestamp, "QPAM: signature expired");
         bytes32 message = keccak256(abi.encode(VALIDATE_AUTHORITY_SIGNATURE, uint256(action), msgHash, salt, expiry));
-        address signer = validateSignature(message, 1, signature);
+
+        // Validate the message for only this signer
+        bytes32 digest = _hashTypedDataV4(message);
+        (bool result, address[] memory signers) = tryVerifyDigestWithAddressWithMinSigCheck(digest, 1, signature, false);
+        require(result, "QPAM: Invalid signer");
+        require(signers.length == 1, "QPAM: Wrong number of signers");
+        address signer = signers[0];
 
         address signerQuorumId = quorumSubscriptions[signer].id;
 
