@@ -1,24 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "../../../staking/interfaces/IStakeInfo.sol";
+import "./IQuantumPortalMinerMgr.sol";
+import "./IQuantumPortalStake.sol";
 import "foundry-contracts/contracts/signature/MultiSigCheckable.sol";
-
-interface IQuantumPortalMinerMgr {
-    enum ValidationResult {
-        None,
-        Valid,
-        NotEnoughStake
-    }
-    function validateMinerSignature(
-        bytes32 msgHash,
-        uint256 expiry,
-        bytes32 salt,
-        bytes memory signature,
-        uint256 msgValue,
-        uint256 minStakeAllowed
-    ) external returns (ValidationResult res);
-}
 
 /**
  @notice Miner manager provides functionality for QP miners; registration, staking,
@@ -31,7 +16,6 @@ interface IQuantumPortalMinerMgr {
 contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, MultiSigCheckable {
     string public constant NAME = "FERRUM_QUANTUM_PORTAL_MINER_MGR";
     string public constant VERSION = "000.010";
-    address constant QP_STAKE_ID = address(1);
     address miningStake;
 
     constructor() EIP712(NAME, VERSION) {}
@@ -56,7 +40,7 @@ contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, MultiSigCheckable {
         require(signers.length != 0, "QPMM: not a valid signature");
         uint256 totalValue = 0;
         for(uint i=0; i<signers.length; i++) {
-            uint256 stake = IStakeInfo(miningStake).stakeOf(QP_STAKE_ID, signers[i]);
+            uint256 stake = IQuantumPortalStake(miningStake).delegatedStakeOf(signers[i]);
             require(stake>=minStakeAllowed, "QPMM: One miner has less than allowed stake");
             totalValue += stake;
         }
