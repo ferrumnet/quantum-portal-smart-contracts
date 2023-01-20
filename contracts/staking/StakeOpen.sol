@@ -91,6 +91,19 @@ contract StakeOpen is Sweepable, BaseStakingV2, IRewardPool {
         return _stake(to, id, 0);
     }
 
+    function _init(address token, string memory name, address[] memory rewardTokens
+    ) internal {
+        StakingBasics.StakeInfo storage info = stakings[token];
+        require(
+            stakings[token].stakeType == Staking.StakeType.None,
+            "SO: Already exists"
+        );
+        info.stakeType = Staking.StakeType.OpenEnded;
+        baseInfo.baseToken[token] = token;
+        baseInfo.name[token] = name;
+        setAllowedRewardTokens(token, rewardTokens);
+    }
+
     function _stake(
         address to,
         address id,

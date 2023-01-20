@@ -185,15 +185,15 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         }
 
         // Validate miner
-        // bytes32 msgHash = keccak256(abi.encode(MINE_REMOTE_BLOCK, remoteChainId, blockNonce, transactions, salt));
-        // IQuantumPortalMinerMgr.ValidationResult validationResult = IQuantumPortalMinerMgr(minerMgr).validateMinerSignature(
-        //     msgHash,
-        //     expiry,
-        //     salt,
-        //     multiSignature,
-        //     totalValue,
-        //     minerMinimumStake
-        // );
+        bytes32 msgHash = keccak256(abi.encode(MINE_REMOTE_BLOCK, remoteChainId, blockNonce, transactions, salt));
+        IQuantumPortalMinerMgr.ValidationResult validationResult = IQuantumPortalMinerMgr(minerMgr).validateMinerSignature(
+            msgHash,
+            expiry,
+            salt,
+            multiSignature,
+            totalValue,
+            minerMinimumStake
+        );
 
         QuantumPortalLib.Block memory blockMetadata = QuantumPortalLib.Block({
             chainId: remoteChainId,
