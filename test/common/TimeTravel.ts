@@ -1,6 +1,30 @@
 import { ethers } from "ethers";
 import { network } from "hardhat";
 
+export async function hardhatAdvanceTimeAndBlock(totalTime: number, blocks: number) {
+	if (blocks == 0) {
+		throw new Error('Blocks must be at least one');
+	}
+	const theTime = Math.round(totalTime / blocks);
+	const timeHex = '0x' + theTime.toString(16);
+	const blockHex = '0x' + (blocks + 1).toString(16);
+	const preTime = await hardhatGetTime();
+	console.log('hardhat_mine', blockHex,  timeHex);
+	await network.provider.send('hardhat_mine', [blockHex, timeHex]);
+	const postTime = await hardhatGetTime();
+	console.log(`hardhatAdvanceTimeAndBlock(${totalTime},${blocks}) => (${preTime} -> ${preTime})`);
+	if (postTime <= preTime) {
+		throw new Error(`Time did not expend`)
+	}
+}
+
+export async function hardhatGetTime() {
+	let block = await network.provider.request({method: 'eth_blockNumber'});
+	let time = await network.provider.request({method: 'eth_getBlockByNumber', params: [block, false]}) as any;
+	console.log('hardhatGetTime - blockNumber is ', block);
+	return parseInt(time.timestamp, 16);
+}
+
 export async function advanceTimeAndBlock(time: number) {
 	// const t = await getTime();
 	await advanceTime(time);

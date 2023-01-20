@@ -6,6 +6,8 @@ import "./QuantumPortalAuthorityMgr.sol";
 import "./Delegator.sol";
 import "../../../staking/StakeOpen.sol";
 
+import "hardhat/console.sol";
+
 /**
  @notice The QP stake, is a special type of open staking, with two exceptions:
     1 - Unstake will move assets to a locked state, for a period.
@@ -55,6 +57,7 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
         uint256 amount
     ) internal override nonZeroAddress(staker) {
         require(id == STAKE_ID, "QPS: bad id");
+        require(to == msg.sender, "QPS: only withdraw to self");
         if (amount == 0) {
             return;
         }
@@ -75,19 +78,24 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
         pushToQueue(staker, wi);
     }
 
-    function releaseWithdrawItems(address staker, address receiver, uint256 max) public nonReentrant returns(uint256 total) {
+    function releaseWithdrawItems(address staker, address receiver, uint256 max
+    ) public returns(uint256 total) {
         require(staker != address(0), "QPS: staker requried");
         address token = baseInfo.baseToken[STAKE_ID];
         (Pair memory pair, WithdrawItem memory wi) = peekQueue(staker);
+        console.log("PEEKED", wi.opensAt, block.timestamp);
         while(wi.opensAt != 0 && wi.opensAt < block.timestamp) {
             popFromQueue(staker, pair);
+            console.log("Sending tokens ", wi.amount);
             sendToken(token, receiver, wi.amount);
             total += wi.amount;
+            console.log("Total is", total);
             if (max != 0 && total >= max) {
                 // Shortcut if total greater than 0
                 return total;
             }
             (pair, wi) = peekQueue(staker);
+            console.log("PEEKED", wi.opensAt, block.timestamp);
         }
     }
 
@@ -129,7 +137,7 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
     function pushToQueue(address staker, WithdrawItem memory wi) private {
         uint end = withdrawItemsQueueParam[staker].end;
         withdrawItemsQueueParam[staker].end = uint64(end) + 1;
-        withdrawItemsQueue[staker][end + 1] = wi;
+        withdrawItemsQueue[staker][end] = wi; // starts from 0, so end is empty by now
     }
 
     function popFromQueue(address staker, Pair memory pair) private {
