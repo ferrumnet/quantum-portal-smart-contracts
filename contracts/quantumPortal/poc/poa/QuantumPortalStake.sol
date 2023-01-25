@@ -26,17 +26,18 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
     uint64 constant WITHDRAW_LOCK = 30 * 3600 * 24;
     address public STAKE_ID;
     address slashTarget;
-    IQuantumPortalAuthorityMgr auth;
+    IQuantumPortalAuthorityMgr public auth;
     mapping(address => Pair) public withdrawItemsQueueParam;
     mapping(address => mapping (uint => WithdrawItem)) public withdrawItemsQueue;
 
     constructor() {
         bytes memory _data = IFerrumDeployer(msg.sender).initData();
-        (address token) = abi.decode(_data, (address));
+        (address token, address authority) = abi.decode(_data, (address, address));
         address[] memory tokens = new address[](1);
         tokens[0] = token;
         _init(token, "QP Stake", tokens);
         STAKE_ID = token;
+        auth = IQuantumPortalAuthorityMgr(authority);
     }
 
     function delegatedStakeOf(address delegatee

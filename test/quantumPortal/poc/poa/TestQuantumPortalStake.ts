@@ -1,20 +1,8 @@
-import { ethers } from "hardhat";
 import { QuantumPortalStake } from "../../../../typechain-types/QuantumPortalStake";
-import { abi, deployWithOwner, deployDummyToken, getCtx, TestContext, Wei, throws } from 'foundry-contracts/dist/test/common/Utils';
-// import { advanceTimeAndBlock, getTime } from 'foundry-contracts/dist/test/common/TimeTravel';
+import { getCtx, TestContext, Wei, throws } from 'foundry-contracts/dist/test/common/Utils';
 import { expect } from "chai";
-import { advanceTimeAndBlock, getTime, hardhatAdvanceTimeAndBlock, hardhatGetTime, increaseTs } from "../../../common/TimeTravel";
-
-const DEFAULT_ID = '0x0000000000000000000000000000000000000001';
-
-async function delpoyStake(ctx: TestContext) {
-    await deployDummyToken(ctx);
-    const initData = abi.encode(['address'], [ctx.token.address]);
-    console.log("INIT", initData)
-    const stk = await deployWithOwner(ctx, 'QuantumPortalStake', ctx.acc1, initData
-        ) as QuantumPortalStake;
-    return stk;
-}
+import { hardhatAdvanceTimeAndBlock, hardhatGetTime } from "../../../common/TimeTravel";
+import { delpoyStake } from "./TestQuantumPortalStakeUtils";
 
 async function getPendingWithdrawItems(ctx: TestContext, stk: QuantumPortalStake): Promise<{ opensAt: number, amount: string }[]> {
     const releaseQ = await stk.withdrawItemsQueueParam(ctx.owner);

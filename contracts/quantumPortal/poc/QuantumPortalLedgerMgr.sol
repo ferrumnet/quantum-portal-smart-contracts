@@ -186,7 +186,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
 
         // Validate miner
         bytes32 msgHash = keccak256(abi.encode(MINE_REMOTE_BLOCK, remoteChainId, blockNonce, transactions, salt));
-        IQuantumPortalMinerMgr.ValidationResult validationResult = IQuantumPortalMinerMgr(minerMgr).validateMinerSignature(
+        IQuantumPortalMinerMgr.ValidationResult validationResult = IQuantumPortalMinerMgr(minerMgr).verifyMinerSignature(
             msgHash,
             expiry,
             salt,
