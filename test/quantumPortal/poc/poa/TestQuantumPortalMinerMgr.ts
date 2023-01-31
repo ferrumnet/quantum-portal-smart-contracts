@@ -1,25 +1,13 @@
-import { ethers } from "hardhat";
-import { QuantumPortalStake } from "../../../../typechain-types/QuantumPortalStake";
-import { QuantumPortalMinerMgr } from "../../../../typechain-types/QuantumPortalMinerMgr";
-import { abi, deployWithOwner, deployDummyToken, getCtx, TestContext, Wei, throws, ZeroAddress, expiryInFuture } from 'foundry-contracts/dist/test/common/Utils';
+import { getCtx, Wei, throws, expiryInFuture } from 'foundry-contracts/dist/test/common/Utils';
 import { getBridgeMethodCall, randomSalt } from "foundry-contracts/dist/test/common/Eip712Utils";
-import { hardhatGetTime } from "../../../common/TimeTravel";
-import { delpoyStake } from "./TestQuantumPortalStakeUtils";
+import { delpoyStake, deployMinerMgr } from "./TestQuantumPortalStakeUtils";
 import { expect } from "chai";
-
-async function  deployMiner(ctx: TestContext, stk: QuantumPortalStake) {
-    const initData = abi.encode(['address'], [stk.address]);
-    console.log("INIT", initData)
-    const min = await deployWithOwner(ctx, 'QuantumPortalMinerMgr', ZeroAddress, initData
-        ) as QuantumPortalMinerMgr;
-    return min;
-}
 
 describe('Test QP miner to see if it validates properly', function() {
     it('Can verify when miners have stake', async function() {
         const ctx = await getCtx();
         const stk = await delpoyStake(ctx);
-        const mine = await deployMiner(ctx, stk);
+        const mine = await deployMinerMgr(ctx, stk);
 
         const msgHash = randomSalt(); // Verifying some random message
         const expiry = expiryInFuture().toString();

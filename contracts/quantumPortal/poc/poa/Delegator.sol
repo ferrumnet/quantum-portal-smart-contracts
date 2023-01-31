@@ -6,8 +6,8 @@ pragma solidity ^0.8.0;
  */
 contract Delegator {
     event Delegated(address delator, address delegatee);
-    mapping(address => address) delegation;
-    mapping(address => address) reverseDelegation;
+    mapping(address => address) public delegation;
+    mapping(address => address) public reverseDelegation;
 
     function delegate(address to
     ) external {
