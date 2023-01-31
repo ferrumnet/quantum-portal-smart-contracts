@@ -61,12 +61,19 @@ contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712 {
         bytes memory multiSig
     ) internal view returns (address) {
         console.log("EXPIRY IS", expiry);
-        console.log("EXPIRY IS", block.timestamp);
+        console.log("MSG HASH");
+        console.logBytes32(msgHash);
         require(block.timestamp < expiry, "CR: signature timed out");
         require(expiry < block.timestamp + WEEK, "CR: expiry too far");
         require(salt != 0, "MSC: salt required");
         bytes32 message = keccak256(abi.encode(MINER_SIGNATURE, msgHash, expiry, salt));
+        console.log("MESSAGE IS");
+        console.logBytes32(message);
         bytes32 digest = _hashTypedDataV4(message);
+        console.log("DIGEST IS");
+        console.log("CHAIN_ID", block.chainid);
+        console.log("ME", address(this));
+        console.logBytes32(digest);
         MultiSigLib.Sig[] memory signatures = MultiSigLib.parseSig(multiSig);
         require(signatures.length == 1, "QPMM: wrong number of signatures");
         address _signer = ECDSA.recover(

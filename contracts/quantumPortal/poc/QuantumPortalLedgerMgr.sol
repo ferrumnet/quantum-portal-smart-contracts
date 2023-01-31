@@ -326,7 +326,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         uint64 remoteChainId,
         uint64 blockNonce,
         QuantumPortalLib.RemoteTransaction[] memory transactions
-    ) private pure returns (bytes32) {
+    ) external pure returns (bytes32) {
         return _calculateBlockHash(remoteChainId, blockNonce, transactions);
     }
 

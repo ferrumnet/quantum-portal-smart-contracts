@@ -13,6 +13,7 @@ import { QuantumPortalStake } from "../../../typechain-types/QuantumPortalStake"
 import { ERC20 } from "foundry-contracts/dist/test/common/UniswapV2";
 import { Token } from "@uniswap/sdk";
 import { Signer } from "ethers";
+import { QuantumPortalMinerMgr } from "../../../typechain-types/QuantumPortalMinerMgr";
 
 export const FERRUM_TOKENS = {
     26000: '0x00',
@@ -64,11 +65,38 @@ export class QuantumPortalUtils {
             console.log('Nothing to mine');
             return false;
         }
-
-        const mine = await target.minerMgr();
-        const msgHash = await target.calculateBlockHash(
+        const [salt, expiry, signature] = await QuantumPortalUtils.generateSignatureForMining(
+            target,
+            chain1,
             sourceBlock[0].metadata.chainId.toString(),
             sourceBlock[0].metadata.nonce.toString(),
+            txs,
+            minerSk
+        );
+        await target.mineRemoteBlock(
+            chain1,
+            sourceBlock[0].metadata.nonce.toString(),
+            txs,
+            salt,
+            expiry,
+            signature,
+        );
+        return true;
+    }
+
+    static async generateSignatureForMining(
+        target: QuantumPortalLedgerMgrTest,
+        sourceChainId: string,
+        nonce: string,
+        txs: any,
+        minerSk: string,
+    ) {
+        const mineAddress = await target.minerMgr();
+        const mineD = await ethers.getContractFactory('QuantumPortalMinerMgr');
+        const mine = await mineD.attach(mineAddress) as QuantumPortalMinerMgr;
+        const msgHash = await target.calculateBlockHash(
+            sourceChainId,
+            nonce,
             txs);
         const expiry = expiryInFuture().toString();
         const salt = randomSalt();
@@ -76,7 +104,7 @@ export class QuantumPortalUtils {
         const multiSig = await getBridgeMethodCall(
             await mine.NAME(),
             await mine.VERSION(),
-            chain1,
+            ethers.provider.network.chainId,
             mine.address,
             'MinerSignature',
             [
@@ -86,15 +114,7 @@ export class QuantumPortalUtils {
             ],
             [minerSk]
         );
-        await target.mineRemoteBlock(
-            chain1,
-            sourceBlock[0].metadata.nonce.toString(),
-            txs,
-            randomSalt(),
-            expiry.toString(),
-            multiSig.signature!,
-        );
-        return true;
+        return [salt, expiry, multiSig.signature!];
     }
 
     static async finalize(
@@ -126,7 +146,6 @@ export class QuantumPortalUtils {
         realChainId: number, // used for EIP-712 signature generation
         remoteChainId: number,
         mgr: QuantumPortalLedgerMgrTest,
-        sourceManager: QuantumPortalLedgerMgrTest,
         authMgrAddr: string,
         finalizers: string[],
         finalizersSk: string[],
@@ -195,7 +214,9 @@ export class QuantumPortalUtils {
         const token = new ERC20(tokenAddress);
         await (await token.token()).connect(signer).transfer(stake.address, await token.amountToMachine(amount));
         await stake.stake(staker, await stake.STAKE_ID());
+        console.log(`Staked ${amount} for ${staker}`)
         await stake.connect(signer).delegate(delegatee);
+        console.log(`Delegated to ${delegatee}`);
     }
 }
 
