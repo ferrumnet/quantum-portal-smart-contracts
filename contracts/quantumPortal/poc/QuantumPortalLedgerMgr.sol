@@ -74,6 +74,10 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         authorityMgr = _authorityMgr;
     }
 
+    function updateMinerMgr(address _minerMgr) external onlyAdmin {
+        minerMgr = _minerMgr;
+    }
+
     constructor(uint256 overrideChainId) {
         CHAIN_ID = overrideChainId == 0 ? block.chainid : overrideChainId;
     }
@@ -185,9 +189,8 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         }
 
         // Validate miner
-        bytes32 msgHash = keccak256(abi.encode(MINE_REMOTE_BLOCK, remoteChainId, blockNonce, transactions, salt));
-        IQuantumPortalMinerMgr.ValidationResult validationResult = IQuantumPortalMinerMgr(minerMgr).validateMinerSignature(
-            msgHash,
+        IQuantumPortalMinerMgr.ValidationResult validationResult = IQuantumPortalMinerMgr(minerMgr).verifyMinerSignature(
+            blockHash,
             expiry,
             salt,
             multiSignature,
@@ -311,6 +314,20 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
      */
     function getBlockIdx(uint64 chainId, uint64 nonce) external pure returns (uint256) {
         return blockIdx(chainId, nonce);
+    }
+
+    /**
+     @notice Helper method for client applications to calculate the block hash.
+     @param remoteChainId The remote chain ID
+     @param blockNonce The block nonce
+     @param transactions Remote transactions in the block
+     */
+    function  calculateBlockHash(
+        uint64 remoteChainId,
+        uint64 blockNonce,
+        QuantumPortalLib.RemoteTransaction[] memory transactions
+    ) external pure returns (bytes32) {
+        return _calculateBlockHash(remoteChainId, blockNonce, transactions);
     }
 
     /**

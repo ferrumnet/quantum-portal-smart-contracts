@@ -59,7 +59,7 @@ export function produceSignature(
     const structureHash = Web3.utils.keccak256(structure);
     const ds = domainSeparator(eth, eipParams.contractName, eipParams.contractVersion, netId, contractAddress);
 	// console.log('Method hash is ', methodHash, methodSig);
-	// console.log('Structure hash is ', structureHash, {params});
+	console.log('Structure hash is ', structureHash, {params});
     // console.log('values area', [methodHash, ...eipParams.args.map(p => p.value)]);
 	// console.log('Domain separator is ', ds);
     // console.log('Chain ID is', netId);

@@ -7,9 +7,9 @@ interface IQuantumPortalMinerMgr {
         Valid,
         NotEnoughStake
     }
-    function validateMinerSignature(
+    function verifyMinerSignature(
         bytes32 msgHash,
-        uint256 expiry,
+        uint64 expiry,
         bytes32 salt,
         bytes memory signature,
         uint256 msgValue,

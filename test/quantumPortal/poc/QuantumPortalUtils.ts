@@ -8,6 +8,16 @@ import { abi, deployWithOwner, expiryInFuture, getCtx, isAllZero, Salt, TestCont
     'foundry-contracts/dist/test/common/Utils';
 import { getBridgeMethodCall } from '../../bridge/BridgeUtilsV12';
 import { keccak256 } from "ethers/lib/utils";
+import { delpoyStake, deployMinerMgr } from "./poa/TestQuantumPortalStakeUtils";
+import { QuantumPortalStake } from "../../../typechain-types/QuantumPortalStake";
+import { ERC20 } from "foundry-contracts/dist/test/common/UniswapV2";
+import { Token } from "@uniswap/sdk";
+import { Signer } from "ethers";
+import { QuantumPortalMinerMgr } from "../../../typechain-types/QuantumPortalMinerMgr";
+
+export const FERRUM_TOKENS = {
+    26000: '0x00',
+}
 
 export class QuantumPortalUtils {
     static async mine(
@@ -15,6 +25,7 @@ export class QuantumPortalUtils {
         chain2: number,
         source: QuantumPortalLedgerMgrTest,
         target: QuantumPortalLedgerMgrTest,
+        minerSk: string,
     ): Promise<boolean> {
         const blockReady = await source.isLocalBlockReady(chain2);
         console.log('Local block ready?', blockReady)
@@ -54,17 +65,56 @@ export class QuantumPortalUtils {
             console.log('Nothing to mine');
             return false;
         }
-        const expiry = Math.round(Date.now() / 1000) + 3600 * 100;
-        const sig = '0x'; // TODO: Generate the signature...
+        const [salt, expiry, signature] = await QuantumPortalUtils.generateSignatureForMining(
+            target,
+            chain1,
+            sourceBlock[0].metadata.chainId.toString(),
+            sourceBlock[0].metadata.nonce.toString(),
+            txs,
+            minerSk
+        );
         await target.mineRemoteBlock(
             chain1,
             sourceBlock[0].metadata.nonce.toString(),
             txs,
-            randomSalt(),
-            expiry.toString(),
-            sig,
+            salt,
+            expiry,
+            signature,
         );
         return true;
+    }
+
+    static async generateSignatureForMining(
+        target: QuantumPortalLedgerMgrTest,
+        sourceChainId: string,
+        nonce: string,
+        txs: any,
+        minerSk: string,
+    ) {
+        const mineAddress = await target.minerMgr();
+        const mineD = await ethers.getContractFactory('QuantumPortalMinerMgr');
+        const mine = await mineD.attach(mineAddress) as QuantumPortalMinerMgr;
+        const msgHash = await target.calculateBlockHash(
+            sourceChainId,
+            nonce,
+            txs);
+        const expiry = expiryInFuture().toString();
+        const salt = randomSalt();
+        // Verify with a miner that has no stakes
+        const multiSig = await getBridgeMethodCall(
+            await mine.NAME(),
+            await mine.VERSION(),
+            ethers.provider.network.chainId,
+            mine.address,
+            'MinerSignature',
+            [
+                { type: 'bytes32', name: 'msgHash', value: msgHash},
+                { type: 'uint64', name: 'expiry', value: expiry},
+                { type: 'bytes32', name: 'salt', value: salt},
+            ],
+            [minerSk]
+        );
+        return [salt, expiry, multiSig.signature!];
     }
 
     static async finalize(
@@ -96,7 +146,6 @@ export class QuantumPortalUtils {
         realChainId: number, // used for EIP-712 signature generation
         remoteChainId: number,
         mgr: QuantumPortalLedgerMgrTest,
-        sourceManager: QuantumPortalLedgerMgrTest,
         authMgrAddr: string,
         finalizers: string[],
         finalizersSk: string[],
@@ -158,6 +207,17 @@ export class QuantumPortalUtils {
         const block = existingBlock[0].blockHash.toString();
         return isAllZero(block) ? undefined : block;
     }
+
+    static async stakeAndDelegate(stake: QuantumPortalStake, amount: string, staker: string, delegatee: string, signer: Signer) {
+        const id = await stake.STAKE_ID();
+        const tokenAddress = await stake.baseToken(id);
+        const token = new ERC20(tokenAddress);
+        await (await token.token()).connect(signer).transfer(stake.address, await token.amountToMachine(amount));
+        await stake.stake(staker, await stake.STAKE_ID());
+        console.log(`Staked ${amount} for ${staker}`)
+        await stake.connect(signer).delegate(delegatee);
+        console.log(`Delegated to ${delegatee}`);
+    }
 }
 
 export interface PortalContext extends TestContext {
@@ -167,6 +227,7 @@ export interface PortalContext extends TestContext {
         poc: QuantumPortalPocTest;
         token: DummyToken;
         autorityMgr: QuantumPortalAuthorityMgr;
+        stake: QuantumPortalStake;
     },
     chain2: {
         chainId: number;
@@ -174,6 +235,7 @@ export interface PortalContext extends TestContext {
         poc: QuantumPortalPocTest;
         token: DummyToken;
         autorityMgr: QuantumPortalAuthorityMgr;
+        stake: QuantumPortalStake;
     },
 }
 
@@ -194,20 +256,28 @@ export async function deployAll(): Promise<PortalContext> {
 	console.log('About to deploy the ledger managers');
     const autorityMgr = await autorityMgrF.deploy() as QuantumPortalAuthorityMgr;
 
+    console.log('Deploying some tokens');
+	const tokenData = abi.encode(['address'], [ctx.owner]);
+    const tok1 = await deployWithOwner(ctx, 'DummyToken', ZeroAddress, tokenData);
+
+    // Deploy staking and mining manager
+    const stake = await delpoyStake(ctx, tok1.address);
+    // const stake = await delpoyStake(ctx, FERRUM_TOKENS[ctx.chainId] || panick(`No FRM token is configured for chain ${ctx.chainId}`));
+    const miningMgr = await deployMinerMgr(ctx, stake);
+
     console.log(`Registering a single authority ("${ctx.wallets[0]}"`);
     await autorityMgr.initialize(ctx.owner, 1, 1, 0, [ctx.wallets[0]]); 
 
+    console.log(`Settting authority mgr (${autorityMgr.address}) and miner mgr ${miningMgr.address} on both QP managers`);
     await mgr1.updateAuthorityMgr(autorityMgr.address);
+    await mgr1.updateMinerMgr(miningMgr.address);
     await mgr2.updateAuthorityMgr(autorityMgr.address);
+    await mgr2.updateMinerMgr(miningMgr.address);
 
     await poc1.setManager(mgr1.address);
     await poc2.setManager(mgr2.address);
     await mgr1.updateLedger(poc1.address);
     await mgr2.updateLedger(poc2.address);
-
-    console.log('Deploying some tokens');
-	const tokenData = abi.encode(['address'], [ctx.owner]);
-    const tok1 = await deployWithOwner(ctx, 'DummyToken', ZeroAddress, tokenData);
 
 	return {...ctx,
         chain1: {
@@ -216,6 +286,7 @@ export async function deployAll(): Promise<PortalContext> {
             poc: poc1,
             autorityMgr,
             token: tok1,
+            stake,
         },
         chain2: {
             chainId: 2,
@@ -223,6 +294,7 @@ export async function deployAll(): Promise<PortalContext> {
             poc: poc2,
             autorityMgr,
             token: tok1,
+            stake,
         }
     } as PortalContext;
 }
