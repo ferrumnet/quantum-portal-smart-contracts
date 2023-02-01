@@ -37,11 +37,17 @@ describe("Mint and move", function () {
 
         await tokMaster.mintAndBurn(ctx.chain2.chainId, ctx.chain1.chainId, Wei.from('10'), Wei.from('1'), Wei.from('1'));
 
+        console.log('Setting up the miner...');
+        await QuantumPortalUtils.stakeAndDelegate(ctx.chain1.stake, '1', ctx.owner, ctx.wallets[0], ctx.signers.owner);
+
         console.log('Moving time forward');
         await advanceTimeAndBlock(120); // Two minutes
-        const mined = await QuantumPortalUtils.mine(ctx.chain1.chainId, ctx.chain2.chainId, ctx.chain1.ledgerMgr, ctx.chain2.ledgerMgr);
+        const mined = await QuantumPortalUtils.mine(ctx.chain1.chainId, ctx.chain2.chainId, ctx.chain1.ledgerMgr, ctx.chain2.ledgerMgr, ctx.sks[0]);
         expect(mined).to.be.true;
-        await QuantumPortalUtils.finalize(ctx.chain1.chainId, ctx.chain2.ledgerMgr);
+        await QuantumPortalUtils.finalize(
+            ctx.chain1.chainId,
+            ctx.chain2.ledgerMgr,
+            ctx.sks[0]);
 
         console.log('Remember master token is deployed at ', tokMaster.address);
         console.log('Sweet! Now we should be all good'); 

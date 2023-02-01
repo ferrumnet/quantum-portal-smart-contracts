@@ -73,13 +73,10 @@ describe("Test qp", function () {
         let minedBlock = await ctx.chain2.ledgerMgr.minedBlockByNonce(ctx.chain1.chainId, 1);
         console.log('Mined block is ', JSON.stringify(minedBlock, undefined, 2));
         console.log('Now finalizing on chain2');
-        await QuantumPortalUtils.callFinalizeWithSignature(
-            ctx.chainId,
+        await QuantumPortalUtils.finalize(
             ctx.chain1.chainId,
             ctx.chain2.ledgerMgr,
-            ctx.chain2.autorityMgr.address,
-            [ctx.wallets[0]],
-            [ctx.sks[0]],
+            ctx.sks[0],
         );
         // await ctx.chain2.ledgerMgr.finalize(ctx.chain1.chainId, 1, Salt, [], salt0x(), expiryInFuture(), '0x');
         // let remoteBalance = Wei.to((await ctx.chain2.poc.remoteBalanceOf(ctx.chain1.chainId, ctx.chain1.token.address, ctx.acc1)).toString());

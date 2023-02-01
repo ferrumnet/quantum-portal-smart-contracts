@@ -67,8 +67,7 @@ export class QuantumPortalUtils {
         }
         const [salt, expiry, signature] = await QuantumPortalUtils.generateSignatureForMining(
             target,
-            chain1,
-            sourceBlock[0].metadata.chainId.toString(),
+            chain1.toString(),
             sourceBlock[0].metadata.nonce.toString(),
             txs,
             minerSk
@@ -98,6 +97,11 @@ export class QuantumPortalUtils {
             sourceChainId,
             nonce,
             txs);
+        console.log('Msg Hash for :', {
+            sourceChainId,
+            nonce,
+            txs
+        }, 'is: ', msgHash);
         const expiry = expiryInFuture().toString();
         const salt = randomSalt();
         // Verify with a miner that has no stakes
@@ -118,24 +122,52 @@ export class QuantumPortalUtils {
     }
 
     static async finalize(
-        chain: number,
+        sourceChainId: number,
         mgr: QuantumPortalLedgerMgrTest,
+        finalizerSk: string,
     ) {
-        const block = await mgr.lastRemoteMinedBlock(chain);
-        const lastFin = await mgr.lastFinalizedBlock(chain);
+        const block = await mgr.lastRemoteMinedBlock(sourceChainId);
+        const lastFin = await mgr.lastFinalizedBlock(sourceChainId);
         const blockNonce = block.nonce.toNumber();
         const fin = lastFin.nonce.toNumber();
         if (blockNonce > fin) {
-            console.log(`Calling mgr.finalize(${chain}, ${blockNonce.toString()})`);
-            const expiry = Math.round(Date.now() / 1000) + 3600 * 100;
-            const sig = '0x'; // TODO: Generate the signature...
-            await mgr.finalize(chain,
-                blockNonce.toString(),
-                Salt,
-                [],
-                randomSalt(),
-                expiry.toString(),
-                sig,
+            console.log(`Calling mgr.finalize(${sourceChainId}, ${blockNonce.toString()})`);
+            const expiry = expiryInFuture().toString();
+            const salt = randomSalt();
+            const finalizersHash = randomSalt();
+            const FINALIZE_METHOD = 
+                keccak256(
+                    Buffer.from("Finalize(uint256 remoteChainId,uint256 blockNonce,bytes32 finalizersHash,address[] finalizers,bytes32 salt,uint64 expiry)", 'utf-8')
+                );
+            const msgHash = keccak256(abi.encode(['bytes32', 'uint256', 'uint256', 'bytes32', 'address[]', 'bytes32', 'uint64'],
+                [FINALIZE_METHOD, sourceChainId, blockNonce, finalizersHash, [], salt, expiry]));
+            
+            const authorityAddr = await mgr.authorityMgr();
+            const authorityF = await ethers.getContractFactory('QuantumPortalAuthorityMgr');
+            const authority = await authorityF.attach(authorityAddr) as QuantumPortalAuthorityMgr;
+
+            const name = await authority.NAME();
+            const version = await authority.VERSION();
+            // Create the signature for the authority mgr contract
+            let multiSig = await getBridgeMethodCall(
+                name, version, (await ethers.provider.getNetwork()).chainId,
+                authorityAddr,
+                'ValidateAuthoritySignature',
+                [
+                    { type: 'uint256', name: 'action', value: '1' },
+                    { type: 'bytes32', name: 'msgHash', value: msgHash },
+                    { type: 'bytes32', name:'salt', value: salt},
+                    { type: 'uint64', name: 'expiry', value: expiry },
+                ]
+                , [finalizerSk]);
+            console.log("Returned from bridgeMethodCall");
+            await mgr.finalize(sourceChainId,
+                blockNonce,
+                finalizersHash,
+                [], // TODO: Remove this parameter
+                salt,
+                expiry,
+                multiSig.signature!,
                 );
         } else {
             console.log('Nothing to finalize...')
@@ -288,7 +320,8 @@ export async function deployAll(): Promise<PortalContext> {
     await mgr1.updateLedger(poc1.address);
     await mgr2.updateLedger(poc2.address);
 
-	return {...ctx,
+	return {
+        ...ctx,
         chain1: {
             chainId: 2600,
             ledgerMgr: mgr1,

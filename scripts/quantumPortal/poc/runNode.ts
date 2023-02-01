@@ -1,11 +1,7 @@
 import { ethers } from "ethers";
 import { QuantumPortalLedgerMgr } from "../../../typechain/QuantumPortalLedgerMgr";
-import { QuantumPortalPoc } from "../../../typechain/QuantumPortalPoc";
-import { QuantumPortalPoc__factory } from '../../../typechain/factories/QuantumPortalPoc__factory';
 import { QuantumPortalLedgerMgr__factory } from '../../../typechain/factories/QuantumPortalLedgerMgr__factory';
 import { QuantumPortalUtils } from "../../../test/quantumPortal/poc/QuantumPortalUtils";
-import { ethers as hardhatEthers } from "hardhat";
-import { panick, sleep } from "../../../test/common/Utils";
 
 const getEnv = (env: string) => {
 	const value = process.env[env];
@@ -55,14 +51,14 @@ class PairMiner {
         // Try to finalize if any
         let authorityMgr = "0xA8900b24cf4284d9017C9Ee976C294b623fB07c8";
         let signer_addresses = [getEnv("OWNER")];
-        let signer_pks = [getEnv("TEST_ACCOUNT_PRIVATE_KEY")];
-        await QuantumPortalUtils.callFinalizeWithSignature(chain2, chain1, this.portal2.mgr as any, this.portal1.mgr as any, authorityMgr, 
-                signer_addresses, signer_pks);
+        let signer_pk = getEnv("TEST_ACCOUNT_PRIVATE_KEY");
+        await QuantumPortalUtils.finalize(chain1, this.portal2.mgr as any, signer_pk);
         if (await QuantumPortalUtils.mine(
             chain1,
             chain2,
             this.portal1.mgr as any,
             this.portal2.mgr as any,
+            signer_pk,
         )) {
             console.log(`Mined!`)
         } else {
