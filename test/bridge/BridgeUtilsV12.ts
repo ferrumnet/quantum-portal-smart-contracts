@@ -64,7 +64,7 @@ export async function getBridgeMethodCall(
 		methodName: string,
 		args: {type: string, name: string, value: string}[], sks: string[]) {
 	const web3 = new Web3();
-	// console.log('We are going to bridge method call it ', args)
+	console.log('We are going to bridge method call it ', args)
 	const msg = produceSignature(
 		web3.eth, chainId, bridge, {
 			contractName: contractName,

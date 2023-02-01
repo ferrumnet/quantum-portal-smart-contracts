@@ -4,9 +4,9 @@ import { QuantumPortalLedgerMgrTest } from "../../../typechain/QuantumPortalLedg
 import { QuantumPortalPocTest } from "../../../typechain/QuantumPortalPocTest";
 import { QuantumPortalAuthorityMgr } from '../../../typechain/QuantumPortalAuthorityMgr';
 import { randomSalt } from "foundry-contracts/dist/test/common/Eip712Utils";
-import { abi, deployWithOwner, expiryInFuture, getCtx, isAllZero, Salt, TestContext, ZeroAddress,  } from 
+import { abi, deployWithOwner, expiryInFuture, getCtx, isAllZero, Salt, TestContext, ZeroAddress} from 
     'foundry-contracts/dist/test/common/Utils';
-import { getBridgeMethodCall } from '../../bridge/BridgeUtilsV12';
+import { getBridgeMethodCall } from 'foundry-contracts/dist/test/common/Eip712Utils';
 import { keccak256 } from "ethers/lib/utils";
 import { delpoyStake, deployMinerMgr } from "./poa/TestQuantumPortalStakeUtils";
 import { QuantumPortalStake } from "../../../typechain-types/QuantumPortalStake";
@@ -160,12 +160,21 @@ export class QuantumPortalUtils {
         const expiry = expiryInFuture().toString();
         const salt = randomSalt();
         const finalizersHash = randomSalt();
+
+        console.log("expiry", expiry);
+        console.log("salt", salt);
+
         const FINALIZE_METHOD = 
             keccak256(
                 Buffer.from("Finalize(uint256 remoteChainId,uint256 blockNonce,bytes32 finalizersHash,address[] finalizers,bytes32 salt,uint64 expiry)", 'utf-8')
             );
+        console.log("This is the finalize method hash : ", FINALIZE_METHOD);
+        console.log("remoteChainId : ", remoteChainId);
+        console.log("blockNonce : ", blockNonce);
         const msgHash = keccak256(abi.encode(['bytes32', 'uint256', 'uint256', 'bytes32', 'address[]', 'bytes32', 'uint64'],
             [FINALIZE_METHOD, remoteChainId, blockNonce, finalizersHash, finalizers, salt, expiry]));
+        console.log("This is the finalize msg hash : ", msgHash);
+
 
         const name = "FERRUM_QUANTUM_PORTAL_AUTHORITY_MGR";
         const version = "000.010";
@@ -183,9 +192,9 @@ export class QuantumPortalUtils {
 				{ type: 'uint64', name: 'expiry', value: expiry },
 			]
 			, finalizersSk);
-
+        console.log("This is the multisig : ", multiSig);
         console.log("Returned from bridgeMethodCall");
-        await mgr.finalize(remoteChainId,
+        await mgr.finalizeSingleSigner(remoteChainId,
             blockNonce,
             finalizersHash,
             finalizers,

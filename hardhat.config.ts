@@ -91,11 +91,10 @@ const config: HardhatUserConfig = {
   },
   etherscan: {
     // Your API key for Etherscan
-    // Obtain one at https://etherscan.io/
-    //    apiKey: getEnv('BSCSCAN_API_KEY'),
-    //  apiKey: getEnv('POLYGONSCAN_API_KEY'),
-     // apiKey: getEnv('ETHERSCAN_API_KEY'),
-     apiKey: getEnv('SNOWTRACE_API_KEY'),
+     apiKey: {
+      bscTestnet: getEnv('BSCSCAN_API_KEY'),
+      polygonMumbai : getEnv('POLYGONSCAN_API_KEY'),
+     }
   }
 };
 export default config;
