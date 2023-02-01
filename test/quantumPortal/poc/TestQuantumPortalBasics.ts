@@ -43,11 +43,8 @@ describe("Test qp", function () {
         expect(isBlockReady).to.be.true;
 
         console.log('Now, mining a block on chain 2');
-        await ctx.chain2.ledgerMgr.mineRemoteBlock(
-            ctx.chain1.chainId,
-            1,
-            [
-                {
+        await QuantumPortalUtils.stakeAndDelegate(ctx.chain1.stake, '1', ctx.owner, ctx.wallets[0], ctx.signers.owner);
+        const txs = [{
                     token: tx.token.toString(),
                     amount: tx.amount.toString(),
                     gas: tx.gas.toString(),
@@ -56,11 +53,21 @@ describe("Test qp", function () {
                     sourceBeneficiary: tx.sourceBeneficiary.toString(),
                     sourceMsgSender: tx.sourceMsgSender.toString(),
                     timestamp: tx.timestamp.toString(),
-            }
-            ],
-            salt0x(),
-            expiryInFuture(),
-            '0x', // TODO: Generate proper signature
+            }];
+        const [salt, expiry, signature] = await QuantumPortalUtils.generateSignatureForMining(
+            ctx.chain2.ledgerMgr,
+            ctx.chain1.chainId.toString(),
+            '1',
+            txs,
+            ctx.sks[0],
+        );
+        await ctx.chain2.ledgerMgr.mineRemoteBlock(
+            ctx.chain1.chainId,
+            '1',
+            txs,
+            salt,
+            expiry,
+            signature,
         );
         console.log('Mined');
         let minedBlock = await ctx.chain2.ledgerMgr.minedBlockByNonce(ctx.chain1.chainId, 1);
@@ -69,7 +76,6 @@ describe("Test qp", function () {
         await QuantumPortalUtils.callFinalizeWithSignature(
             ctx.chainId,
             ctx.chain1.chainId,
-            '1',
             ctx.chain2.ledgerMgr,
             ctx.chain2.autorityMgr.address,
             [ctx.wallets[0]],

@@ -32,7 +32,8 @@ const config: HardhatUserConfig = {
 		hardhat: {
       accounts: {
         mnemonic: TEST_MNEMONICS,
-      }
+      },
+      blockGasLimit: 50000000
 		},
     local: {
 	    chainId: 31337,

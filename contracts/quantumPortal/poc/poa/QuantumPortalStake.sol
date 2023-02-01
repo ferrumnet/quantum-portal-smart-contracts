@@ -1,15 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "./IQuantumPortalStake.sol";
 import "./QuantumPortalAuthorityMgr.sol";
+import "./Delegator.sol";
 import "../../../staking/StakeOpen.sol";
+
+import "hardhat/console.sol";
 
 /**
  @notice The QP stake, is a special type of open staking, with two exceptions:
     1 - Unstake will move assets to a locked state, for a period.
     2 - Authorities can slash
  */
-contract QuantumPortalStake is StakeOpen {
+contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
     struct WithdrawItem {
         uint64 opensAt;
         uint128 amount;
@@ -20,11 +24,29 @@ contract QuantumPortalStake is StakeOpen {
     }
 
     uint64 constant WITHDRAW_LOCK = 30 * 3600 * 24;
-    address constant DEFAULT_ID = address(1);
+    address public STAKE_ID;
     address slashTarget;
-    IQuantumPortalAuthorityMgr auth;
+    IQuantumPortalAuthorityMgr public auth;
     mapping(address => Pair) public withdrawItemsQueueParam;
     mapping(address => mapping (uint => WithdrawItem)) public withdrawItemsQueue;
+
+    constructor() {
+        bytes memory _data = IFerrumDeployer(msg.sender).initData();
+        (address token, address authority) = abi.decode(_data, (address, address));
+        address[] memory tokens = new address[](1);
+        tokens[0] = token;
+        _init(token, "QP Stake", tokens);
+        STAKE_ID = token;
+        auth = IQuantumPortalAuthorityMgr(authority);
+    }
+
+    function delegatedStakeOf(address delegatee
+    ) external override view returns (uint256) {
+        require(delegatee != address(0), "QPS: delegatee required");
+        address staker = reverseDelegation[delegatee];
+        require(staker != address(0), "QPS: delegatee not valid");
+		return state.stakes[STAKE_ID][staker];
+	}
 
     /**
      @notice This will first, release all the available withdraw items, 
@@ -35,7 +57,8 @@ contract QuantumPortalStake is StakeOpen {
         address staker,
         uint256 amount
     ) internal override nonZeroAddress(staker) {
-        require(id == DEFAULT_ID, "QPS: bad id");
+        require(id == STAKE_ID, "QPS: bad id");
+        require(to == msg.sender, "QPS: only withdraw to self");
         if (amount == 0) {
             return;
         }
@@ -56,19 +79,24 @@ contract QuantumPortalStake is StakeOpen {
         pushToQueue(staker, wi);
     }
 
-    function releaseWithdrawItems(address staker, address receiver, uint256 max) public nonReentrant returns(uint256 total) {
+    function releaseWithdrawItems(address staker, address receiver, uint256 max
+    ) public returns(uint256 total) {
         require(staker != address(0), "QPS: staker requried");
-        address token = baseInfo.baseToken[DEFAULT_ID];
+        address token = baseInfo.baseToken[STAKE_ID];
         (Pair memory pair, WithdrawItem memory wi) = peekQueue(staker);
+        console.log("PEEKED", wi.opensAt, block.timestamp);
         while(wi.opensAt != 0 && wi.opensAt < block.timestamp) {
             popFromQueue(staker, pair);
+            console.log("Sending tokens ", wi.amount);
             sendToken(token, receiver, wi.amount);
             total += wi.amount;
+            console.log("Total is", total);
             if (max != 0 && total >= max) {
                 // Shortcut if total greater than 0
                 return total;
             }
             (pair, wi) = peekQueue(staker);
+            console.log("PEEKED", wi.opensAt, block.timestamp);
         }
     }
 
@@ -91,11 +119,11 @@ contract QuantumPortalStake is StakeOpen {
         address staker,
         uint256 amount
     ) internal returns (uint256 remaining) {
-		uint stake = state.stakes[DEFAULT_ID][staker];
+		uint stake = state.stakes[STAKE_ID][staker];
         stake = amount < stake ? amount : stake;
         remaining = amount - stake;
-        _withdrawOnlyUpdateStateAndPayRewards(slashTarget, DEFAULT_ID, staker, stake);
-        address token = baseInfo.baseToken[DEFAULT_ID];
+        _withdrawOnlyUpdateStateAndPayRewards(slashTarget, STAKE_ID, staker, stake);
+        address token = baseInfo.baseToken[STAKE_ID];
         sendToken(token, slashTarget, amount);
     }
 
@@ -110,7 +138,7 @@ contract QuantumPortalStake is StakeOpen {
     function pushToQueue(address staker, WithdrawItem memory wi) private {
         uint end = withdrawItemsQueueParam[staker].end;
         withdrawItemsQueueParam[staker].end = uint64(end) + 1;
-        withdrawItemsQueue[staker][end + 1] = wi;
+        withdrawItemsQueue[staker][end] = wi; // starts from 0, so end is empty by now
     }
 
     function popFromQueue(address staker, Pair memory pair) private {
