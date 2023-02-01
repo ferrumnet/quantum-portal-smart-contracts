@@ -183,6 +183,10 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             remoteChainId,
             blockNonce,
             transactions);
+        console.log("REMOTE_CHAIN_ID", remoteChainId);
+        console.log("BLOCK_NONCE", blockNonce);
+        console.log("MSG HASH");
+        console.logBytes32(blockHash);
         uint256 totalValue = 0;
         for (uint i=0; i < transactions.length; i++) {
             totalValue += _transactionValue(transactions[i]);
