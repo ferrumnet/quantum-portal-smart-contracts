@@ -90,10 +90,10 @@ async function prep(owner: string) {
 	    const authM = await ethers.getContractFactory("QuantumPortalMinerMgr");
         ctx.miner = await authM.attach(deployed.QuantumPortalMinerMgr) as any;
     } else {
-        console.log(ctx.stake.address);
+        console.log('Deploying miner mgr for stake', ctx.stake.address);
         const initData = abi.encode(['address'], [ctx.stake.address]);
-        const deped = await deployUsingDeployer('QuantumPortalMinerMgr', owner, initData,
-        DEPLOYER_CONTRACT, DEPLPOY_SALT_1) as QuantumPortalMinerMgr;
+        const deped = await deployUsingDeployer('QuantumPortalMinerMgr', ZeroAddress, initData,
+            DEPLOYER_CONTRACT, DEPLPOY_SALT_1) as QuantumPortalMinerMgr;
         console.log(`Deployed miner mgr at `, deped.address);
         ctx.miner = deped as any;
     }
