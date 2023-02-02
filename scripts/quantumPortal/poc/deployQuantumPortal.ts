@@ -1,27 +1,34 @@
 import { ethers } from "hardhat";
+import { abi, deployDummyToken, deployWithOwner, TestContext, ZeroAddress } from "foundry-contracts/dist/test/common/Utils";
 import { panick, _WETH, deployUsingDeployer, contractExists, isAllZero } from "../../../test/common/Utils";
 import { QuantumPortalPoc } from "../../../typechain/QuantumPortalPoc";
 import { QuantumPortalLedgerMgr } from "../../../typechain/QuantumPortalLedgerMgr";
 import { DEPLOYER_CONTRACT, DEPLPOY_SALT_1 } from "../../consts";
 import { QuantumPortalAuthorityMgr } from "../../../typechain/QuantumPortalAuthorityMgr";
+import { QuantumPortalStake } from "../../../typechain/QuantumPortalStake";
+import { QuantumPortalMinerMgr } from "../../../typechain/QuantumPortalMinerMgr";
+
+const STAKE_TOKEN_OBJ = {
+    97 : "0x326C977E6efc84E512bB9C30f76E30c160eD06FB",
+    80001 : "0x326C977E6efc84E512bB9C30f76E30c160eD06FB"
+}
+
 
 const deployed = {
-    QuantumPortalPoc: '',
-    QuantumPortalLedgerMgr: '',
-    QuantumPortalAuthorityMgr: '',
-    // QuantumPortalPoc: '0x735af3bb15e4110cbbad0d74652da4f076879b97',
-    // QuantumPortalLedgerMgr: '0x907383f7186d8b9ab51b7c879dbad7d71c56220e',
-    // QuantumPortalPoc: '0x2c24a6b225b4c82d3241f5c7c037cc374a979b17',
-    // QuantumPortalLedgerMgr: '0x3d7d171d02d5f37c8eb0d3eea72859d5fc758ffb',
-    // QuantumPortalPoc: '0x010aC4c06D5aD5Ad32bF29665b18BcA555553151',
-    // QuantumPortalLedgerMgr: '0xd36312D594852462d6760042E779164EB97301cd',
-    QuantumPortalFeeManager: '', // Not yet implemented   
+    QuantumPortalPoc: '0xBFdba405bA3b4DaB1fFBD820671FaB70A439960D',
+    QuantumPortalLedgerMgr: '0xfe8f8b081c8cAc86481F2Ac68359171a0166Bc27',
+    QuantumPortalAuthorityMgr: '0x56C48b568e9B98DB1d3427b479d6e82Db4b4Bb64',
+    QuantumPortalMinerMgr: '',
+    QuantumPortalStake: '0xB47124F18B396329d903dC3F27784349A6Ca4334',
+    //QuantumPortalFeeManager: '',
 };
 
 interface Ctx {
     poc: QuantumPortalPoc;
     mgr: QuantumPortalLedgerMgr;
     auth: QuantumPortalAuthorityMgr;
+    miner: QuantumPortalMinerMgr,
+    stake: QuantumPortalStake
 }
 
 async function prep(owner: string) {
@@ -47,7 +54,7 @@ async function prep(owner: string) {
         ctx.mgr = await pocF.attach(deployed.QuantumPortalLedgerMgr) as any;
     } else {
         const deped = await deployUsingDeployer('QuantumPortalLedgerMgrImpl', owner, '0x',
-        DEPLOYER_CONTRACT, DEPLPOY_SALT_1) as QuantumPortalPoc;
+        DEPLOYER_CONTRACT, DEPLPOY_SALT_1) as QuantumPortalLedgerMgr;
         console.log(`Deployed QuantumPortalLedgerMgr  at `, deped.address);
         ctx.mgr = deped as any;
     }
@@ -58,10 +65,39 @@ async function prep(owner: string) {
         ctx.auth = await authM.attach(deployed.QuantumPortalAuthorityMgr) as any;
     } else {
         const deped = await deployUsingDeployer('QuantumPortalAuthorityMgr', owner, '0x',
-        DEPLOYER_CONTRACT, DEPLPOY_SALT_1) as QuantumPortalPoc;
+        DEPLOYER_CONTRACT, DEPLPOY_SALT_1) as QuantumPortalAuthorityMgr;
         console.log(`Deployed auth at `, deped.address);
         ctx.auth = deped as any;
     }
+
+    if (deployed.QuantumPortalStake &&
+        await (contractExists('QuantumPortalStake', deployed.QuantumPortalStake))) {
+        console.log(`QuantumPortalStake exists on `, deployed.QuantumPortalStake);
+	    const authM = await ethers.getContractFactory("QuantumPortalStake");
+        ctx.stake = await authM.attach(deployed.QuantumPortalStake) as any;
+    } else {
+        let stakeToken = STAKE_TOKEN_OBJ[(await ethers.provider.getNetwork()).chainId] || panick(`No stake token address for chain`);
+        const initData = abi.encode(['address', 'address'], [stakeToken, ctx.auth.address]);
+        const deped = await deployUsingDeployer('QuantumPortalStake', owner, initData,
+        DEPLOYER_CONTRACT, DEPLPOY_SALT_1) as QuantumPortalStake;
+        console.log(`Deployed stake at `, deped.address);
+        ctx.stake = deped as any;
+    }
+
+    if (deployed.QuantumPortalMinerMgr &&
+        await (contractExists('QuantumPortalMinerMgr', deployed.QuantumPortalMinerMgr))) {
+        console.log(`QuantumPortalMinerMgr exists on `, deployed.QuantumPortalMinerMgr);
+	    const authM = await ethers.getContractFactory("QuantumPortalMinerMgr");
+        ctx.miner = await authM.attach(deployed.QuantumPortalMinerMgr) as any;
+    } else {
+        console.log(ctx.stake.address);
+        const initData = abi.encode(['address'], [ctx.stake.address]);
+        const deped = await deployUsingDeployer('QuantumPortalMinerMgr', owner, initData,
+        DEPLOYER_CONTRACT, DEPLPOY_SALT_1) as QuantumPortalMinerMgr;
+        console.log(`Deployed miner mgr at `, deped.address);
+        ctx.miner = deped as any;
+    }
+
     return ctx;
 }
 
@@ -85,6 +121,12 @@ async function configure(ctx: Ctx) {
     if (auth != ctx.auth.address) {
         console.log('Updating auth to ', ctx.auth.address);
         await ctx.mgr.updateAuthorityMgr(ctx.auth.address);
+    }
+
+    const miner_mgr = (await ctx.mgr.minerManager()).toString();
+    if (miner_mgr != ctx.miner.address) {
+        console.log('Updating miner to ', ctx.miner.address);
+        await ctx.mgr.updateMinerMgr(ctx.miner.address);
     }
 }
 
