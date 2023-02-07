@@ -15,11 +15,11 @@ const STAKE_TOKEN_OBJ = {
 
 
 const deployed = {
-    QuantumPortalPoc: '0xBFdba405bA3b4DaB1fFBD820671FaB70A439960D',
-    QuantumPortalLedgerMgr: '0xfe8f8b081c8cAc86481F2Ac68359171a0166Bc27',
-    QuantumPortalAuthorityMgr: '0x56C48b568e9B98DB1d3427b479d6e82Db4b4Bb64',
-    QuantumPortalMinerMgr: '',
-    QuantumPortalStake: '0xB47124F18B396329d903dC3F27784349A6Ca4334',
+    QuantumPortalPoc: '0x50F4F6303F9e377D8f3A674F6A44253f5a4CBb62',
+    QuantumPortalLedgerMgr: '0x574358Fa4826f6F614FB394D99e3118784a1e473',
+    QuantumPortalAuthorityMgr: '0x56a191D2B56202beBB1e1294e9f02D72F0d133ad',
+    QuantumPortalMinerMgr: '0x9458910F2b1f8B8c409200AC0A9C30B74DB66821',
+    QuantumPortalStake: '0x7de5dC601f4B49DB8513DE795Ec641fd6A970C88',
     //QuantumPortalFeeManager: '',
 };
 
@@ -123,7 +123,7 @@ async function configure(ctx: Ctx) {
         await ctx.mgr.updateAuthorityMgr(ctx.auth.address);
     }
 
-    const miner_mgr = (await ctx.mgr.minerManager()).toString();
+    const miner_mgr = (await ctx.mgr.minerMgr()).toString();
     if (miner_mgr != ctx.miner.address) {
         console.log('Updating miner to ', ctx.miner.address);
         await ctx.mgr.updateMinerMgr(ctx.miner.address);

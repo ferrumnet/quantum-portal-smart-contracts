@@ -29,8 +29,8 @@ async function main() {
     await helper.init(
         (helper.args.mode === 'MASTER' || helper.args.mode === 'INIT_MASTER') ? helper.MASTER_CHAIN_ID : helper.CLIENT_CHAIN_ID,
         [
-            {name: 'MultiChainStakingMaster', address: '', netId: helper.MASTER_CHAIN_ID},
-            {name: 'MultiChainStakingClient', address: '', netId: helper.CLIENT_CHAIN_ID},
+            {name: 'MultiChainStakingMaster', address: '0x396d48ef73DB4A3EE9D44f016138d5138A3658a0', netId: helper.MASTER_CHAIN_ID},
+            {name: 'MultiChainStakingClient', address: '0xd5DBf6cf8733F71dD145188C2B28581f58600520', netId: helper.CLIENT_CHAIN_ID},
         ]);
 
     if (helper.args.mode === 'MASTER') {
