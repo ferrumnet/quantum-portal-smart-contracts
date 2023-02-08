@@ -9,17 +9,16 @@ import { QuantumPortalStake } from "../../../typechain/QuantumPortalStake";
 import { QuantumPortalMinerMgr } from "../../../typechain/QuantumPortalMinerMgr";
 
 const STAKE_TOKEN_OBJ = {
-    97 : "0x326C977E6efc84E512bB9C30f76E30c160eD06FB",
-    80001 : "0x326C977E6efc84E512bB9C30f76E30c160eD06FB"
+    97 : "0x64544969ed7EBf5f083679233325356EbE738930", // USDC token on BSC
+    80001 : "0x326C977E6efc84E512bB9C30f76E30c160eD06FB" // LINK token on Mumbai
 }
 
-
 const deployed = {
-    QuantumPortalPoc: '0xBFdba405bA3b4DaB1fFBD820671FaB70A439960D',
-    QuantumPortalLedgerMgr: '0xfe8f8b081c8cAc86481F2Ac68359171a0166Bc27',
-    QuantumPortalAuthorityMgr: '0x56C48b568e9B98DB1d3427b479d6e82Db4b4Bb64',
-    QuantumPortalMinerMgr: '',
-    QuantumPortalStake: '0xB47124F18B396329d903dC3F27784349A6Ca4334',
+    QuantumPortalPoc: '0x9b3f3A08d6F0EBc77262b68e6239C6C57d8dC07d',
+    QuantumPortalLedgerMgr: '0x465AAF9F6B8edb16D62344d4C100Bc69bC0e4AC7',
+    QuantumPortalAuthorityMgr: '0x9367A0b0e80475EfADe4d4EdAd5bF64c5043C9D7',
+    QuantumPortalMinerMgr: '0x98a5282993A5d8404A29327FADfB6CD9F3Fe8ABd',
+    QuantumPortalStake: '0x58c35647e52E65Eda6a27D1501A7ff2CC17fc9A0',
     //QuantumPortalFeeManager: '',
 };
 
@@ -123,7 +122,7 @@ async function configure(ctx: Ctx) {
         await ctx.mgr.updateAuthorityMgr(ctx.auth.address);
     }
 
-    const miner_mgr = (await ctx.mgr.minerManager()).toString();
+    const miner_mgr = (await ctx.mgr.minerMgr()).toString();
     if (miner_mgr != ctx.miner.address) {
         console.log('Updating miner to ', ctx.miner.address);
         await ctx.mgr.updateMinerMgr(ctx.miner.address);

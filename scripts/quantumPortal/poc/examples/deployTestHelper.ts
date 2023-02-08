@@ -28,7 +28,7 @@ export class DeployTestHelper<T extends DeployCliArgs, C> {
     MASTER_CHAIN_ID = 97;
     CLIENT_CHAIN_ID = 80001;
     FERRUM_CHAIN_ID = 2600;
-    qpPoc = '0x57f2FbAD5D6C8DaFfb268DF9D3D87d9E84Dad3Ef';
+    qpPoc = '0x9b3f3A08d6F0EBc77262b68e6239C6C57d8dC07d';
     args: T = {} as any;
     netId: number;
     private _deployed: C = {} as any;
