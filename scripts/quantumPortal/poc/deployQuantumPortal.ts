@@ -17,7 +17,7 @@ const deployed = {
     QuantumPortalPoc: '0x9b3f3A08d6F0EBc77262b68e6239C6C57d8dC07d',
     QuantumPortalLedgerMgr: '0x465AAF9F6B8edb16D62344d4C100Bc69bC0e4AC7',
     QuantumPortalAuthorityMgr: '0x9367A0b0e80475EfADe4d4EdAd5bF64c5043C9D7',
-    QuantumPortalMinerMgr: '0x58c35647e52E65Eda6a27D1501A7ff2CC17fc9A0',
+    QuantumPortalMinerMgr: '0x98a5282993A5d8404A29327FADfB6CD9F3Fe8ABd',
     QuantumPortalStake: '0x58c35647e52E65Eda6a27D1501A7ff2CC17fc9A0',
     //QuantumPortalFeeManager: '',
 };
