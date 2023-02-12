@@ -34,7 +34,7 @@ contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712 {
         uint64 expiry,
         bytes32 salt,
         bytes memory multiSig,
-        uint256 msgValue,
+        uint256 /*msgValue*/,
         uint256 minStakeAllowed
     ) external view override returns (ValidationResult res) {
         // Validate miner signature

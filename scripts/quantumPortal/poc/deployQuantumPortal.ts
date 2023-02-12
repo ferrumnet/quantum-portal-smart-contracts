@@ -7,23 +7,30 @@ import { DEPLOYER_CONTRACT, DEPLPOY_SALT_1 } from "../../consts";
 import { QuantumPortalAuthorityMgr } from "../../../typechain/QuantumPortalAuthorityMgr";
 import { QuantumPortalStake } from "../../../typechain/QuantumPortalStake";
 import { QuantumPortalMinerMgr } from "../../../typechain/QuantumPortalMinerMgr";
+import { QuantumPortalGateway } from "../../../typechain/QuantumPortalGateway";
+
+const WFRM = {
+    26026: '', // TODO: Update
+    'DEFAULT': ZeroAddress,
+}
 
 const STAKE_TOKEN_OBJ = {
     97 : "0x326C977E6efc84E512bB9C30f76E30c160eD06FB",
     80001 : "0x326C977E6efc84E512bB9C30f76E30c160eD06FB"
 }
 
-
 const deployed = {
+    QuantumPortalGateway: '0xd7b6e131074b22c8f0b0f8671789349946ba6a48',
     QuantumPortalPoc: '0xBFdba405bA3b4DaB1fFBD820671FaB70A439960D',
     QuantumPortalLedgerMgr: '0xfe8f8b081c8cAc86481F2Ac68359171a0166Bc27',
     QuantumPortalAuthorityMgr: '0x56C48b568e9B98DB1d3427b479d6e82Db4b4Bb64',
-    QuantumPortalMinerMgr: '',
+    QuantumPortalMinerMgr: '0xcec50553f2df1c354895fd4991517478405baa3b',
     QuantumPortalStake: '0xB47124F18B396329d903dC3F27784349A6Ca4334',
     //QuantumPortalFeeManager: '',
 };
 
 interface Ctx {
+    gateway: QuantumPortalGateway;
     poc: QuantumPortalPoc;
     mgr: QuantumPortalLedgerMgr;
     auth: QuantumPortalAuthorityMgr;
@@ -97,6 +104,25 @@ async function prep(owner: string) {
         console.log(`Deployed miner mgr at `, deped.address);
         ctx.miner = deped as any;
     }
+
+    if (deployed.QuantumPortalGateway &&
+        await (contractExists('QuantumPortalGateway', deployed.QuantumPortalGateway))) {
+        console.log(`QuantumPortalGateway exists on `, deployed.QuantumPortalGateway);
+	    const gatew = await ethers.getContractFactory("QuantumPortalGateway");
+        ctx.gateway = await gatew.attach(deployed.QuantumPortalGateway) as any;
+    } else {
+        console.log('Deploying gateway');
+        const initData = abi.encode(['address'], [
+            WFRM[(await ethers.provider.getNetwork()).chainId] || WFRM['DEFAULT']
+            ]);
+        const deped = await deployUsingDeployer('QuantumPortalGateway', owner, initData,
+            DEPLOYER_CONTRACT, DEPLPOY_SALT_1) as QuantumPortalGateway;
+        console.log(`Deployed qp gateway at `, deped.address);
+        ctx.gateway = deped as any;
+    }
+
+    console.log('Upgrade gateway', ctx.gateway.address);
+    await ctx.gateway.upgrade(ctx.poc.address, ctx.mgr.address, ctx.stake.address, { from: owner });
 
     return ctx;
 }
