@@ -201,6 +201,10 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             totalValue,
             minerMinimumStake
         );
+        if (validationResult != IQuantumPortalMinerMgr.ValidationResult.Valid) {
+            require(validationResult != IQuantumPortalMinerMgr.ValidationResult.NotEnoughStake, "QPLM: miner has not enough stake");
+            revert("QPLM: miner signature cannot be verified");
+        }
 
         QuantumPortalLib.Block memory blockMetadata = QuantumPortalLib.Block({
             chainId: remoteChainId,

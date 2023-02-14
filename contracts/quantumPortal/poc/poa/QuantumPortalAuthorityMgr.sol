@@ -76,7 +76,8 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, MultiSigChecka
 
         // Validate the message for only this signer
         bytes32 digest = _hashTypedDataV4(message);
-        (bool result, address[] memory signers) = tryVerifyDigestWithAddressWithMinSigCheck(digest, 1, signature, false);
+        bool result;
+        (result, signers) = tryVerifyDigestWithAddressWithMinSigCheck(digest, 1, signature, false);
         require(result, "QPAM: Invalid signer");
         require(signers.length == 1, "QPAM: Wrong number of signers");
         address signer = signers[0];

@@ -94,21 +94,21 @@ contract PortalLedger is WithAdmin {
         mgr = _mgr;
     }
 
-    function revertRemoteBalance(QuantumPortalLib.Context memory context) internal {
+    function revertRemoteBalance(QuantumPortalLib.Context memory _context) internal {
         // Register a revert transaction to be mined
         IQuantumPortalLedgerMgr(mgr).registerTransaction(
-            context.blockMetadata.chainId,
-            context.transaction.sourceBeneficiary,
+            _context.blockMetadata.chainId,
+            _context.transaction.sourceBeneficiary,
             address(0),
             address(0),
-            context.transaction.token,
-            context.transaction.amount,
-            context.transaction.gas, // TODO: Use all the remaining gas on the revert tx
+            _context.transaction.token,
+            _context.transaction.amount,
+            _context.transaction.gas, // TODO: Use all the remaining gas on the revert tx
             "");
     }
 
     function callRemoteMethod(
-        uint256 remoteChainId, address localContract, address addr, bytes memory method, uint256 gas
+        uint256 remoteChainId, address localContract, address addr, bytes memory method, uint256 /*gas*/
     ) private returns (bool success) {
         if (method.length == 0) {
             return true;
@@ -130,7 +130,7 @@ contract PortalLedger is WithAdmin {
      */
     function extractRevertReasonSingleBytes32 (
         bytes memory revertData
-    ) internal  returns (bytes32 reason) {
+    ) internal pure returns (bytes32 reason) {
         if (revertData.length < 4) {
             // case 1: catch all
             return "No revert message";
