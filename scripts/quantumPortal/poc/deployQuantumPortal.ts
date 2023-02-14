@@ -15,17 +15,11 @@ const WFRM = {
 }
 
 const STAKE_TOKEN_OBJ = {
-    97 : "0x326C977E6efc84E512bB9C30f76E30c160eD06FB",
-    80001 : "0x326C977E6efc84E512bB9C30f76E30c160eD06FB"
+    97 : "0x64544969ed7EBf5f083679233325356EbE738930", // USDC token on BSC
+    80001 : "0x326C977E6efc84E512bB9C30f76E30c160eD06FB" // LINK token on Mumbai
 }
 
 const deployed = {
-    // QuantumPortalGateway: '0xd7b6e131074b22c8f0b0f8671789349946ba6a48',
-    // QuantumPortalPoc: '0xBFdba405bA3b4DaB1fFBD820671FaB70A439960D',
-    // QuantumPortalLedgerMgr: '0xfe8f8b081c8cAc86481F2Ac68359171a0166Bc27',
-    // QuantumPortalAuthorityMgr: '0x56C48b568e9B98DB1d3427b479d6e82Db4b4Bb64',
-    // QuantumPortalMinerMgr: '0xcec50553f2df1c354895fd4991517478405baa3b',
-    // QuantumPortalStake: '0xB47124F18B396329d903dC3F27784349A6Ca4334',
     QuantumPortalGateway: '0xFB33f0ACDA85c0E9501e9517eBe1346c55ED799F',
     QuantumPortalPoc: '0xdf1bf6F07C2c3F1a65feF6F7F3c90f3bf382af96',
     QuantumPortalLedgerMgr: '0xaF6b1C71CA169Df1829F76fbBacFc301d72e19f6',
@@ -155,7 +149,7 @@ async function configure(ctx: Ctx) {
         await ctx.mgr.updateAuthorityMgr(ctx.auth.address);
     }
 
-    const miner_mgr = (await ctx.mgr.minerManager()).toString();
+    const miner_mgr = (await ctx.mgr.minerMgr()).toString();
     if (miner_mgr != ctx.miner.address) {
         console.log('Updating miner to ', ctx.miner.address);
         await ctx.mgr.updateMinerMgr(ctx.miner.address);
