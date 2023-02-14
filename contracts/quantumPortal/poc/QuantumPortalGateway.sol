@@ -11,9 +11,8 @@ import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
 import "foundry-contracts/contracts/common/WithAdmin.sol";
 import "foundry-contracts/contracts/common/SafeAmount.sol";
 
-contract QuantumPortalGateway is WithAdmin {
+contract QuantumPortalGateway is WithAdmin, IQuantumPortalPoc {
     string public constant VERSION = "000.010";
-//, IQuantumPortalPoc, IQuantumPortalLedgerMgr {
     IQuantumPortalPoc public quantumPortalPoc;
     IQuantumPortalLedgerMgr public quantumPortalLedgerMgr;
     IQuantumPortalStake public quantumPortalStake;
@@ -67,6 +66,42 @@ contract QuantumPortalGateway is WithAdmin {
     }
 
     /**
-     * TODO: Implement proxy methods for IQuantumPortalPoc, and IQuantumPortalLedgerMgr
+     * Proxy methods for IQuantumPortalPoc
      */
+    function feeManager(
+    ) external override view returns(address) {
+        return quantumPortalPoc.feeManager();
+    }
+
+    function run(uint256 fee, uint64 remoteChain, address remoteContract, address beneficiary, bytes memory remoteMethodCall
+    ) external override {
+        quantumPortalPoc.run(fee, remoteChain, remoteContract, beneficiary, remoteMethodCall);
+    }
+
+    function runWithValue(
+        uint256 fee, uint64 remoteChain, address remoteContract, address beneficiary, address token, bytes memory method
+    ) external override {
+        quantumPortalPoc.runWithValue(fee, remoteChain, remoteContract, beneficiary, token, method);
+    }
+
+    function runWithdraw(
+        uint256 fee, uint64 remoteChainId, address remoteAddress, address token, uint256 amount
+    ) external override {
+        quantumPortalPoc.runWithdraw(fee, remoteChainId, remoteAddress, token, amount);
+    }
+
+    function msgSender(
+    ) external override view returns (uint256 sourceNetwork, address sourceMsgSender, address sourceBeneficiary) {
+        return quantumPortalPoc.msgSender();
+    }
+
+    function txContext(
+    ) external override view returns (QuantumPortalLib.Context memory) {
+        return quantumPortalPoc.txContext();
+    }
+
+    function remoteTransfer(uint256 chainId, address token, address to, uint256 amount
+    ) external override {
+        return quantumPortalPoc.remoteTransfer(chainId, token, to, amount);
+    }
 }
