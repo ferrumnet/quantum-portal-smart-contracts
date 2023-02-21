@@ -1,0 +1,27 @@
+#####
+#
+# This config file is used by the QP deploy script.
+# First, remove the hardcoded contract address for the contract you want to be deployed.
+# Then, after deployment, put the deployed addresses, in the config and send a commit
+# tagged with UPDATE_QP_CONFIG
+#
+# Use $in the DeployerKeys section to get the value from an environment variable
+#
+#####
+
+Owner: 0x467502Ef1c444f98349dacdf0223CCb5e2019f36
+DeployerContract: 0x17EA1C55E2E16B57a34932d5b96A749Cd20A6104
+DeployerSalt: 0x65ff7961289d09280b311966c72b708989daabefb729d1a5b64fe72a9ad26045
+QuantumPortalGateway:
+QuantumPortalPoc:
+QuantumPortalLedgerMgr:
+QuantumPortalAuthorityMgr:
+QuantumPortalMinerMgr:
+QuantumPortalStake:
+FRM:
+  93: 0xFe00EE6F00dD7ed533157f6250656B4E007E7179
+WFRM: 0x0000000000000000000000000000000000026026
+DeployerKeys:
+  DeployerContract: 0x40B6C2A35B78AD2568150C74D32336B11B6E8F1278A0A827BBD3826333FA1F84
+  Qp: $DEPLOYER_ADDRESS
+
