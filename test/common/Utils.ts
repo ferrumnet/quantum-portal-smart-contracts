@@ -1,6 +1,7 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { randomBytes } from "crypto";
+import { Signer } from "ethers";
 import { ethers } from "hardhat";
 import { DummyToken } from "../../typechain/DummyToken";
 import { IVersioned } from "../../typechain/IVersioned";
@@ -163,14 +164,15 @@ export async function contractExists(contractName: string, contract: string) {
 }
 
 export async function deployUsingDeployer(contract: string, owner: string, initData: string,
-		deployerAddr: string, salt: string) {
+		deployerAddr: string, salt: string, siger?: Signer) {
 	const contr = await ethers.getContractFactory(contract);
 	const depFac = await ethers.getContractFactory("FerrumDeployer");
 	const deployer = await depFac.attach(deployerAddr);
     console.log('DEPLOYADDR IS ', deployerAddr);
 	console.log("owner is", owner);
 
-	const res = await deployer.deployOwnable(salt, owner, initData, contr.bytecode);
+	const res = siger ? await deployer.connect(siger).deployOwnable(salt, owner, initData, contr.bytecode)
+		: await deployer.deployOwnable(salt, owner, initData, contr.bytecode);
 	console.log(`Deploy tx hash: ${res.hash}`)
 	const events = await getTransactionLog(res.hash, deployer, 'DeployedWithData');
 	// let reci = await getTransactionReceipt(res.hash);

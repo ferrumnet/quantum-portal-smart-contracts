@@ -13,3 +13,8 @@ interface IQuantumPortalLedgerMgr {
         bytes memory method
     ) external;
 }
+
+interface IQuantumPortalLedgerMgrDependencies {
+    function minerMgr() external view returns (address);
+    function authorityMgr() external view returns (address);
+}

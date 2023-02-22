@@ -1,33 +1,16 @@
 import { ethers } from "hardhat";
-import { abi, deployDummyToken, deployWithOwner, TestContext, ZeroAddress } from "foundry-contracts/dist/test/common/Utils";
+import { abi, ZeroAddress } from "foundry-contracts/dist/test/common/Utils";
 import { panick, _WETH, deployUsingDeployer, contractExists, isAllZero } from "../../../test/common/Utils";
 import { QuantumPortalPoc } from "../../../typechain/QuantumPortalPoc";
 import { QuantumPortalLedgerMgr } from "../../../typechain/QuantumPortalLedgerMgr";
-import { DEPLOYER_CONTRACT, DEPLPOY_SALT_1 } from "../../consts";
 import { QuantumPortalAuthorityMgr } from "../../../typechain/QuantumPortalAuthorityMgr";
 import { QuantumPortalStake } from "../../../typechain/QuantumPortalStake";
 import { QuantumPortalMinerMgr } from "../../../typechain/QuantumPortalMinerMgr";
 import { QuantumPortalGateway } from "../../../typechain/QuantumPortalGateway";
+import { loadQpDeployConfig, QpDeployConfig } from "../../utils/DeployUtils";
+import { Signer } from "ethers";
 
-const WFRM = {
-    26026: '', // TODO: Update
-    'DEFAULT': ZeroAddress,
-}
-
-const STAKE_TOKEN_OBJ = {
-    97 : "0x64544969ed7EBf5f083679233325356EbE738930", // USDC token on BSC
-    80001 : "0x326C977E6efc84E512bB9C30f76E30c160eD06FB" // LINK token on Mumbai
-}
-
-const deployed = {
-    QuantumPortalGateway: '0xFB33f0ACDA85c0E9501e9517eBe1346c55ED799F',
-    QuantumPortalPoc: '0xdf1bf6F07C2c3F1a65feF6F7F3c90f3bf382af96',
-    QuantumPortalLedgerMgr: '0xaF6b1C71CA169Df1829F76fbBacFc301d72e19f6',
-    QuantumPortalAuthorityMgr: '0xf6244A1c2463d82c88074a3afE8f57fE633e0b93',
-    QuantumPortalMinerMgr: '0xe0449B1E2669F3902778e78b31b992B361201A66',
-    QuantumPortalStake: '0x8A4C5EC898991CA9f9f72f413f3D0248e56A716e',
-    //QuantumPortalFeeManager: '',
-};
+const DEFAULT_QP_CONFIG_FILE = 'QpDeployConfig.yaml';
 
 interface Ctx {
     gateway: QuantumPortalGateway;
@@ -38,91 +21,114 @@ interface Ctx {
     stake: QuantumPortalStake
 }
 
-async function prep(owner: string) {
-	const [deployer] = await ethers.getSigners();
-	console.log("Account balance:", deployer.address, (await deployer.getBalance()).toString());
+async function deployOrAttach(
+    conf: QpDeployConfig,
+    contractAddress: any,
+    contractName: string,
+    owner: string,
+    initData: string,
+    signer: Signer,
+    deployer?: () => Promise<any>,
+    ): Promise<[any, boolean]> {
+    if (contractAddress &&
+        await (contractExists(contractName, contractAddress))) {
+        console.log(`${contractName} exists on `, contractAddress);
+	    const pocF = await ethers.getContractFactory(contractName);
+        return [pocF.attach(contractAddress) as any, false];
+    } else {
+        if (!!deployer) {
+            const deped = await deployer();
+            return [deped, true];
+        } else {
+            console.log(`Deploying ${contractName} with owner=${owner}, initData: ${initData} using deployer: ${conf.DeployerContract}, salt: ${conf.DeployerSalt}`);
+            const deped = await deployUsingDeployer(contractName, owner, initData,
+                conf.DeployerContract, conf.DeployerSalt, signer) as QuantumPortalPoc;
+            logForRecord(contractName, deped.address);
+            return [deped, true];
+        }
+    }
+}
+
+function logForRecord(name: string, addr: string) {
+    console.log('*'.repeat(80));
+    console.log('*'.repeat(80));
+    console.log(`${name}: "${addr}"`);
+    console.log('*'.repeat(80));
+    console.log('*'.repeat(80));
+}
+
+async function prep(conf: QpDeployConfig) {
+    const deployerWallet = !!conf.DeployerKeys.DeployerContract ? new ethers.Wallet(conf.DeployerKeys.DeployerContract, ethers.provider) : undefined;
+    const qpWallet = !!conf.DeployerKeys.DeployerContract ? new ethers.Wallet(conf.DeployerKeys.Qp, ethers.provider) : undefined;
+    const ownerWallet = !!conf.DeployerKeys.Owner ? new ethers.Wallet(conf.DeployerKeys.Owner, ethers.provider) : undefined;
+    if (ownerWallet) {
+        conf.Owner = await ownerWallet.getAddress();
+    }
+    console.log(`Using the following config: `, {
+        ...conf,
+        DeployerKeys: {},
+    });
+
+    if (!conf.DeployerContract || !(
+            await (contractExists('FerrumDeployer', conf.DeployerContract)))) {
+        console.log(`No deployer contract. Deploying one using ("${deployerWallet.address}")...`);
+        const FerrumDep = await ethers.getContractFactory("FerrumDeployer");
+        const ferrumDep = await FerrumDep.connect(deployerWallet).deploy();
+        logForRecord('Ferrum Deployer address', ferrumDep.address);
+        conf.DeployerContract = ferrumDep.address;
+    }
+
+    let newGateway: boolean;
+    let newPoc: boolean;
+    let newLedgerMgr: boolean;
+    let newAut: boolean;
+    let newStake: boolean;
+    let newMinerMgr: boolean;
     const ctx: Ctx = {} as any;
+    [ctx.gateway, newGateway] = await deployOrAttach(conf, conf.QuantumPortalGateway, 'QuantumPortalGateway', conf.Owner, '0x', qpWallet,
+        async () => {
+            console.log('Deploying gateway');
+            const initData = abi.encode(['address'], [conf.WFRM]);
+            const deped = await deployUsingDeployer('QuantumPortalGateway', conf.Owner, initData,
+                conf.DeployerContract, conf.DeployerSalt, qpWallet) as QuantumPortalGateway;
+            logForRecord('QP Gateway', deped.address);
+            return deped;
+        });
 
-    if (deployed.QuantumPortalPoc &&
-        await (contractExists('QuantumPortalPocImpl', deployed.QuantumPortalPoc))) {
-        console.log(`QuantumPortalPoc exists on `, deployed.QuantumPortalPoc);
-	    const pocF = await ethers.getContractFactory("QuantumPortalPocImpl");
-        ctx.poc = await pocF.attach(deployed.QuantumPortalPoc) as any;
-    } else {
-        const deped = await deployUsingDeployer('QuantumPortalPocImpl', owner, '0x',
-        DEPLOYER_CONTRACT, DEPLPOY_SALT_1) as QuantumPortalPoc;
-        console.log(`Deployed poc at `, deped.address);
-        ctx.poc = deped;
-    }
-    if (deployed.QuantumPortalLedgerMgr &&
-        await (contractExists('QuantumPortalLedgerMgrImpl', deployed.QuantumPortalLedgerMgr))) {
-        console.log(`QuantumPortalLedgerMgr exists on `, deployed.QuantumPortalLedgerMgr);
-	    const pocF = await ethers.getContractFactory("QuantumPortalLedgerMgrImpl");
-        ctx.mgr = await pocF.attach(deployed.QuantumPortalLedgerMgr) as any;
-    } else {
-        const deped = await deployUsingDeployer('QuantumPortalLedgerMgrImpl', owner, '0x',
-        DEPLOYER_CONTRACT, DEPLPOY_SALT_1) as QuantumPortalLedgerMgr;
-        console.log(`Deployed QuantumPortalLedgerMgr  at `, deped.address);
-        ctx.mgr = deped as any;
-    }
-    if (deployed.QuantumPortalAuthorityMgr &&
-        await (contractExists('QuantumPortalAuthorityMgr', deployed.QuantumPortalAuthorityMgr))) {
-        console.log(`QuantumPortalAuthorityMgr exists on `, deployed.QuantumPortalAuthorityMgr);
-	    const authM = await ethers.getContractFactory("QuantumPortalAuthorityMgr");
-        ctx.auth = await authM.attach(deployed.QuantumPortalAuthorityMgr) as any;
-    } else {
-        const deped = await deployUsingDeployer('QuantumPortalAuthorityMgr', owner, '0x',
-        DEPLOYER_CONTRACT, DEPLPOY_SALT_1) as QuantumPortalAuthorityMgr;
-        console.log(`Deployed auth at `, deped.address);
-        ctx.auth = deped as any;
+    [ctx.poc, newPoc] = await deployOrAttach(conf, conf.QuantumPortalPoc, 'QuantumPortalPocImpl', ZeroAddress, '0x', qpWallet,);
+    [ctx.mgr, newLedgerMgr] = await deployOrAttach(conf, conf.QuantumPortalLedgerMgr, 'QuantumPortalLedgerMgrImpl', conf.Owner, '0x', qpWallet,);
+    [ctx.auth, newAut] = await deployOrAttach(conf, conf.QuantumPortalAuthorityMgr, 'QuantumPortalAuthorityMgr', conf.Owner, '0x', qpWallet,);
+
+    const chainId = (await ethers.provider.getNetwork()).chainId;
+    let stakeToken = conf.FRM[chainId] || panick(`No stake token address for chain ${chainId}`);
+    const stakeInitData = abi.encode(['address', 'address'], [stakeToken, ctx.auth.address]);
+    [ctx.stake, newStake] = await deployOrAttach(conf, conf.QuantumPortalStake, 'QuantumPortalStake', conf.Owner, stakeInitData, qpWallet,);
+    if (newStake) {
+        console.log('New stake. Clearing the miner mgr');
+        conf.QuantumPortalMinerMgr = undefined;
     }
 
-    if (deployed.QuantumPortalStake &&
-        await (contractExists('QuantumPortalStake', deployed.QuantumPortalStake))) {
-        console.log(`QuantumPortalStake exists on `, deployed.QuantumPortalStake);
-	    const authM = await ethers.getContractFactory("QuantumPortalStake");
-        ctx.stake = await authM.attach(deployed.QuantumPortalStake) as any;
-    } else {
-        let stakeToken = STAKE_TOKEN_OBJ[(await ethers.provider.getNetwork()).chainId] || panick(`No stake token address for chain`);
-        const initData = abi.encode(['address', 'address'], [stakeToken, ctx.auth.address]);
-        const deped = await deployUsingDeployer('QuantumPortalStake', owner, initData,
-        DEPLOYER_CONTRACT, DEPLPOY_SALT_1) as QuantumPortalStake;
-        console.log(`Deployed stake at `, deped.address);
-        ctx.stake = deped as any;
-    }
+    const minerInitData = abi.encode(['address'], [ctx.stake.address]);
+    [ctx.miner, newMinerMgr] = await deployOrAttach(conf, conf.QuantumPortalMinerMgr, 'QuantumPortalMinerMgr', ZeroAddress, minerInitData, qpWallet,);
 
-    if (deployed.QuantumPortalMinerMgr &&
-        await (contractExists('QuantumPortalMinerMgr', deployed.QuantumPortalMinerMgr))) {
-        console.log(`QuantumPortalMinerMgr exists on `, deployed.QuantumPortalMinerMgr);
-	    const authM = await ethers.getContractFactory("QuantumPortalMinerMgr");
-        ctx.miner = await authM.attach(deployed.QuantumPortalMinerMgr) as any;
-    } else {
-        console.log('Deploying miner mgr for stake', ctx.stake.address);
-        const initData = abi.encode(['address'], [ctx.stake.address]);
-        const deped = await deployUsingDeployer('QuantumPortalMinerMgr', ZeroAddress, initData,
-            DEPLOYER_CONTRACT, DEPLPOY_SALT_1) as QuantumPortalMinerMgr;
-        console.log(`Deployed miner mgr at `, deped.address);
-        ctx.miner = deped as any;
+    console.log('Now updating dependencies...');
+    if (newPoc) {
+        console.log('New POC. Updating ledgerMgr');
+        await ctx.mgr.connect(qpWallet).updateLedger(ctx.poc.address);
     }
-
-    if (deployed.QuantumPortalGateway &&
-        await (contractExists('QuantumPortalGateway', deployed.QuantumPortalGateway))) {
-        console.log(`QuantumPortalGateway exists on `, deployed.QuantumPortalGateway);
-	    const gatew = await ethers.getContractFactory("QuantumPortalGateway");
-        ctx.gateway = await gatew.attach(deployed.QuantumPortalGateway) as any;
-    } else {
-        console.log('Deploying gateway');
-        const initData = abi.encode(['address'], [
-            WFRM[(await ethers.provider.getNetwork()).chainId] || WFRM['DEFAULT']
-            ]);
-        const deped = await deployUsingDeployer('QuantumPortalGateway', owner, initData,
-            DEPLOYER_CONTRACT, DEPLPOY_SALT_1) as QuantumPortalGateway;
-        console.log(`Deployed qp gateway at `, deped.address);
-        ctx.gateway = deped as any;
+    if (newMinerMgr) {
+        console.log('New miner mgr. Updating ledgerMgr');
+        await ctx.mgr.connect(qpWallet).updateMinerMgr(ctx.miner.address);
     }
-
+    if (newAut) {
+        console.log('New auth mgr. Updating ledgerMgr');
+        await ctx.mgr.connect(qpWallet).updateAuthorityMgr(ctx.auth.address);
+    }
     console.log('Upgrade gateway', ctx.gateway.address);
-    await ctx.gateway.upgrade(ctx.poc.address, ctx.mgr.address, ctx.stake.address, { from: owner });
+    if (newPoc || newLedgerMgr || newStake || newGateway) {
+        console.log('Updating gateway')
+        await ctx.gateway.connect(qpWallet).upgrade(ctx.poc.address, ctx.mgr.address, ctx.stake.address, { from: conf.Owner });
+    }
 
     return ctx;
 }
@@ -157,8 +163,9 @@ async function configure(ctx: Ctx) {
 }
 
 async function main() {
-    const ctx = await prep(process.env.OWNER || panick('provide OWNER'));
-    await configure(ctx);
+    const conf = loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
+    const ctx = await prep(conf);
+    // await configure(ctx);
 }
   
 main()

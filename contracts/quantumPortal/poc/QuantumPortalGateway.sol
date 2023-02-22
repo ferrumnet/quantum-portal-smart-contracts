@@ -23,6 +23,14 @@ contract QuantumPortalGateway is WithAdmin, IQuantumPortalPoc {
         (WFRM) = abi.decode(_data, (address));
     }
 
+    function quantumPortalAuthorityMgr() external view returns (address) {
+        return IQuantumPortalLedgerMgrDependencies(address(quantumPortalLedgerMgr)).authorityMgr();
+    }
+
+    function quantumPortalMinerMgr() external view returns (address) {
+        return IQuantumPortalLedgerMgrDependencies(address(quantumPortalLedgerMgr)).minerMgr();
+    }
+
     /**
      * @notice Upgrade the contract
      * @param poc The POC contract
