@@ -24,11 +24,11 @@ contract QuantumPortalGateway is WithAdmin, IQuantumPortalPoc {
     }
 
     function quantumPortalAuthorityMgr() external view returns (address) {
-        return IQuantumPortalLedgerMgrDependencies(quantumPortalLedgerMgr).authorityMgr();
+        return IQuantumPortalLedgerMgrDependencies(address(quantumPortalLedgerMgr)).authorityMgr();
     }
 
     function quantumPortalMinerMgr() external view returns (address) {
-        return IQuantumPortalLedgerMgrDependencies(quantumPortalLedgerMgr).minerMgr();
+        return IQuantumPortalLedgerMgrDependencies(address(quantumPortalLedgerMgr)).minerMgr();
     }
 
     /**

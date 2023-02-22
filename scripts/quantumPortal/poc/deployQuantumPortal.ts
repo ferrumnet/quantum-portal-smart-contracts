@@ -29,7 +29,6 @@ async function deployOrAttach(
     initData: string,
     signer: Signer,
     deployer?: () => Promise<any>,
-    postDeploy?: () => Promise<any>,
     ): Promise<[any, boolean]> {
     if (contractAddress &&
         await (contractExists(contractName, contractAddress))) {
@@ -37,17 +36,31 @@ async function deployOrAttach(
 	    const pocF = await ethers.getContractFactory(contractName);
         return [pocF.attach(contractAddress) as any, false];
     } else {
-        const deped = await deployUsingDeployer(contractName, owner, initData,
-        conf.DeployerContract, conf.DeployerSalt) as QuantumPortalPoc;
-        console.log(`Deployed poc at `, deped.address);
-        return [deped, true];
+        if (!!deployer) {
+            const deped = await deployer();
+            return [deped, true];
+        } else {
+            console.log(`Deploying ${contractName} with owner=${owner}, initData: ${initData} using deployer: ${conf.DeployerContract}, salt: ${conf.DeployerSalt}`);
+            const deped = await deployUsingDeployer(contractName, owner, initData,
+                conf.DeployerContract, conf.DeployerSalt, signer) as QuantumPortalPoc;
+            logForRecord(contractName, deped.address);
+            return [deped, true];
+        }
     }
 }
 
+function logForRecord(name: string, addr: string) {
+    console.log('*'.repeat(80));
+    console.log('*'.repeat(80));
+    console.log(`${name}: "${addr}"`);
+    console.log('*'.repeat(80));
+    console.log('*'.repeat(80));
+}
+
 async function prep(conf: QpDeployConfig) {
-    const deployerWallet = !!conf.DeployerKeys.DeployerContract ? new ethers.Wallet(conf.DeployerKeys.DeployerContract) : undefined;
-    const qpWallet = !!conf.DeployerKeys.DeployerContract ? new ethers.Wallet(conf.DeployerKeys.Qp) : undefined;
-    const ownerWallet = !!conf.DeployerKeys.Owner ? new ethers.Wallet(conf.DeployerKeys.Owner) : undefined;
+    const deployerWallet = !!conf.DeployerKeys.DeployerContract ? new ethers.Wallet(conf.DeployerKeys.DeployerContract, ethers.provider) : undefined;
+    const qpWallet = !!conf.DeployerKeys.DeployerContract ? new ethers.Wallet(conf.DeployerKeys.Qp, ethers.provider) : undefined;
+    const ownerWallet = !!conf.DeployerKeys.Owner ? new ethers.Wallet(conf.DeployerKeys.Owner, ethers.provider) : undefined;
     if (ownerWallet) {
         conf.Owner = await ownerWallet.getAddress();
     }
@@ -56,11 +69,12 @@ async function prep(conf: QpDeployConfig) {
         DeployerKeys: {},
     });
 
-    if (!conf.DeployerContract) {
+    if (!conf.DeployerContract || !(
+            await (contractExists('FerrumDeployer', conf.DeployerContract)))) {
         console.log(`No deployer contract. Deploying one using ("${deployerWallet.address}")...`);
         const FerrumDep = await ethers.getContractFactory("FerrumDeployer");
-        const ferrumDep = await FerrumDep.deploy();
-        console.log("FerrumDep address:", ferrumDep.address);
+        const ferrumDep = await FerrumDep.connect(deployerWallet).deploy();
+        logForRecord('Ferrum Deployer address', ferrumDep.address);
         conf.DeployerContract = ferrumDep.address;
     }
 
@@ -76,25 +90,26 @@ async function prep(conf: QpDeployConfig) {
             console.log('Deploying gateway');
             const initData = abi.encode(['address'], [conf.WFRM]);
             const deped = await deployUsingDeployer('QuantumPortalGateway', conf.Owner, initData,
-                conf.DeployerContract, conf.DeployerSalt) as QuantumPortalGateway;
-            console.log(`Deployed qp gateway at `, deped.address);
+                conf.DeployerContract, conf.DeployerSalt, qpWallet) as QuantumPortalGateway;
+            logForRecord('QP Gateway', deped.address);
             return deped;
         });
 
-    [ctx.poc, newPoc] = await deployOrAttach(conf, conf.QuantumPortalPoc, ZeroAddress, '0x', 'QuantumPortalPocImpl', qpWallet,);
-    [ctx.mgr, newLedgerMgr] = await deployOrAttach(conf, conf.QuantumPortalLedgerMgr, conf.Owner, '0x', 'QuantumPortalLedgerMgrImpl', qpWallet,);
-    [ctx.auth, newAut] = await deployOrAttach(conf, conf.QuantumPortalAuthorityMgr, conf.Owner, '0x', 'QuantumPortalAuthorityMgr', qpWallet,);
+    [ctx.poc, newPoc] = await deployOrAttach(conf, conf.QuantumPortalPoc, 'QuantumPortalPocImpl', ZeroAddress, '0x', qpWallet,);
+    [ctx.mgr, newLedgerMgr] = await deployOrAttach(conf, conf.QuantumPortalLedgerMgr, 'QuantumPortalLedgerMgrImpl', conf.Owner, '0x', qpWallet,);
+    [ctx.auth, newAut] = await deployOrAttach(conf, conf.QuantumPortalAuthorityMgr, 'QuantumPortalAuthorityMgr', conf.Owner, '0x', qpWallet,);
 
-    let stakeToken = conf.FRM[(await ethers.provider.getNetwork()).chainId] || panick(`No stake token address for chain`);
+    const chainId = (await ethers.provider.getNetwork()).chainId;
+    let stakeToken = conf.FRM[chainId] || panick(`No stake token address for chain ${chainId}`);
     const stakeInitData = abi.encode(['address', 'address'], [stakeToken, ctx.auth.address]);
-    [ctx.stake, newStake] = await deployOrAttach(conf, conf.QuantumPortalStake, conf.Owner, stakeInitData, 'QuantumPortalStake', qpWallet,);
+    [ctx.stake, newStake] = await deployOrAttach(conf, conf.QuantumPortalStake, 'QuantumPortalStake', conf.Owner, stakeInitData, qpWallet,);
     if (newStake) {
         console.log('New stake. Clearing the miner mgr');
         conf.QuantumPortalMinerMgr = undefined;
     }
 
     const minerInitData = abi.encode(['address'], [ctx.stake.address]);
-    [ctx.miner, newMinerMgr] = await deployOrAttach(conf, conf.QuantumPortalMinerMgr, ZeroAddress, minerInitData, 'QuantumPortalMinerMgr', qpWallet,);
+    [ctx.miner, newMinerMgr] = await deployOrAttach(conf, conf.QuantumPortalMinerMgr, 'QuantumPortalMinerMgr', ZeroAddress, minerInitData, qpWallet,);
 
     console.log('Now updating dependencies...');
     if (newPoc) {
@@ -150,7 +165,7 @@ async function configure(ctx: Ctx) {
 async function main() {
     const conf = loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
     const ctx = await prep(conf);
-    await configure(ctx);
+    // await configure(ctx);
 }
   
 main()
