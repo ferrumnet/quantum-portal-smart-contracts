@@ -83,7 +83,8 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
      * @notice Only staker can release WI. This is to allow staker to be a smart contract
      * and manage state when withdraw happens.
      * @param staker The staker.
-     * @return Returns the list of payments.
+     * @return paidTo Returns the list of payments.
+     * @return amounts Returns the list of payments.
      */
     function releaseWithdrawItems(address staker
     ) external returns(address[] memory paidTo, uint256[] memory amounts) {
@@ -91,8 +92,8 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
         require(msg.sender == staker, "QPS: not owner");
         address token = baseInfo.baseToken[STAKE_ID];
         (Pair memory pair, WithdrawItem memory wi) = peekQueue(staker);
-        paidTo = address[](pair.end - pair.start);
-        amounts = uint256[](pair.end - pair.start);
+        paidTo = new address[](pair.end - pair.start);
+        amounts = new uint256[](pair.end - pair.start);
         console.log("PEEKED", wi.opensAt, block.timestamp);
         uint i = 0;
         while(wi.opensAt != 0 && wi.opensAt < block.timestamp) {
@@ -148,9 +149,9 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
     ) internal returns (uint256) {
         Pair memory param = withdrawItemsQueueParam[staker];
         for (uint i=param.start; i<param.end; i++) {
-            WithdrawItem memory wi = withdrawItemsQueue[staker][pair.start];
-            delete withdrawItemsQueue[staker][pair.start];
-            _stakeUpdateStateOnly(stake, STAKE_ID, wi.amount);
+            WithdrawItem memory wi = withdrawItemsQueue[staker][i];
+            delete withdrawItemsQueue[staker][i];
+            _stakeUpdateStateOnly(staker, STAKE_ID, wi.amount);
         }
         delete withdrawItemsQueueParam[staker];
     }
