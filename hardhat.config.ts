@@ -60,6 +60,20 @@ const config: HardhatUserConfig = {
       url: getEnv('BSC_LIVE_NETWORK'),
       accounts: [getEnv('TEST_ACCOUNT_PRIVATE_KEY')],
 	},
+  ferrum_testnet: {
+	  chainId: 26026,
+      url: "http://testnet.dev.svcs.ferrumnetwork.io:9933",
+      accounts: [getEnv('TEST_ACCOUNT_PRIVATE_KEY')],
+      allowUnlimitedContractSize: true,
+			gas: 10000000, // this override is required for Substrate based evm chains
+	},
+  moonbeam: {
+	  chainId: 1287,
+      url: "https://rpc.api.moonbase.moonbeam.network",
+      accounts: [getEnv('TEST_ACCOUNT_PRIVATE_KEY')],
+      allowUnlimitedContractSize: true,
+      gas: 10000000, // this override is required for Substrate based evm chains
+	},
 	matic: {
 	  chainId: 137,
       url: 'https://rpc-mainnet.maticvigil.com/',
