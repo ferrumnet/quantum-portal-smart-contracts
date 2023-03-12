@@ -15,6 +15,28 @@ import Big from 'big.js';
  * npx hardhat test ./test/fee/TestUniswapOracle.ts --network local
  */
 
+function ethCallThrows(expected: number) {
+    return async (fun: Promise<any>) => {
+        try {
+            await fun;
+        } catch (e) {
+            const errCode = (e.errorArgs || [])[0];
+            if (!errCode) {
+                console.error('ethCallThrows', e);
+                throw new Error(`Expected error code ${errCode}, but no e.errorArgs exists`);
+            }
+            if (!(errCode as BigNumber).toNumber) {
+                console.error('ethCallThrows', e);
+                throw new Error(`Expected error code ${errCode}, but the first e.errorArgs is not an error code`);
+            }
+            const errCodeNum = (errCode as BigNumber).toNumber();
+            if (errCodeNum !== expected) {
+                throw new Error(`Unexpected error code. Expected "${errCode.toString()}", but received ${errCodeNum.toString()}`)
+            }
+        }
+    }
+}
+
 const USDT = '0xdac17f958d2ee523a2206206994597c13d831ec7';
 
 const _it: any = () => { };
@@ -54,7 +76,7 @@ async function getUniOracleCtx(): Promise<UniOracleContext> {
 }
 
 describe("Get Prices", function () {
-    _it('Can get price for old tokens', async function() {
+    it('Can get price for old tokens', async function() {
         /**
          * Process:
          * - Sell some eth to buy USDT
@@ -68,13 +90,14 @@ describe("Get Prices", function () {
         console.log('USDT was bought form pair ', ctx.weth, USDT);
         await ctx.oracle.updatePrice([ctx.weth, USDT]);
         console.log('Prices were updated, but this is not enough to get the price yet');
-        await throws(ctx.oracle.recentPriceX128([ctx.weth, USDT]), 'Array accessed at an out-of-bounds');
+        await ethCallThrows(0x32)(ctx.oracle.recentPriceX128([ctx.weth, USDT]));
+        console.log('.')
 
         advanceTimeAndBlock(2); // 2 secons later...
         console.log('Second time updating the price, but no price update.');
         await ctx.oracle.updatePrice([ctx.weth, USDT]);
         
-        await throws(ctx.oracle.recentPriceX128([ctx.weth, USDT]), 'Array accessed at an out-of-bounds');
+        await ethCallThrows(0x32)(ctx.oracle.recentPriceX128([ctx.weth, USDT]));
 
         advanceTimeAndBlock(2); // 2 secons later...
         console.log('Third time updating the price, with price update.');
@@ -83,11 +106,12 @@ describe("Get Prices", function () {
         console.log('Buy some USDT');
         await ctx.uniswapV2.swapEthForTokens([USDT], '1', ctx.owner);
         await ctx.oracle.updatePrice([ctx.weth, USDT]);
+        console.log('Price updated');
 
         const curPrice = await ctx.oracle.recentPriceX128([ctx.weth, USDT]);
         const usdtEthPriceMachine = bigNumX128ToHuman(curPrice);
         // Create human readable price by considering decimals (eth 18, and usdt 6)
-        const usdtEthPrice = BigNumber.from(usdtEthPriceMachine).mul(1000000).div(BigNumber.from(10).pow(18 - 6)).toString();
+        const usdtEthPrice = new Big(usdtEthPriceMachine).mul(1000000).div(new Big(10).pow(18 - 6)).toString();
         const ethUsdtPrice = 1/Number(usdtEthPrice) * 1000000;
         console.log('Oracle price is', curPrice.toString(), ethUsdtPrice);
         expect(ethUsdtPrice).greaterThan(10, 'ETH is too cheap!').lessThan(20000, 'ETH is too expensive!')
@@ -126,7 +150,7 @@ describe("Get Prices", function () {
         
         console.log('Updating the price 1st time');
         await ctx.oracle.updatePrice([ctx.pair.base.address, ctx.pair.token.address]);
-        await throws(ctx.oracle.recentPriceX128([ctx.pair.base.address, ctx.pair.token.address]), 'Array accessed at an out-of-bounds');
+        await ethCallThrows(0x32)(ctx.oracle.recentPriceX128([ctx.pair.base.address, ctx.pair.token.address]));
         advanceTimeAndBlock(2 * 3600); 
 
         console.log('Now swaping some tokens');
@@ -134,7 +158,7 @@ describe("Get Prices", function () {
         console.log('Tokens swapped');
         await ctx.oracle.updatePrice([ctx.pair.base.address, ctx.pair.token.address]);
         console.log('Updatin the price again');
-        await throws(ctx.oracle.recentPriceX128([ctx.pair.base.address, ctx.pair.token.address]), 'Array accessed at an out-of-bounds');
+        await ethCallThrows(0x32)(ctx.oracle.recentPriceX128([ctx.pair.base.address, ctx.pair.token.address]));
         advanceTimeAndBlock(2 * 3600); // 2 secons later...
 
         console.log('Now swaping some tokens again');
