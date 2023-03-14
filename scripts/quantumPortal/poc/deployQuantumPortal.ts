@@ -7,6 +7,8 @@ import { QuantumPortalAuthorityMgr } from "../../../typechain/QuantumPortalAutho
 import { QuantumPortalStake } from "../../../typechain/QuantumPortalStake";
 import { QuantumPortalMinerMgr } from "../../../typechain/QuantumPortalMinerMgr";
 import { QuantumPortalGateway } from "../../../typechain/QuantumPortalGateway";
+import { QuantumPortalFeeConverter } from "../../../typechain/QuantumPortalFeeConverter";
+import { UniswapOracle } from "../../../typechain/UniswapOracle";
 import { loadQpDeployConfig, QpDeployConfig } from "../../utils/DeployUtils";
 import { Signer } from "ethers";
 
@@ -17,8 +19,10 @@ interface Ctx {
     poc: QuantumPortalPoc;
     mgr: QuantumPortalLedgerMgr;
     auth: QuantumPortalAuthorityMgr;
-    miner: QuantumPortalMinerMgr,
-    stake: QuantumPortalStake
+    miner: QuantumPortalMinerMgr;
+    feeConvertor: QuantumPortalFeeConverter;
+    uniV2Oracle: UniswapOracle;
+    stake: QuantumPortalStake;
 }
 
 async function deployOrAttach(
@@ -84,6 +88,8 @@ async function prep(conf: QpDeployConfig) {
     let newAut: boolean;
     let newStake: boolean;
     let newMinerMgr: boolean;
+    let newFeeConvertor: boolean;
+    let newUniV2Oracle: boolean;
     const ctx: Ctx = {} as any;
     [ctx.gateway, newGateway] = await deployOrAttach(conf, conf.QuantumPortalGateway, 'QuantumPortalGateway', conf.Owner, '0x', qpWallet,
         async () => {
@@ -100,6 +106,23 @@ async function prep(conf: QpDeployConfig) {
     [ctx.auth, newAut] = await deployOrAttach(conf, conf.QuantumPortalAuthorityMgr, 'QuantumPortalAuthorityMgr', conf.Owner, '0x', qpWallet,);
 
     const chainId = (await ethers.provider.getNetwork()).chainId;
+    const weAreOnFrmChain = conf.WETH[chainId] === conf.WFRM;
+    if (weAreOnFrmChain) {
+        [ctx.feeConvertor, newFeeConvertor] = await deployOrAttach(
+            conf, conf.QuantumPortalFeeConvertorDirect, 'QuantumPortalFeeConverterDirect', ZeroAddress, '0x', qpWallet,);
+    } else {
+        const oracleInit = abi.encode(conf.UniV2Factory[chainId] || panick(`No UniV2Factory is configured for chain "${chainId}"`), ['address']);
+        [ctx.uniV2Oracle, newUniV2Oracle] = await deployOrAttach(conf, conf.UniswapOracle, 'UniswapOracle', ZeroAddress, oracleInit, qpWallet,);
+        if (newUniV2Oracle) {
+            conf.QuantumPortalFeeConvertor = undefined;
+        }
+        const feeConvertorInits = abi.encode(
+            ['address', 'address', 'address'],
+            [conf.WETH[chainId] || panick(`No WETH configured for chain "${chainId}"`), conf.WFRM, ctx.uniV2Oracle.address]);
+        [ctx.feeConvertor, newFeeConvertor] = await deployOrAttach(
+            conf, conf.QuantumPortalFeeConvertor, 'QuantumPortalFeeConverter', ZeroAddress, feeConvertorInits, qpWallet,);
+    }
+
     let stakeToken = conf.FRM[chainId] || panick(`No stake token address for chain ${chainId}`);
     const stakeInitData = abi.encode(['address', 'address'], [stakeToken, ctx.auth.address]);
     [ctx.stake, newStake] = await deployOrAttach(conf, conf.QuantumPortalStake, 'QuantumPortalStake', conf.Owner, stakeInitData, qpWallet,);
@@ -112,17 +135,21 @@ async function prep(conf: QpDeployConfig) {
     [ctx.miner, newMinerMgr] = await deployOrAttach(conf, conf.QuantumPortalMinerMgr, 'QuantumPortalMinerMgr', ZeroAddress, minerInitData, qpWallet,);
 
     console.log('Now updating dependencies...');
-    if (newPoc) {
+    if (newLedgerMgr || newPoc) {
         console.log('New POC. Updating ledgerMgr');
         await ctx.mgr.connect(qpWallet).updateLedger(ctx.poc.address);
     }
-    if (newMinerMgr) {
+    if (newLedgerMgr || newMinerMgr) {
         console.log('New miner mgr. Updating ledgerMgr');
         await ctx.mgr.connect(qpWallet).updateMinerMgr(ctx.miner.address);
     }
-    if (newAut) {
+    if (newLedgerMgr || newAut) {
         console.log('New auth mgr. Updating ledgerMgr');
         await ctx.mgr.connect(qpWallet).updateAuthorityMgr(ctx.auth.address);
+    }
+    if (newLedgerMgr || newFeeConvertor) {
+        console.log('New fee convertor. Updating ledgerMgr');
+        await ctx.mgr.connect(qpWallet).updateFeeConvertor(ctx.feeConvertor.address);
     }
     console.log('Upgrade gateway', ctx.gateway.address);
     if (newPoc || newLedgerMgr || newStake || newGateway) {
@@ -131,35 +158,6 @@ async function prep(conf: QpDeployConfig) {
     }
 
     return ctx;
-}
-
-async function configure(ctx: Ctx) {
-    console.log('Configuring...')
-    const ledger = (await ctx.mgr.ledger()).toString();
-    console.log('Current: ctx.mgr.ledger', ledger);
-    if (ledger !== ctx.poc.address) {
-    // if (isAllZero(ledger)) {
-        console.log('Updating to ', ctx.poc.address);
-        await ctx.mgr.updateLedger(ctx.poc.address);
-    }
-    const mgr = (await ctx.poc.mgr()).toString();
-    console.log('Current: ctx.poc.mgr', mgr);
-    if (mgr !== ctx.mgr.address) {
-    // if (isAllZero(mgr)) {
-        console.log('Updating to ', ctx.mgr.address);
-        await ctx.poc.setManager(ctx.mgr.address);
-    }
-    const auth = (await ctx.mgr.authorityMgr()).toString();
-    if (auth != ctx.auth.address) {
-        console.log('Updating auth to ', ctx.auth.address);
-        await ctx.mgr.updateAuthorityMgr(ctx.auth.address);
-    }
-
-    const miner_mgr = (await ctx.mgr.minerMgr()).toString();
-    if (miner_mgr != ctx.miner.address) {
-        console.log('Updating miner to ', ctx.miner.address);
-        await ctx.mgr.updateMinerMgr(ctx.miner.address);
-    }
 }
 
 async function main() {

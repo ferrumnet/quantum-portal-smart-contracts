@@ -10,10 +10,15 @@ export interface QpDeployConfig {
     QuantumPortalPoc?: string;
     QuantumPortalLedgerMgr?: string;
     QuantumPortalAuthorityMgr?: string;
+    QuantumPortalFeeConvertor?: string;
+    QuantumPortalFeeConvertorDirect?: string;
     QuantumPortalMinerMgr?: string;
     QuantumPortalStake?: string;
+    UniswapOracle?: string;
     FRM: { [NetworkId in number]: string; }
+    WETH: { [NetworkId in number]: string; }
     WFRM: string;
+    UniV2Factory: { [NetworkId in number]: string; }
     DeployerKeys: {
         DeployerContract?: string;
         Qp?: string;
@@ -24,8 +29,8 @@ export interface QpDeployConfig {
 export function loadQpDeployConfig(path: string) {
     const data = fs.readFileSync(path).toString();
     const rv = parse(data) as QpDeployConfig;
-    if (!rv.WFRM || !rv.FRM || !rv.DeployerKeys) {
-        throw new Error(`Invalid config. Required: WFrm, Frm, and DeployerKeys`);
+    if (!rv.WFRM || !rv.FRM || !rv.DeployerKeys || !rv.WETH || !rv.UniV2Factory) {
+        throw new Error(`Invalid config. Required: WFrm, Frm, WETH, UniV2Factory, and DeployerKeys`);
     }
     updateDeployerKey(rv, 'DeployerContract');
     updateDeployerKey(rv, 'Qp');

@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./IQuantumPortalLedgerMgr.sol";
 import "./poa/IQuantumPortalAuthorityMgr.sol";
+import "./poa/IQuantumPortalFeeConvertor.sol";
 import "foundry-contracts/contracts/common/IVersioned.sol";
 import "foundry-contracts/contracts/common/WithAdmin.sol";
 import "foundry-contracts/contracts/math/FullMath.sol";
@@ -60,6 +61,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
     address public ledger;
     address public minerMgr;
     address public authorityMgr;
+    address public feeConvertor;
 
     modifier onlyLedger() {
         require(msg.sender == ledger, "QPLM: Not allowed");
@@ -76,6 +78,10 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
 
     function updateMinerMgr(address _minerMgr) external onlyAdmin {
         minerMgr = _minerMgr;
+    }
+
+    function updateFeeConvertor(address _feeConvertor) external onlyAdmin {
+        feeConvertor = _feeConvertor;
     }
 
     constructor(uint256 overrideChainId) {
@@ -377,7 +383,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
     ) internal {
         MinedBlock memory b = minedBlocks[key];
         PortalLedger qp = PortalLedger(ledger);
-        uint256 gasPrice = localChainGasTokenPrice();
+        uint256 gasPrice = IQuantumPortalFeeConvertor(feeConvertor).localChainGasTokenPriceX128();
         QuantumPortalLib.RemoteTransaction[] memory transactions = minedBlockTransactions[key]; 
         for(uint i=0; i<transactions.length; i++) {
             QuantumPortalLib.RemoteTransaction memory t = transactions[i];
@@ -408,15 +414,6 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         address token
     ) internal virtual view returns (uint256) {
         return 0;
-    }
-
-    /**
-     @notice Ruetnrs the FRM price for the current chain native gas (e.g. ETH)
-     @return The price
-     */
-    function localChainGasTokenPrice(
-    ) internal virtual view returns (uint256) {
-        return 1;
     }
 
     /**
