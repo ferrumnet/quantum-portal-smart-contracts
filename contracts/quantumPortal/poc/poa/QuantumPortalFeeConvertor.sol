@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 import "./IQuantumPortalFeeConvertor.sol";
 import "../../../fee/IPriceOracle.sol";
 import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
+import "hardhat/console.sol";
 
 contract QuantumPortalFeeConverter is IQuantumPortalFeeConvertor {
     address networkFeeWrappedToken;
@@ -17,11 +18,18 @@ contract QuantumPortalFeeConverter is IQuantumPortalFeeConvertor {
         oracle = IPriceOracle(_oracle);
     }
 
-    function localChainGasTokenPriceX128() external override returns (uint256) {
+    function updatePrice() external override {
         address[] memory pairs = new address[](2);
-        pairs[0] = qpFeeToken;
-        pairs[1] = networkFeeWrappedToken;
+        pairs[0] = networkFeeWrappedToken;
+        pairs[1] = qpFeeToken;
         oracle.updatePrice(pairs);
+    }
+
+    function localChainGasTokenPriceX128() external view override returns (uint256) {
+        address[] memory pairs = new address[](2);
+        pairs[0] = networkFeeWrappedToken;
+        pairs[1] = qpFeeToken;
+        console.log("PAIR", pairs[0], pairs[1]);
         return oracle.recentPriceX128(pairs);
     }
 }
