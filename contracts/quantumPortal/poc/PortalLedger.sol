@@ -108,7 +108,7 @@ contract PortalLedger is WithAdmin {
     }
 
     function callRemoteMethod(
-        uint256 remoteChainId, address localContract, address addr, bytes memory method, uint256 /*gas*/
+        uint256 remoteChainId, address localContract, address addr, bytes memory method, uint256 gas
     ) private returns (bool success) {
         if (method.length == 0) {
             return true;
@@ -117,7 +117,7 @@ contract PortalLedger is WithAdmin {
         // TODO: Include gas properly, and catch the proper error when there is not enough gas
         // (success,) = addr.call{gas: gas}(method);
         bytes memory data;
-        (success, data) = addr.call(method);
+        (success, data) = addr.call{gas: gas}(method);
         if (!success) {
             bytes32 revertReason = extractRevertReasonSingleBytes32(data);
             console.logBytes32(revertReason);
