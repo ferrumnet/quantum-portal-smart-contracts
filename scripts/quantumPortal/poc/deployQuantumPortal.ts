@@ -106,7 +106,7 @@ async function prep(conf: QpDeployConfig) {
     [ctx.auth, newAut] = await deployOrAttach(conf, conf.QuantumPortalAuthorityMgr, 'QuantumPortalAuthorityMgr', conf.Owner, '0x', qpWallet,);
 
     const chainId = (await ethers.provider.getNetwork()).chainId;
-    const weAreOnFrmChain = conf.WETH[chainId] === conf.WFRM;
+    const weAreOnFrmChain = true; // conf.WETH[chainId] === conf.WFRM;
     if (weAreOnFrmChain) {
         [ctx.feeConvertor, newFeeConvertor] = await deployOrAttach(
             conf, conf.QuantumPortalFeeConvertorDirect, 'QuantumPortalFeeConverterDirect', ZeroAddress, '0x', qpWallet,);
