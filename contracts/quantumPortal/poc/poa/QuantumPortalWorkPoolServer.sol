@@ -44,7 +44,7 @@ abstract contract QuantumPortalWorkPoolServer is IQuantumPortalWorkPoolServer, T
     }
 
     function withdrawFixedRemote(address worker, uint256 workRatioX128, uint256 epoch) external override {
-        (uint256 remoteChainId, uint256 lastLocalEpoch) = withdrawRemote(worker, workRatioX128, epoch);
+        (uint256 remoteChainId, uint256 lastLocalEpoch) = withdrawRemote(epoch);
         uint collected = FullMath.mulDiv(collectedFixedFee[remoteChainId], epoch, lastLocalEpoch);
         uint amount = FullMath.mulDiv(collected, workRatioX128, FixedPoint128.Q128); 
         amount = amount;
@@ -53,15 +53,15 @@ abstract contract QuantumPortalWorkPoolServer is IQuantumPortalWorkPoolServer, T
     }
 
     function withdrawVariableRemote(address worker, uint256 workRatioX128, uint256 epoch) external override {
-        (uint256 remoteChainId, uint256 lastLocalEpoch) = withdrawRemote(worker, workRatioX128, epoch);
+        (uint256 remoteChainId, uint256 lastLocalEpoch) = withdrawRemote(epoch);
         uint collected = FullMath.mulDiv(collectedVarFee[remoteChainId], epoch, lastLocalEpoch);
         uint amount = FullMath.mulDiv(collected, workRatioX128, FixedPoint128.Q128); 
         collectedVarFee[remoteChainId] -= amount;
         sendToken(baseToken, worker, amount);
     }
 
-    function withdrawRemote(address worker, uint256 workRatioX128, uint256 epoch) internal returns (uint256, uint256) {
-        (uint256 remoteChainId, address sourceMsgSender, address beneficiary) = portal.msgSender();
+    function withdrawRemote(uint256 epoch) internal view returns (uint256, uint256) {
+        (uint256 remoteChainId, address sourceMsgSender, /* address beneficiary */) = portal.msgSender();
         // Caller must be a valid pre-configured remote.
         require(sourceMsgSender == remotes[remoteChainId], "Not allowed"); 
         // Worker gets the same ratio of fees compared to the collected fees.
