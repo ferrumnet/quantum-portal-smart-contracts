@@ -54,14 +54,14 @@ contract MultiChainToken is ERC20, Ownable {
         } else {
             address remoteContract = remoteAddress(mintChain);
             bytes memory method = abi.encodeWithSelector(MultiChainToken.mint.selector, msg.sender, amount);
-            portal.run(mintFee, mintChain, remoteContract, msg.sender, method); // The fee is base fee charged on this side. Covers enough to fail the tx on the other side.
+            portal.run(mintChain, remoteContract, msg.sender, method); // The fee is base fee charged on this side. Covers enough to fail the tx on the other side.
         }
         if (burnChain == CHAIN_ID) {
             _burn(msg.sender, amount);
         } else {
             address remoteContract = remoteAddress(burnChain);
             bytes memory method = abi.encodeWithSelector(MultiChainToken.burn.selector, msg.sender, amount);
-            portal.run(burnFee, burnChain, remoteContract, msg.sender, method);
+            portal.run(burnChain, remoteContract, msg.sender, method);
         }
     }
 

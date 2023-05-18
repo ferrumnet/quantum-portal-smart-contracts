@@ -9,7 +9,8 @@ import "./QuantumPortalLib.sol";
 
 abstract contract QuantumPortalPoc is TokenReceivable, PortalLedger, IQuantumPortalPoc, IVersioned {
 	string constant public override VERSION = "000.001";
-    address public override feeManager;
+    address public override feeTarget;
+    address public override feeToken;
 
     function txContext() external override view returns (QuantumPortalLib.Context memory) {
         return context;
@@ -18,7 +19,7 @@ abstract contract QuantumPortalPoc is TokenReceivable, PortalLedger, IQuantumPor
     /**
      @notice Registers a run in the local context. No value transfer
      */
-    function run(uint256 fee, uint64 remoteChainId, address remoteContract, address beneficiary, bytes memory remoteMethodCall) external override {
+    function run(uint64 remoteChainId, address remoteContract, address beneficiary, bytes memory remoteMethodCall) external override {
         require(remoteMethodCall.length != 0, "remoteMethodCall is required");
         require(remoteChainId != CHAIN_ID, "Remote cannot be self");
         IQuantumPortalLedgerMgr(mgr).registerTransaction(
@@ -28,7 +29,6 @@ abstract contract QuantumPortalPoc is TokenReceivable, PortalLedger, IQuantumPor
             beneficiary,
             address(0),
             0,
-            fee,
             remoteMethodCall);
     }
 
@@ -36,7 +36,7 @@ abstract contract QuantumPortalPoc is TokenReceivable, PortalLedger, IQuantumPor
      @notice Runs a remote method and pays the token amount to the remote method.
      */
     function runWithValue(
-        uint256 fee, uint64 remoteChainId, address remoteContract, address beneficiary, address token, bytes memory method) external override {
+        uint64 remoteChainId, address remoteContract, address beneficiary, address token, bytes memory method) external override {
         require(remoteChainId != CHAIN_ID, "Remote cannot be self");
         IQuantumPortalLedgerMgr(mgr).registerTransaction(
             remoteChainId,
@@ -45,7 +45,6 @@ abstract contract QuantumPortalPoc is TokenReceivable, PortalLedger, IQuantumPor
             beneficiary,
             token,
             sync(token),
-            fee,
             method);
     }
 
@@ -53,7 +52,7 @@ abstract contract QuantumPortalPoc is TokenReceivable, PortalLedger, IQuantumPor
      @notice Runs a remote withdraw. Mining this tx will update the balance for the user. User can then call a withdraw.
      */
     function runWithdraw(
-        uint256 fee, uint64 remoteChainId, address remoteAddress, address token, uint256 amount) external override {
+        uint64 remoteChainId, address remoteAddress, address token, uint256 amount) external override {
         require(remoteChainId != CHAIN_ID, "Remote cannot be self");
         remoteBalances[remoteChainId][token][msg.sender] -= amount;
         IQuantumPortalLedgerMgr(mgr).registerTransaction(
@@ -63,7 +62,6 @@ abstract contract QuantumPortalPoc is TokenReceivable, PortalLedger, IQuantumPor
             address(0),
             token,
             amount,
-            fee,
             "");
     }
 

@@ -2,13 +2,15 @@
 pragma solidity ^0.8.0;
 
 import "./IQuantumPortalAuthorityMgr.sol";
+import "./QuantumPortalWorkPoolClient.sol";
+import "./IQuantumPortalWorkPoolServer.sol";
 import "foundry-contracts/contracts/signature/MultiSigCheckable.sol";
 
 /**
  @notice Authority manager, provides authority signature verification, for 
     different actions.
  */
-contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, MultiSigCheckable {
+contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, QuantumPortalWorkPoolClient, MultiSigCheckable {
     string public constant NAME = "FERRUM_QUANTUM_PORTAL_AUTHORITY_MGR";
     string public constant VERSION = "000.010";
 
@@ -41,6 +43,7 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, MultiSigChecka
         uint64 expiry,
         bytes memory signature
     ) external override {
+        require(msg.sender == mgr, "QPAM: unauthorized");
         require(action != Action.NONE, "QPAM: action required");
         require(msgHash != bytes32(0), "QPAM: msgHash required");
         require(expiry != 0, "QPAM: expiry required");
@@ -61,7 +64,7 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, MultiSigChecka
         uint64 expiry,
         bytes memory signature
     ) external override returns (address[] memory signers, bool quorumComplete) {
-
+        require(msg.sender == mgr, "QPAM: unauthorized");
         // ensure that the current msgHash matches the one in process or msgHash is empty
         if (currentMsgHash != bytes32(0)) {
             require(msgHash == currentMsgHash, "QPAM: msgHash different than expected");
@@ -115,6 +118,10 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, MultiSigChecka
             return (completedSigners, false);
         }
 
+    }
+
+    function withdraw(uint256 remoteChain, address worker, uint fee) external {
+        withdraw(IQuantumPortalWorkPoolServer.withdrawVariableRemote.selector, remoteChain, worker, fee);
     }
 
     /**

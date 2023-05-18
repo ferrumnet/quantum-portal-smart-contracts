@@ -5,6 +5,8 @@ import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
 import "foundry-contracts/contracts/signature/MultiSigLib.sol";
 import "./IQuantumPortalMinerMgr.sol";
 import "./IQuantumPortalStake.sol";
+import "./QuantumPortalWorkPoolClient.sol";
+import "./QuantumPortalWorkPoolServer.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
@@ -18,7 +20,7 @@ import "hardhat/console.sol";
          Anybody can become a miner with staking. But there are rules of minimum stake
          and lock amount.
  */
-contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712 {
+contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712, QuantumPortalWorkPoolServer, QuantumPortalWorkPoolClient {
     string public constant NAME = "FERRUM_QUANTUM_PORTAL_MINER_MGR";
     string public constant VERSION = "000.010";
     uint32 constant WEEK = 3600 * 24 * 7;
@@ -36,7 +38,7 @@ contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712 {
         bytes memory multiSig,
         uint256 /*msgValue*/,
         uint256 minStakeAllowed
-    ) external view override returns (ValidationResult res) {
+    ) external view override returns (ValidationResult res, address signer) {
         // Validate miner signature
         // Get its stake
         // Validate miner has stake
@@ -44,16 +46,15 @@ contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712 {
         // add the value to miners validation history.
         // such that a miner has not limit-per-transaction
         // but limit per other things.
-        address signer = verifySignature(msgHash, expiry, salt, multiSig);
+        signer = verifySignature(msgHash, expiry, salt, multiSig);
         require(signer != address(0), "QPMM: invalid signature");
         console.log("Signer is ?", signer);
         uint256 stake = IQuantumPortalStake(miningStake).delegatedStakeOf(signer);
         require(stake!=0, "QPMM: Not a valid miner");
-        return stake >= minStakeAllowed ? ValidationResult.Valid : ValidationResult.NotEnoughStake;
+        res = stake >= minStakeAllowed ? ValidationResult.Valid : ValidationResult.NotEnoughStake;
     }
 
     bytes32 constant MINER_SIGNATURE = keccak256("MinerSignature(bytes32 msgHash,uint64 expiry,bytes32 salt)");
-
     function verifySignature(
         bytes32 msgHash,
         uint64 expiry,
@@ -83,5 +84,9 @@ contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712 {
             signatures[0].s
         );
         return _signer;
+    }
+
+    function withdraw(uint256 remoteChain, address worker, uint fee) external {
+        withdraw(IQuantumPortalWorkPoolServer.withdrawFixedRemote.selector, remoteChain, worker, fee);
     }
 }
