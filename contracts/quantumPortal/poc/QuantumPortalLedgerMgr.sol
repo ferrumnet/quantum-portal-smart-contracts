@@ -99,7 +99,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
     /**
      * @notice Calculate the fixed fee.
      */
-    function calculateFixedFee(uint256 targetChainId, uint256 varSize) private returns (uint256) {
+    function calculateFixedFee(uint256 targetChainId, uint256 varSize) private view returns (uint256) {
         return IQuantumPortalFeeConvertor(feeConvertor).targetChainFixedFee(targetChainId, FIX_TX_SIZE + varSize);
     }
 
@@ -348,6 +348,8 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             totalMinedWork += minedWork;
             totalVarWork += varWork;
         }
+        IQuantumPortalWorkPoolClient(minerMgr).registerWork(remoteChainId, msg.sender, totalMinedWork, blockNonce);
+        IQuantumPortalWorkPoolClient(authorityMgr).registerWork(remoteChainId, msg.sender, totalVarWork, blockNonce);
 
         FinalizationMetadata memory fin = FinalizationMetadata({
             executor: msg.sender,
@@ -370,9 +372,6 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             nonce: uint64(blockNonce),
             timestamp: uint64(block.timestamp)
         });
-
-        IQuantumPortalWorkPoolClient(minerMgr).registerWork(remoteChainId, msg.sender, totalMinedWork, blockNonce);
-        IQuantumPortalWorkPoolClient(authorityMgr).registerWork(remoteChainId, msg.sender, totalVarWork, blockNonce);
         // TODO: Produce event
     }
 
