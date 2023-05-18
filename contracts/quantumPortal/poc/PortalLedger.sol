@@ -96,6 +96,7 @@ contract PortalLedger is WithAdmin {
 
     function revertRemoteBalance(QuantumPortalLib.Context memory _context) internal {
         // Register a revert transaction to be mined
+        // TODO: Where does the gas come from?
         IQuantumPortalLedgerMgr(mgr).registerTransaction(
             _context.blockMetadata.chainId,
             _context.transaction.sourceBeneficiary,
@@ -103,7 +104,6 @@ contract PortalLedger is WithAdmin {
             address(0),
             _context.transaction.token,
             _context.transaction.amount,
-            _context.transaction.gas, // TODO: Use all the remaining gas on the revert tx
             "");
     }
 

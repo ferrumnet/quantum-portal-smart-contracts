@@ -23,7 +23,8 @@ library QuantumPortalLib {
         address token;
         uint256 amount;
         bytes method;
-        uint256 gas; // provided gas in FRM
+        uint256 gas; // Provided gas in FRM, to run the transaction
+        uint256 fixedFee; // To pay miners and finalizers
     }
 
     struct Context {

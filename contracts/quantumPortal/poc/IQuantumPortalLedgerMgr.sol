@@ -9,7 +9,6 @@ interface IQuantumPortalLedgerMgr {
         address beneficiary,
         address token,
         uint256 amount,
-        uint256 gas,
         bytes memory method
     ) external;
 }

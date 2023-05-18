@@ -14,6 +14,6 @@ interface IQuantumPortalMinerMgr {
         bytes memory signature,
         uint256 msgValue,
         uint256 minStakeAllowed
-    ) external returns (ValidationResult res);
+    ) external view returns (ValidationResult res, address signer);
 }
 
