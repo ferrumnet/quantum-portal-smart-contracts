@@ -1,19 +1,19 @@
 import { ethers } from "hardhat";
-import { DummyToken } from "../../../typechain/DummyToken";
-import { QuantumPortalLedgerMgrTest } from "../../../typechain/QuantumPortalLedgerMgrTest";
-import { QuantumPortalPocTest } from "../../../typechain/QuantumPortalPocTest";
-import { QuantumPortalAuthorityMgr } from '../../../typechain/QuantumPortalAuthorityMgr';
+import { DummyToken } from "../../../typechain-types/DummyToken";
+import { QuantumPortalLedgerMgrTest } from "../../../typechain-types/QuantumPortalLedgerMgrTest";
+import { QuantumPortalPocTest } from "../../../typechain-types/QuantumPortalPocTest";
+import { QuantumPortalAuthorityMgr } from '../../../typechain-types/QuantumPortalAuthorityMgr';
 import { randomSalt } from "foundry-contracts/dist/test/common/Eip712Utils";
-import { abi, deployWithOwner, expiryInFuture, getCtx, isAllZero, Salt, TestContext, ZeroAddress} from 
+import { abi, deployWithOwner, expiryInFuture, getCtx, isAllZero, Salt, TestContext, Wei, ZeroAddress} from 
     'foundry-contracts/dist/test/common/Utils';
 import { getBridgeMethodCall } from 'foundry-contracts/dist/test/common/Eip712Utils';
 import { keccak256 } from "ethers/lib/utils";
 import { delpoyStake, deployMinerMgr } from "./poa/TestQuantumPortalStakeUtils";
 import { QuantumPortalStake } from "../../../typechain-types/QuantumPortalStake";
 import { ERC20 } from "foundry-contracts/dist/test/common/UniswapV2";
-import { Token } from "@uniswap/sdk";
 import { Signer } from "ethers";
 import { QuantumPortalMinerMgr } from "../../../typechain-types/QuantumPortalMinerMgr";
+import { QuantumPortalFeeConverterDirect } from "../../../typechain-types/QuantumPortalFeeConverterDirect";
 
 export const FERRUM_TOKENS = {
     26000: '0x00',
@@ -268,7 +268,9 @@ export interface PortalContext extends TestContext {
         poc: QuantumPortalPocTest;
         token: DummyToken;
         autorityMgr: QuantumPortalAuthorityMgr;
+        minerMgr: QuantumPortalMinerMgr;
         stake: QuantumPortalStake;
+        feeConverter: QuantumPortalFeeConverterDirect;
     },
     chain2: {
         chainId: number;
@@ -276,7 +278,9 @@ export interface PortalContext extends TestContext {
         poc: QuantumPortalPocTest;
         token: DummyToken;
         autorityMgr: QuantumPortalAuthorityMgr;
+        minerMgr: QuantumPortalMinerMgr;
         stake: QuantumPortalStake;
+        feeConverter: QuantumPortalFeeConverterDirect;
     },
 }
 
@@ -287,6 +291,10 @@ export async function deployAll(): Promise<PortalContext> {
     const mgr1 = await mgrFac.deploy(26000) as QuantumPortalLedgerMgrTest;
     const mgr2 = await mgrFac.deploy(2) as QuantumPortalLedgerMgrTest;
 
+    console.log('Setting min stakes');
+    await mgr1.updateMinerMinimumStake(Wei.from('10'));
+    await mgr2.updateMinerMinimumStake(Wei.from('10'));
+
 	const pocFac = await ethers.getContractFactory("QuantumPortalPocTest");
 	console.log('About to deploy the pocs');
     const poc1 = await pocFac.deploy(26000) as QuantumPortalPocTest;
@@ -295,30 +303,45 @@ export async function deployAll(): Promise<PortalContext> {
     // By default, both test ledger mgrs use the same authority mgr.
 	const autorityMgrF = await ethers.getContractFactory("QuantumPortalAuthorityMgr");
 	console.log('About to deploy the ledger managers');
-    const autorityMgr = await autorityMgrF.deploy() as QuantumPortalAuthorityMgr;
+    const autorityMgr1 = await autorityMgrF.deploy() as QuantumPortalAuthorityMgr;
+    const autorityMgr2 = await autorityMgrF.connect(ctx.signers.acc1).deploy() as QuantumPortalAuthorityMgr;
 
     console.log('Deploying some tokens');
 	const tokenData = abi.encode(['address'], [ctx.owner]);
     const tok1 = await deployWithOwner(ctx, 'DummyToken', ZeroAddress, tokenData);
 
-    // Deploy staking and mining manager
+    console.log('Deploying direc fee converter');
+    const feeConverterF = await ethers.getContractFactory('QuantumPortalFeeConverterDirect');
+    const feeConverter = await feeConverterF.deploy();
+
+    console.log('Deploying staking');
     const stake = await delpoyStake(ctx, tok1.address);
     // const stake = await delpoyStake(ctx, FERRUM_TOKENS[ctx.chainId] || panick(`No FRM token is configured for chain ${ctx.chainId}`));
-    const miningMgr = await deployMinerMgr(ctx, stake);
+    console.log('Deploying mining mgr');
+    const miningMgr1 = await deployMinerMgr(ctx, stake, ctx.owner);
+    const miningMgr2 = await deployMinerMgr(ctx, stake, ctx.acc1); // To deploy a different contract.
 
     console.log(`Registering a single authority ("${ctx.wallets[0]}"`);
-    await autorityMgr.initialize(ctx.owner, 1, 1, 0, [ctx.wallets[0]]); 
+    await autorityMgr1.initialize(ctx.owner, 1, 1, 0, [ctx.wallets[0]]); 
+    await autorityMgr2.initialize(ctx.owner, 1, 1, 0, [ctx.wallets[0]]); 
 
-    console.log(`Settting authority mgr (${autorityMgr.address}) and miner mgr ${miningMgr.address} on both QP managers`);
-    await mgr1.updateAuthorityMgr(autorityMgr.address);
-    await mgr1.updateMinerMgr(miningMgr.address);
-    await mgr2.updateAuthorityMgr(autorityMgr.address);
-    await mgr2.updateMinerMgr(miningMgr.address);
+    console.log(`Settting authority mgr (${autorityMgr1.address}/${autorityMgr2.address}) and miner mgr ${miningMgr1.address} / ${miningMgr2.address} on both QP managers, and fee converter`);
+    await mgr1.updateAuthorityMgr(autorityMgr1.address);
+    await mgr1.updateMinerMgr(miningMgr1.address);
+    await mgr1.updateFeeConvertor(feeConverter.address);
+    await miningMgr1.initServer(poc1.address, mgr1.address, tok1.address);
+    await autorityMgr1.updateMgr(mgr1.address);
+    await mgr2.updateAuthorityMgr(autorityMgr2.address);
+    await mgr2.updateMinerMgr(miningMgr2.address);
+    await mgr2.updateFeeConvertor(feeConverter.address);
+    await miningMgr2.connect(ctx.signers.acc1).initServer(poc2.address, mgr2.address, tok1.address);
+    await autorityMgr2.connect(ctx.signers.acc1).updateMgr(mgr2.address);
 
     await poc1.setManager(mgr1.address);
     await poc2.setManager(mgr2.address);
     await mgr1.updateLedger(poc1.address);
     await mgr2.updateLedger(poc2.address);
+    console.log('Set.')
 
 	return {
         ...ctx,
@@ -326,17 +349,21 @@ export async function deployAll(): Promise<PortalContext> {
             chainId: 2600,
             ledgerMgr: mgr1,
             poc: poc1,
-            autorityMgr,
+            autorityMgr: autorityMgr1,
+            minerMgr: miningMgr1,
             token: tok1,
             stake,
+            feeConverter,
         },
         chain2: {
             chainId: 2,
             ledgerMgr: mgr2,
             poc: poc2,
-            autorityMgr,
+            autorityMgr: autorityMgr2,
+            minerMgr: miningMgr2,
             token: tok1,
             stake,
+            feeConverter,
         }
     } as PortalContext;
 }

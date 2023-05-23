@@ -8,7 +8,7 @@ import "../../../staking/library/TokenReceivable.sol";
 import "foundry-contracts/contracts/common/WithAdmin.sol";
 import "hardhat/console.sol";
 
-abstract contract QuantumPortalWorkerBase {
+abstract contract QuantumPortalWorkerBase is WithAdmin {
     mapping(uint256=>address) public remotes;
     IQuantumPortalPoc public portal;
     address public mgr;
@@ -17,7 +17,7 @@ abstract contract QuantumPortalWorkerBase {
 /**
  * @notice Collect and distribute rewards
  */
-abstract contract QuantumPortalWorkPoolServer is IQuantumPortalWorkPoolServer, TokenReceivable, QuantumPortalWorkerBase, WithAdmin {
+abstract contract QuantumPortalWorkPoolServer is IQuantumPortalWorkPoolServer, TokenReceivable, QuantumPortalWorkerBase {
     address public baseToken;
     mapping(uint256=>uint256) public lastEpoch;
     mapping(uint256=>uint256) public collectedFixedFee;

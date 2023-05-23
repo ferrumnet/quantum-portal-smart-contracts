@@ -17,7 +17,6 @@ describe("Test qp", function () {
         const ctx = await deployAll();
         await ctx.chain1.token.transfer(ctx.chain1.poc.address, Wei.from('20'));
         await ctx.chain1.poc.runWithValue(
-            Wei.from('1'),
             ctx.chain2.chainId,
             ctx.acc1,
             ZeroAddress,
@@ -43,11 +42,12 @@ describe("Test qp", function () {
         expect(isBlockReady).to.be.true;
 
         console.log('Now, mining a block on chain 2');
-        await QuantumPortalUtils.stakeAndDelegate(ctx.chain1.stake, '1', ctx.owner, ctx.wallets[0], ctx.signers.owner);
+        await QuantumPortalUtils.stakeAndDelegate(ctx.chain1.stake, '10', ctx.owner, ctx.wallets[0], ctx.signers.owner);
         const txs = [{
                     token: tx.token.toString(),
                     amount: tx.amount.toString(),
                     gas: tx.gas.toString(),
+                    fixedFee: tx.fixedFee.toString(),
                     method: tx.method.toString(),
                     remoteContract: tx.remoteContract.toString(),
                     sourceBeneficiary: tx.sourceBeneficiary.toString(),

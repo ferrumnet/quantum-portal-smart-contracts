@@ -15,6 +15,10 @@ abstract contract QuantumPortalWorkPoolClient is IQuantumPortalWorkPoolClient, Q
     mapping (uint256=>uint256) public totalWork; // Total work on remote chain
     mapping (uint256=>uint256) public remoteEpoch;
 
+    function updateMgr(address _mgr) external onlyAdmin {
+        mgr = _mgr;
+    }
+
     function registerWork(uint256 remoteChain, address worker, uint256 work, uint256 _remoteEpoch) external override {
         require(msg.sender == mgr, "QPWPC: caller not allowed");
         works[remoteChain][worker] += work;
