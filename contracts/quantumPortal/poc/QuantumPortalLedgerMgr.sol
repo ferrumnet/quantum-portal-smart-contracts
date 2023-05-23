@@ -91,6 +91,10 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         fixedFeeTarget = _fixedFeeTarget;
     }
 
+    function updateMinerMinimumStake(uint256 amount) external onlyAdmin {
+        minerMinimumStake = amount;
+    }
+
     constructor(uint256 overrideChainId) {
         CHAIN_ID = overrideChainId == 0 ? block.chainid : overrideChainId;
     }
