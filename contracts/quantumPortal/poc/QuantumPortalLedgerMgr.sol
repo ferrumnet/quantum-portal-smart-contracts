@@ -45,7 +45,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
     }
 
 	string constant public override VERSION = "000.001";
-    uint256 constant BLOCK_PERIOD = 60; // One block per minute?
+    uint256 constant BLOCK_PERIOD = 60 * 2; // One block per two minutes?
     uint256 immutable CHAIN_ID;
     uint256 public minerMinimumStake = 10**18 * 1000000; // Minimum 1M tokens to become miner
     mapping(uint256 => LocalBlock) public localBlocks;
@@ -125,6 +125,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         console.log("ORIGINAL NONCE IS", b.nonce);
         uint256 key = blockIdx(remoteChainId, b.nonce);
         uint256 fixedFee = calculateFixedFee(remoteChainId, method.length);
+        console.log("Fixed Fee is", fixedFee);
         QuantumPortalLib.RemoteTransaction memory remoteTx = QuantumPortalLib.RemoteTransaction({
             timestamp: uint64(block.timestamp),
             remoteContract: remoteContract,
@@ -228,6 +229,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             totalValue,
             minerMinimumStake
         );
+        console.log("MINER IS", miner);
         if (validationResult != IQuantumPortalMinerMgr.ValidationResult.Valid) {
             require(validationResult != IQuantumPortalMinerMgr.ValidationResult.NotEnoughStake, "QPLM: miner has not enough stake");
             revert("QPLM: miner signature cannot be verified");
@@ -420,7 +422,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
                 FixedPoint128.Q128);
             uint256 baseGasUsed = qp.executeRemoteTransaction(i, b.blockMetadata, t, txGas);
             totalVarWork += baseGasUsed;
-            console.log("REMOTE TX EXECUTED", t.gas);
+            console.log("REMOTE TX EXECUTED vs used", t.gas, baseGasUsed);
             // TODO: Refund extra gas based on the ratio of gas used vs gas provided.
             // Need to convert the base gas to FRM first, and reduce the base fee.
         }

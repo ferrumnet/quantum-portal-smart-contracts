@@ -22,6 +22,7 @@ abstract contract QuantumPortalWorkPoolClient is IQuantumPortalWorkPoolClient, Q
     function registerWork(uint256 remoteChain, address worker, uint256 work, uint256 _remoteEpoch) external override {
         require(msg.sender == mgr, "QPWPC: caller not allowed");
         works[remoteChain][worker] += work;
+        console.log("REGISTERING WORK",  worker, work);
         totalWork[remoteChain] += work;
         remoteEpoch[remoteChain] = _remoteEpoch;
     }

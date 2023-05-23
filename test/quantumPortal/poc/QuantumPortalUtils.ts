@@ -20,6 +20,8 @@ export const FERRUM_TOKENS = {
 }
 
 export class QuantumPortalUtils {
+    static FIXED_FEE_SIZE = 32*9;
+
     static async mine(
         chain1: number,
         chain2: number,
@@ -313,6 +315,7 @@ export async function deployAll(): Promise<PortalContext> {
     console.log('Deploying direc fee converter');
     const feeConverterF = await ethers.getContractFactory('QuantumPortalFeeConverterDirect');
     const feeConverter = await feeConverterF.deploy();
+    await feeConverter.updateFeePerByte(Wei.from('0.001'));
 
     console.log('Deploying staking');
     const stake = await delpoyStake(ctx, tok1.address);
@@ -338,7 +341,9 @@ export async function deployAll(): Promise<PortalContext> {
     await autorityMgr2.connect(ctx.signers.acc1).updateMgr(mgr2.address);
 
     await poc1.setManager(mgr1.address);
+    await poc1.setFeeTarget(miningMgr1.address);
     await poc2.setManager(mgr2.address);
+    await poc2.setFeeTarget(miningMgr2.address);
     await mgr1.updateLedger(poc1.address);
     await mgr2.updateLedger(poc2.address);
     console.log('Set.')
