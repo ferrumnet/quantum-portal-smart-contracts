@@ -24,13 +24,14 @@ async function configClient(helper: DeployTestHelper<Args, Contracts>) {
 
 async function main() {
     const helper = new DeployTestHelper<Args, Contracts>(['owner','mode;provide MODE = MASTER or CLIENT']);
-    helper.MASTER_CHAIN_ID = 97; // bsc testnet
-    helper.CLIENT_CHAIN_ID = 80001; // avax fuji testnet
+    helper.MASTER_CHAIN_ID = 26100; // ferrum testnet
+    const client_chain_id = await readLine('What is the CLIENT CHAIN ID?');
+    helper.CLIENT_CHAIN_ID = parseInt(client_chain_id);
     await helper.init(
         (helper.args.mode === 'MASTER' || helper.args.mode === 'INIT_MASTER') ? helper.MASTER_CHAIN_ID : helper.CLIENT_CHAIN_ID,
         [
-            {name: 'MultiChainStakingMaster', address: '0x53665C11792f0224232d6BC3152F9f3A9F739542', netId: helper.MASTER_CHAIN_ID},
-            {name: 'MultiChainStakingClient', address: '0x8975062DD4105723207e104b257157d23488e9D0', netId: helper.CLIENT_CHAIN_ID},
+            {name: 'MultiChainStakingMaster', address: '0xB1CcE8e7039395348283cbb267007351a7777876', netId: helper.MASTER_CHAIN_ID},
+            {name: 'MultiChainStakingClient', address: '', netId: 80001 },
         ]);
 
     if (helper.args.mode === 'MASTER') {
