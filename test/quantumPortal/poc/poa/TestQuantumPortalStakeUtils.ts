@@ -13,16 +13,18 @@ export async function delpoyStake(ctx: TestContext, tokenAddress?: string) {
         await deployDummyToken(ctx);
     }
     const initData = abi.encode(['address', 'address'], [ctx.token.address, ctx.token.address]);
-    console.log("INIT", initData)
+    console.log("INIT", initData);
     const stk = await deployWithOwner(ctx, 'QuantumPortalStake', ctx.acc1, initData
         ) as QuantumPortalStake;
+    const stakeId = await stk.STAKE_ID();
+    console.log(`Statke with ID ${stakeId} was deployed`);
     return stk;
 }
 
-export async function  deployMinerMgr(ctx: TestContext, stk: QuantumPortalStake) {
+export async function  deployMinerMgr(ctx: TestContext, stk: QuantumPortalStake, owner: string) {
     const initData = abi.encode(['address'], [stk.address]);
     console.log("INIT for QuantumPortalMinerMgr", initData)
-    const min = await deployWithOwner(ctx, 'QuantumPortalMinerMgr', ZeroAddress, initData
+    const min = await deployWithOwner(ctx, 'QuantumPortalMinerMgr', owner, initData
         ) as QuantumPortalMinerMgr;
     return min;
 }

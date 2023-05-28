@@ -146,12 +146,13 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
      */
     function cancelWithdrawals(
         address staker
-    ) internal returns (uint256) {
+    ) internal returns (uint256 total) {
         Pair memory param = withdrawItemsQueueParam[staker];
         for (uint i=param.start; i<param.end; i++) {
             WithdrawItem memory wi = withdrawItemsQueue[staker][i];
             delete withdrawItemsQueue[staker][i];
             _stakeUpdateStateOnly(staker, STAKE_ID, wi.amount);
+            total += wi.amount;
         }
         delete withdrawItemsQueueParam[staker];
     }
@@ -167,7 +168,7 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
         delete withdrawItemsQueue[staker][pair.start];
     }
 
-    function peekQueue(address staker) private returns (Pair memory pair, WithdrawItem memory wi) {
+    function peekQueue(address staker) private view returns (Pair memory pair, WithdrawItem memory wi) {
         pair = withdrawItemsQueueParam[staker];
         wi = withdrawItemsQueue[staker][pair.start];
     }

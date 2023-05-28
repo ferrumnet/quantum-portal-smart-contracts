@@ -33,10 +33,10 @@ contract PortalLedger is WithAdmin {
         QuantumPortalLib.RemoteTransaction memory t,
         uint256 gas
     ) external onlyMgr returns (uint256 gasUsed) {
-        uint preGas = block.gaslimit;
-        console.log("Executing");
-        console.log("amount", t.amount);
-        console.log("remoteContract", t.remoteContract);
+        uint preGas = gasleft();
+        console.log("EXECUTING", preGas);
+        console.log("AMOUNT", t.amount);
+        console.log("REMOTE CONTRACT", t.remoteContract);
         if (t.method.length == 0) {
             // This is a withdraw tx. There is no remote balance to be updated.
             // I.e. when the remote contract creates decides to pay out,
@@ -44,9 +44,9 @@ contract PortalLedger is WithAdmin {
             // Withdraw txs may not fail. If the actual withdraw failed, there is
             // either an issue with the token, which we cannot do anything about, 
             // or not enough balance, which should never happen.
-            console.log("UPDATING BALANCE FOR ", t.remoteContract);
+            console.log("UPDATING BALANCE FOR ", t.remoteContract, t.amount);
             if (t.amount != 0) {
-                remoteBalances[CHAIN_ID][t.token][t.remoteContract] += t.amount;
+                remoteBalances[b.chainId][t.token][t.remoteContract] += t.amount;
             }
         } else {
             QuantumPortalLib.Context memory _context = QuantumPortalLib.Context({
@@ -68,8 +68,9 @@ contract PortalLedger is WithAdmin {
                 revertRemoteBalance(_context);
             }
         }
-        uint postGas = block.gaslimit;
-        gasUsed = postGas - preGas;
+        uint postGas = gasleft();
+        gasUsed = preGas - postGas;
+        console.log("gas used? ", postGas);
     }
 
     function remoteBalanceOf(
@@ -96,6 +97,7 @@ contract PortalLedger is WithAdmin {
 
     function revertRemoteBalance(QuantumPortalLib.Context memory _context) internal {
         // Register a revert transaction to be mined
+        // TODO: Where does the gas come from?
         IQuantumPortalLedgerMgr(mgr).registerTransaction(
             _context.blockMetadata.chainId,
             _context.transaction.sourceBeneficiary,
@@ -103,7 +105,6 @@ contract PortalLedger is WithAdmin {
             address(0),
             _context.transaction.token,
             _context.transaction.amount,
-            _context.transaction.gas, // TODO: Use all the remaining gas on the revert tx
             "");
     }
 

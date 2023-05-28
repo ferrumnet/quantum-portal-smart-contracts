@@ -76,26 +76,31 @@ contract QuantumPortalGateway is WithAdmin, IQuantumPortalPoc {
     /**
      * Proxy methods for IQuantumPortalPoc
      */
-    function feeManager(
+    function feeTarget(
     ) external override view returns(address) {
-        return quantumPortalPoc.feeManager();
+        return quantumPortalPoc.feeTarget();
     }
 
-    function run(uint256 fee, uint64 remoteChain, address remoteContract, address beneficiary, bytes memory remoteMethodCall
+    function feeToken(
+    ) external override view returns(address) {
+        return quantumPortalPoc.feeToken();
+    }
+
+    function run(uint64 remoteChain, address remoteContract, address beneficiary, bytes memory remoteMethodCall
     ) external override {
-        quantumPortalPoc.run(fee, remoteChain, remoteContract, beneficiary, remoteMethodCall);
+        quantumPortalPoc.run(remoteChain, remoteContract, beneficiary, remoteMethodCall);
     }
 
     function runWithValue(
-        uint256 fee, uint64 remoteChain, address remoteContract, address beneficiary, address token, bytes memory method
+        uint64 remoteChain, address remoteContract, address beneficiary, address token, bytes memory method
     ) external override {
-        quantumPortalPoc.runWithValue(fee, remoteChain, remoteContract, beneficiary, token, method);
+        quantumPortalPoc.runWithValue(remoteChain, remoteContract, beneficiary, token, method);
     }
 
     function runWithdraw(
-        uint256 fee, uint64 remoteChainId, address remoteAddress, address token, uint256 amount
+        uint64 remoteChainId, address remoteAddress, address token, uint256 amount
     ) external override {
-        quantumPortalPoc.runWithdraw(fee, remoteChainId, remoteAddress, token, amount);
+        quantumPortalPoc.runWithdraw(remoteChainId, remoteAddress, token, amount);
     }
 
     function msgSender(
