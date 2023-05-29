@@ -130,4 +130,8 @@ describe("Test qp", function () {
         console.log('Remote balance for acc1, token1 is', remoteBalance.toString());
         expect(remoteBalance).to.be.equal('20.0');
     });
+
+    it('Miners can claim their rewards.', async function() {
+
+    });
 });
