@@ -6,12 +6,14 @@ Note : remember to change the DEPLOY_SALT value in consts file
 
 1. Deploy on master chain
 
-QP_CONFIG_FILE=./localConfig/QpDeployConfig.yml npx hardhat run --network bsctestnet ./scripts/quantumPortal/poc/deployQuantumPortal.ts
+QP_CONFIG_FILE=./localConfig/QpDeployConfig.yml npx hardhat run --network ferrum_testnet ./scripts/quantumPortal/poc/deployQuantumPortal.ts
 
 
 2. Deploy on client chain
 
 QP_CONFIG_FILE=./localConfig/QpDeployConfig.yml npx hardhat run --network mumbai ./scripts/quantumPortal/poc/deployQuantumPortal.ts
+
+QP_CONFIG_FILE=./localConfig/QpDeployConfig.yml npx hardhat run --network shibuya_testnet ./scripts/quantumPortal/poc/deployQuantumPortal.ts
 
 
 # Deploy Multichain staking example
@@ -22,7 +24,7 @@ QP_CONFIG_FILE=./localConfig/QpDeployConfig.yml npx hardhat run --network mumbai
 
 1. Deploy on master
 
-    mode=MASTER owner=0xD164F5DD60d11100771BAB79B0868Ae835DD23f0 npx hardhat run --network bsctestnet ./scripts/quantumPortal/poc/examples/deployMultiChainStaking.ts
+    mode=MASTER owner=0xD164F5DD60d11100771BAB79B0868Ae835DD23f0 npx hardhat run --network ferrum_testnet ./scripts/quantumPortal/poc/examples/deployMultiChainStaking.ts
 
 2. Deploying the client
 
@@ -38,7 +40,7 @@ await helper.init([
 Then:
 
 ```
-  mode=CLIENT owner=0xD164F5DD60d11100771BAB79B0868Ae835DD23f0 npx hardhat run --network mumbai ./scripts/quantumPortal/poc/examples/deployMultiChainStaking.ts
+  mode=CLIENT owner=0xD164F5DD60d11100771BAB79B0868Ae835DD23f0 npx hardhat run --network shibuya_testnet ./scripts/quantumPortal/poc/examples/deployMultiChainStaking.ts
 ```
 
 3. Init the master contract

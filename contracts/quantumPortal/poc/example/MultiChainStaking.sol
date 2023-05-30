@@ -66,7 +66,7 @@ contract MultiChainStakingMaster is MultiChainMasterBase {
      */
     function stakeRemote() external {
         (uint netId, address sourceMsgSender, address beneficiary) = portal.msgSender();
-        require(sourceMsgSender == remotes[netId], "Not allowed");
+        require(sourceMsgSender == remotes[netId], "Not allowed"); // Caller must be a valid pre-configured remote.
         QuantumPortalLib.RemoteTransaction memory _tx = portal.txContext().transaction;
         require(_tx.token == baseTokens[netId], "Unexpected token");
         doStake(netId, beneficiary, _tx.amount);
@@ -120,7 +120,7 @@ contract MultiChainStakingMaster is MultiChainMasterBase {
         IERC20(rewardToken).transfer(msg.sender, reward);
         // This should initiate a withdaw on the remote side...
         portal.runWithdraw(
-            fee, uint64(chainId), msg.sender, baseTokens[chainId], staked);
+            uint64(chainId), msg.sender, baseTokens[chainId], staked);
     }
 
     function calcReward(uint256 stakeAmount) private view returns (uint256) {
@@ -136,6 +136,6 @@ contract MultiChainStakingClient is MultiChainClientBase {
         require(SafeAmount.safeTransferFrom(token, msg.sender, address(portal), amount) != 0, "Nothing transferred");
         bytes memory method = abi.encodeWithSelector(MultiChainStakingMaster.stakeRemote.selector);
         portal.runWithValue(
-            fee, uint64(MASTER_CHAIN_ID), masterContract, msg.sender, token, method);
+            uint64(MASTER_CHAIN_ID), masterContract, msg.sender, token, method);
     }
 }
