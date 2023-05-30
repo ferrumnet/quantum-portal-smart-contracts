@@ -1,4 +1,9 @@
 {
+  "name": "quantum-portal-smart-contracts",
+  "version": "0.1.0",
+  "description": "Smart contracts for Quantum Portal",
+  "author": "Ferrum Network",
+  "license": "MIT",
   "dependencies": {
     "@openzeppelin/contracts": "^4.1.0",
     "@openzeppelin/contracts-upgradeable": "^4.3.2",
