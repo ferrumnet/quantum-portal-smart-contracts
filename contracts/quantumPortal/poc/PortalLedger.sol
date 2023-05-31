@@ -37,6 +37,7 @@ contract PortalLedger is WithAdmin {
         console.log("EXECUTING", preGas);
         console.log("AMOUNT", t.amount);
         console.log("REMOTE CONTRACT", t.remoteContract);
+        console.log("USING GAS", gas);
         if (t.method.length == 0) {
             // This is a withdraw tx. There is no remote balance to be updated.
             // I.e. when the remote contract creates decides to pay out,
@@ -65,7 +66,8 @@ contract PortalLedger is WithAdmin {
                 // Commit the uncommitedBalance. This could have been changed during callRemoteMehod
                 remoteBalances[b.chainId][t.token][t.remoteContract] = context.uncommitedBalance;
             } else {
-                revertRemoteBalance(_context);
+                // We cannot revert because we don't know where to get the fee from.
+                // revertRemoteBalance(_context);
             }
         }
         uint postGas = gasleft();
@@ -118,9 +120,12 @@ contract PortalLedger is WithAdmin {
         // TODO: Include gas properly, and catch the proper error when there is not enough gas
         // (success,) = addr.call{gas: gas}(method);
         bytes memory data;
-        (success, data) = addr.call{gas: gas}(method);
+        console.log("CALLING ", addr);
+        // (success, data) = addr.call{gas: gas}(method);
+        (success, data) = addr.call(method);
         if (!success) {
             bytes32 revertReason = extractRevertReasonSingleBytes32(data);
+            console.log("CALL TO CONTRACT FAILED");
             console.logBytes32(revertReason);
             emit ExecutionReverted(remoteChainId, localContract, revertReason);
         }

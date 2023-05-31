@@ -87,6 +87,6 @@ contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712, QuantumPortalW
     }
 
     function withdraw(uint256 remoteChain, address worker, uint fee) external {
-        withdraw(IQuantumPortalWorkPoolServer.withdrawFixedRemote.selector, remoteChain, worker, fee);
+        QuantumPortalWorkPoolClient.withdraw(IQuantumPortalWorkPoolServer.withdrawFixedRemote.selector, remoteChain, worker, fee);
     }
 }
