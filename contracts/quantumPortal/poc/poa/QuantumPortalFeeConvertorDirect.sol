@@ -17,7 +17,7 @@ contract QuantumPortalFeeConverterDirect is IQuantumPortalFeeConvertor, WithAdmi
     function updatePrice() external override { }
 
     function localChainGasTokenPriceX128() external pure override returns (uint256) {
-        return 1;
+        return FixedPoint128.Q128;
     }
 
     function targetChainGasTokenPriceX128(uint256 targetChainId) external view override returns (uint256) {
