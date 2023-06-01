@@ -12,6 +12,9 @@ abstract contract QuantumPortalWorkerBase is WithAdmin {
     mapping(uint256=>address) public remotes;
     IQuantumPortalPoc public portal;
     address public mgr;
+    function setRemote(uint256 chainId, address remote) external onlyAdmin {
+        remotes[chainId] = remote;
+    }
 }
 
 /**
@@ -29,26 +32,27 @@ abstract contract QuantumPortalWorkPoolServer is IQuantumPortalWorkPoolServer, T
         baseToken = _baseToken;
     }
 
-    function setRemote(uint256 chainId, address remote) external onlyAdmin {
-        remotes[chainId] = remote;
-    }
-
     function collectFee(uint256 targetChainId, uint256 localEpoch, uint256 fixedFee) external override returns (uint256 varFee) {
         require(msg.sender == mgr, "QPWPS:only QP mgr may call");
         uint256 collected = sync(baseToken);
         require(collected >= fixedFee, "QPWPS: Not enough fee");
-        lastEpoch[targetChainId] == localEpoch;
+        console.log("CollectFee EPOCH", localEpoch, targetChainId);
+        lastEpoch[targetChainId] = localEpoch;
         collectedFixedFee[targetChainId] += fixedFee;
         varFee = collected - fixedFee;
         collectedVarFee[targetChainId] += varFee;
     }
 
     function withdrawFixedRemote(address worker, uint256 workRatioX128, uint256 epoch) external override {
+        console.log("WITHDRAW_FIXED_REMOTE", worker);
+        console.log("workRatio", workRatioX128);
+        console.log("epoch", epoch);
         (uint256 remoteChainId, uint256 lastLocalEpoch) = withdrawRemote(epoch);
         uint collected = FullMath.mulDiv(collectedFixedFee[remoteChainId], epoch, lastLocalEpoch);
         uint amount = FullMath.mulDiv(collected, workRatioX128, FixedPoint128.Q128); 
         amount = amount;
         collectedFixedFee[remoteChainId] -= amount;
+        console.log("WITHDRAW CALLED HERE", worker, amount);
         sendToken(baseToken, worker, amount);
     }
 
@@ -66,6 +70,7 @@ abstract contract QuantumPortalWorkPoolServer is IQuantumPortalWorkPoolServer, T
         require(sourceMsgSender == remotes[remoteChainId], "Not allowed"); 
         // Worker gets the same ratio of fees compared to the collected fees.
         uint lastLocalEpoch = lastEpoch[remoteChainId]; // Note: This can NOT be zero
+        console.log("LAST LOCAL EPOCH IS VS", lastEpoch[remoteChainId], remoteChainId);
         require(epoch <= lastLocalEpoch, "QPWPS:expected epoch<=lastLocalEpoch");
         return (remoteChainId, lastLocalEpoch);
     }
