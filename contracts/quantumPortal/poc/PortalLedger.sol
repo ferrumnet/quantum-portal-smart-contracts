@@ -73,6 +73,7 @@ contract PortalLedger is WithAdmin {
                 // We cannot revert because we don't know where to get the fee from.
                 // revertRemoteBalance(_context);
             }
+            resetContext();
         }
         uint postGas = gasleft();
         gasUsed = preGas - postGas;
@@ -114,6 +115,7 @@ contract PortalLedger is WithAdmin {
         context = _context;
         // This call will revert after execution but the tx should go through, hence enabling gas estimation
         address(this).call(abi.encodeWithSelector(CanEstimateGas.executeTxAndRevertToEstimateGas.selector, t.remoteContract, t.method));
+        resetContext();
     }
 
     function executeTxAndRevertToEstimateGas(address addr, bytes memory method) public {
@@ -220,5 +222,9 @@ contract PortalLedger is WithAdmin {
                 }
             }
         }
+    }
+
+    function resetContext() private {
+        delete context;
     }
 }
