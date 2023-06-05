@@ -420,6 +420,10 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             uint256 txGas = FullMath.mulDiv(gasPrice,
                 t.gas, // TODO: include base fee and miner fee, etc.
                 FixedPoint128.Q128);
+            console.log("Price is...", gasPrice);
+            console.log("Gas provided in eth: ", t.gas, txGas);
+            txGas = txGas / tx.gasprice;
+            console.log("Gas limit provided", txGas);
             uint256 baseGasUsed = qp.executeRemoteTransaction(i, b.blockMetadata, t, txGas);
             totalVarWork += baseGasUsed;
             console.log("REMOTE TX EXECUTED vs used", t.gas, baseGasUsed);

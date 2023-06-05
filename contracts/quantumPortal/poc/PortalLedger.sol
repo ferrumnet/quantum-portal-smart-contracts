@@ -121,8 +121,8 @@ contract PortalLedger is WithAdmin {
         // (success,) = addr.call{gas: gas}(method);
         bytes memory data;
         console.log("CALLING ", addr);
-        // (success, data) = addr.call{gas: gas}(method);
-        (success, data) = addr.call(method);
+        (success, data) = addr.call{gas: gas}(method);
+        // (success, data) = addr.call(method);
         if (!success) {
             bytes32 revertReason = extractRevertReasonSingleBytes32(data);
             console.log("CALL TO CONTRACT FAILED");
