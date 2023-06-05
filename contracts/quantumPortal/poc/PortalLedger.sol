@@ -6,6 +6,10 @@ import "foundry-contracts/contracts/common/WithAdmin.sol";
 import "./QuantumPortalLib.sol";
 import "hardhat/console.sol";
 
+interface CanEstimateGas {
+    function executeTxAndRevertToEstimateGas(address addr, bytes memory method) external;
+}
+
 contract PortalLedger is WithAdmin {
     event ExecutionReverted(uint256 remoteChainId, address localContract, bytes32 revertReason);
     address public mgr;
@@ -73,6 +77,48 @@ contract PortalLedger is WithAdmin {
         uint postGas = gasleft();
         gasUsed = preGas - postGas;
         console.log("gas used? ", postGas);
+    }
+
+    function estimateGasForRemoteTransaction(
+        uint256 remoteChainId,
+        address sourceMsgSender,
+        address remoteContract,
+        address beneficiary,
+        bytes memory method,
+        address token,
+        uint256 amount
+    ) external {
+        QuantumPortalLib.RemoteTransaction memory t = QuantumPortalLib.RemoteTransaction({
+            timestamp: uint64(block.timestamp),
+            remoteContract: remoteContract,
+            sourceMsgSender: sourceMsgSender,
+            sourceBeneficiary: beneficiary,
+            token: token,
+            amount: amount,
+            method: method,
+            gas: 0, 
+            fixedFee: 0
+        });
+        QuantumPortalLib.Block memory b = QuantumPortalLib.Block({
+            chainId: uint64(remoteChainId),
+            nonce: 1,
+            timestamp: uint64(block.timestamp)
+        });
+        QuantumPortalLib.Context memory _context = QuantumPortalLib.Context({
+            index: uint64(1),
+            blockMetadata: b,
+            transaction: t,
+            uncommitedBalance: remoteBalances[b.chainId][t.token][t.remoteContract] + t.amount
+        });
+
+        context = _context;
+        // This call will revert after execution but the tx should go through, hence enabling gas estimation
+        address(this).call(abi.encodeWithSelector(CanEstimateGas.executeTxAndRevertToEstimateGas.selector, t.remoteContract, t.method));
+    }
+
+    function executeTxAndRevertToEstimateGas(address addr, bytes memory method) public {
+        addr.call(method);
+        revert();
     }
 
     function remoteBalanceOf(

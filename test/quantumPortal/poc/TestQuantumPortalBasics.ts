@@ -1,8 +1,10 @@
-import { expiryInFuture, seed0x as salt0x, throws, Wei, ZeroAddress } from 
+import { abi, expiryInFuture, seed0x as salt0x, throws, Wei, ZeroAddress } from 
     'foundry-contracts/dist/test/common/Utils';
 import { expect } from "chai";
 import { advanceTimeAndBlock } from "../../common/TimeTravel";
 import { deployAll, PortalContext, QuantumPortalUtils } from "./QuantumPortalUtils";
+import { ethers } from 'hardhat';
+import { EstimateGasExample } from '../../../typechain-types/EstimateGasExample';
 
 const _it = (a: any, b: any) => () => {};
 
@@ -238,5 +240,79 @@ describe("Test qp", function () {
         const finalBal = Wei.to((await ctx.chain2.token.balanceOf(ctx.wallets[0])).toString());
         console.log(`POST - Current balance is: ${finalBal}`);
         expect(finalBal).to.be.equal('0.144');
+    });
+
+    it('Estimate gas reverts the work', async function() {
+        const ctx = await deployAll();
+
+        const estimageGasTestF = await ethers.getContractFactory('EstimateGasExample');
+        const estimageGasTest = await estimageGasTestF.deploy(ctx.chain2.poc.address) as EstimateGasExample;
+
+        let methodCall = estimageGasTest.interface.encodeFunctionData('setNumber', ['1']);
+        await estimageGasTest.setNumber('6');
+        const ensureNumberIs6 = async () => {
+            const num = (await estimageGasTest.number()). toString();
+            expect(num).to.be.equal('6');
+            console.log('State stayed');
+        }
+
+        console.log('Estimating the gas needed to run setNumber(1)');
+        const estim = (method: string) => ctx.chain2.poc.estimateGas.estimateGasForRemoteTransaction(
+            ctx.chain1.chainId,
+            ZeroAddress,
+            estimageGasTest.address,
+            ZeroAddress,
+            method,
+            ZeroAddress,
+            '0');
+        const runTheEstim = (method: string) => ctx.chain2.poc.estimateGasForRemoteTransaction(
+            ctx.chain1.chainId,
+            ZeroAddress,
+            estimageGasTest.address,
+            ZeroAddress,
+            method,
+            ZeroAddress,
+            '0');
+        let gasNeeded = await estim(methodCall);
+        console.log('Gas needed to run remote tx is: ', gasNeeded.toString());
+        console.log('Making sure estate cannot change');
+        try { await ctx.chain2.poc.executeTxAndRevertToEstimateGas(estimageGasTest.address, methodCall); } catch (e) {};
+        await ensureNumberIs6();
+        await runTheEstim(methodCall);
+        await ensureNumberIs6();
+        gasNeeded = await estimageGasTest.estimateGas.setNumber('1');
+        console.log('Gas needed to run directly is: ', gasNeeded.toString());
+
+        console.log('Estimate a few more methods');
+        const methodCallGetContextOpen = estimageGasTest.interface.encodeFunctionData('getContextOpen');
+        const methodCallGetContextLimit = estimageGasTest.interface.encodeFunctionData('getContextLimit');
+        const methodCallExpensiveContextCall100 = estimageGasTest.interface.encodeFunctionData('expensiveContextCall', ['100']);
+        const methodCallExpensiveContextCall1000 = estimageGasTest.interface.encodeFunctionData('expensiveContextCall', ['1000']);
+        const methodCallExpensiveContextCall10000 = estimageGasTest.interface.encodeFunctionData('expensiveContextCall', ['10000']);
+        let gasNeededGetContextOpen = (await estim(methodCallGetContextOpen)).toString();
+        await runTheEstim(methodCallGetContextOpen);
+        await ensureNumberIs6();
+        let gasNeededmethodCallGetContextLimit = (await estim(methodCallGetContextLimit)).toString();
+        await runTheEstim(methodCallGetContextLimit);
+        await ensureNumberIs6();
+        let gasNeededmethodCallExpensiveContextCall100 = (await estim(methodCallExpensiveContextCall100)).toString();
+        await runTheEstim(methodCallExpensiveContextCall100);
+        await ensureNumberIs6();
+        let gasNeededmethodCallExpensiveContextCall1000 = (await estim(methodCallExpensiveContextCall1000)).toString();
+        await runTheEstim(methodCallExpensiveContextCall1000);
+        await ensureNumberIs6();
+        let gasNeededmethodCallExpensiveContextCall10000 = (await estim(methodCallExpensiveContextCall10000)).toString();
+        await runTheEstim(methodCallExpensiveContextCall10000);
+        await ensureNumberIs6();
+
+        console.log('Gas needed:', {gasNeededGetContextOpen, gasNeededmethodCallGetContextLimit,
+            gasNeededmethodCallExpensiveContextCall100,
+            gasNeededmethodCallExpensiveContextCall1000,
+            gasNeededmethodCallExpensiveContextCall10000,
+            });
+        expect(Number(gasNeededmethodCallExpensiveContextCall10000) > Number(gasNeededmethodCallExpensiveContextCall1000)).to.be.true;
+        expect(Number(gasNeededmethodCallExpensiveContextCall1000) > Number(gasNeededmethodCallExpensiveContextCall100)).to.be.true;
+        expect(Number(gasNeededmethodCallExpensiveContextCall100) > Number(gasNeededmethodCallGetContextLimit)).to.be.true;
+        expect(Number(gasNeededmethodCallGetContextLimit) < Number(methodCallGetContextOpen)).to.be.true;
     });
 });
