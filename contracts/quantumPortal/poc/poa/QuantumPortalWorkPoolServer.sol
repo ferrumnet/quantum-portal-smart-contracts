@@ -15,6 +15,11 @@ abstract contract QuantumPortalWorkerBase is WithAdmin {
     function setRemote(uint256 chainId, address remote) external onlyAdmin {
         remotes[chainId] = remote;
     }
+
+    modifier onlyMgr() {
+        require(msg.sender == mgr, "QPWPS:only QP mgr may call");
+        _;
+    }
 }
 
 /**
@@ -32,8 +37,7 @@ abstract contract QuantumPortalWorkPoolServer is IQuantumPortalWorkPoolServer, T
         baseToken = _baseToken;
     }
 
-    function collectFee(uint256 targetChainId, uint256 localEpoch, uint256 fixedFee) external override returns (uint256 varFee) {
-        require(msg.sender == mgr, "QPWPS:only QP mgr may call");
+    function collectFee(uint256 targetChainId, uint256 localEpoch, uint256 fixedFee) external override onlyMgr returns (uint256 varFee) {
         uint256 collected = sync(baseToken);
         require(collected >= fixedFee, "QPWPS: Not enough fee");
         console.log("CollectFee EPOCH", localEpoch, targetChainId);
