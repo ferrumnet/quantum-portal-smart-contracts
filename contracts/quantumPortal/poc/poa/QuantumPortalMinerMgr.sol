@@ -7,6 +7,7 @@ import "./IQuantumPortalMinerMgr.sol";
 import "./IQuantumPortalStake.sol";
 import "./QuantumPortalWorkPoolClient.sol";
 import "./QuantumPortalWorkPoolServer.sol";
+import "./QuantumPortalMinerMembership.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
@@ -20,7 +21,7 @@ import "hardhat/console.sol";
          Anybody can become a miner with staking. But there are rules of minimum stake
          and lock amount.
  */
-contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712, QuantumPortalWorkPoolServer, QuantumPortalWorkPoolClient {
+contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712, QuantumPortalWorkPoolServer, QuantumPortalWorkPoolClient, QuantumPortalMinerMembership {
     string public constant NAME = "FERRUM_QUANTUM_PORTAL_MINER_MGR";
     string public constant VERSION = "000.010";
     uint32 constant WEEK = 3600 * 24 * 7;
@@ -29,6 +30,22 @@ contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712, QuantumPortalW
     constructor() EIP712(NAME, VERSION) {
         bytes memory _data = IFerrumDeployer(msg.sender).initData();
         (miningStake) = abi.decode(_data, (address));
+    }
+
+    function selectMiner(address requestedMiner, bytes32 blockHash, uint256 blockTimestamp) external override onlyMgr returns (bool) {
+        return _selectMiner(requestedMiner, blockHash, blockTimestamp);
+    }
+
+    function registerMiner(address miner) external override onlyMgr {
+        _registerMiner(miner);
+    }
+
+    function unregisterMiner(address miner) external override onlyMgr {
+        _unregisterMiner(miner);
+    }
+
+    function unregister() external override {
+        _unregisterMiner(msg.sender);
     }
 
     function verifyMinerSignature(
