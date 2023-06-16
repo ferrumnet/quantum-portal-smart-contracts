@@ -14,6 +14,7 @@ export interface QpDeployConfig {
     QuantumPortalFeeConvertorDirect?: string;
     QuantumPortalMinerMgr?: string;
     QuantumPortalStake?: string;
+    QuantumPortalMinStake?: string;
     UniswapOracle?: string;
     FRM: { [NetworkId in number]: string; }
     WETH: { [NetworkId in number]: string; }
@@ -23,6 +24,9 @@ export interface QpDeployConfig {
         DeployerContract?: string;
         Qp?: string;
         Owner?: string;
+    }
+    DirectFee: {
+        feePerByte: string
     }
 }
 

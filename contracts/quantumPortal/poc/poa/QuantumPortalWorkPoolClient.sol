@@ -36,6 +36,10 @@ abstract contract QuantumPortalWorkPoolClient is IQuantumPortalWorkPoolClient, Q
         uint256 epoch = remoteEpoch[remoteChain];
         bytes memory method = abi.encodeWithSelector(selector, worker, workRatioX128, epoch);
         address serverContract = remotes[remoteChain];
+        console.log("ABOUT TO CALL REMOTE WITHDRAW", serverContract);
+        console.log("WORKER", worker);
+        console.log("WORKE RATIO", work, workRatioX128);
+        console.log("EPOCH", epoch);
         portal.run(uint64(remoteChain), serverContract, msg.sender, method);
         // TODO: Challenge: What if the withdraw failed! Need a revert option
     }

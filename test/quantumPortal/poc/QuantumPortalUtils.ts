@@ -56,6 +56,7 @@ export class QuantumPortalUtils {
             token: tx.token.toString(),
             amount: tx.amount.toString(),
             method: tx.method.toString(),
+            fixedFee: tx.fixedFee.toString(),
             gas: tx.gas.toString(),
         }));
         console.log('About to mine block',
@@ -143,6 +144,7 @@ export class QuantumPortalUtils {
                 );
             const msgHash = keccak256(abi.encode(['bytes32', 'uint256', 'uint256', 'bytes32', 'address[]', 'bytes32', 'uint64'],
                 [FINALIZE_METHOD, sourceChainId, blockNonce, finalizersHash, [], salt, expiry]));
+            console.log('Fin method msgHash', msgHash);
             
             const authorityAddr = await mgr.authorityMgr();
             const authorityF = await ethers.getContractFactory('QuantumPortalAuthorityMgr');
@@ -162,7 +164,7 @@ export class QuantumPortalUtils {
                     { type: 'uint64', name: 'expiry', value: expiry },
                 ]
                 , [finalizerSk]);
-            console.log("Returned from bridgeMethodCall");
+            console.log("Returned from bridgeMethodCall", multiSig.hash);
             await mgr.finalize(sourceChainId,
                 blockNonce,
                 finalizersHash,
@@ -287,6 +289,8 @@ export interface PortalContext extends TestContext {
 }
 
 export async function deployAll(): Promise<PortalContext> {
+    const chainId1 = 2600;
+    const chainId2 = 2;
 	const ctx = await getCtx();
 	const mgrFac = await ethers.getContractFactory("QuantumPortalLedgerMgrTest");
 	console.log('About to deploy the ledger managers');
@@ -326,24 +330,28 @@ export async function deployAll(): Promise<PortalContext> {
 
     console.log(`Registering a single authority ("${ctx.wallets[0]}"`);
     await autorityMgr1.initialize(ctx.owner, 1, 1, 0, [ctx.wallets[0]]); 
-    await autorityMgr2.initialize(ctx.owner, 1, 1, 0, [ctx.wallets[0]]); 
+    await autorityMgr2.initialize(ctx.owner, 1, 1, 0, [ctx.wallets[0], ctx.wallets[1]]); 
 
     console.log(`Settting authority mgr (${autorityMgr1.address}/${autorityMgr2.address}) and miner mgr ${miningMgr1.address} / ${miningMgr2.address} on both QP managers, and fee converter`);
     await mgr1.updateAuthorityMgr(autorityMgr1.address);
     await mgr1.updateMinerMgr(miningMgr1.address);
     await mgr1.updateFeeConvertor(feeConverter.address);
     await miningMgr1.initServer(poc1.address, mgr1.address, tok1.address);
+    await miningMgr1.setRemote(chainId2, miningMgr2.address);
     await autorityMgr1.updateMgr(mgr1.address);
     await mgr2.updateAuthorityMgr(autorityMgr2.address);
     await mgr2.updateMinerMgr(miningMgr2.address);
     await mgr2.updateFeeConvertor(feeConverter.address);
     await miningMgr2.connect(ctx.signers.acc1).initServer(poc2.address, mgr2.address, tok1.address);
+    await miningMgr2.connect(ctx.signers.acc1).setRemote(chainId1, miningMgr1.address);
     await autorityMgr2.connect(ctx.signers.acc1).updateMgr(mgr2.address);
 
     await poc1.setManager(mgr1.address);
     await poc1.setFeeTarget(miningMgr1.address);
+    await poc1.setFeeToken(tok1.address);
     await poc2.setManager(mgr2.address);
     await poc2.setFeeTarget(miningMgr2.address);
+    await poc2.setFeeToken(tok1.address);
     await mgr1.updateLedger(poc1.address);
     await mgr2.updateLedger(poc2.address);
     console.log('Set.')
@@ -351,7 +359,7 @@ export async function deployAll(): Promise<PortalContext> {
 	return {
         ...ctx,
         chain1: {
-            chainId: 2600,
+            chainId: chainId1,
             ledgerMgr: mgr1,
             poc: poc1,
             autorityMgr: autorityMgr1,
@@ -361,7 +369,7 @@ export async function deployAll(): Promise<PortalContext> {
             feeConverter,
         },
         chain2: {
-            chainId: 2,
+            chainId: chainId2,
             ledgerMgr: mgr2,
             poc: poc2,
             autorityMgr: autorityMgr2,

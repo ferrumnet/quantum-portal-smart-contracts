@@ -4,6 +4,7 @@ import { randomBytes } from "crypto";
 import { Signer } from "ethers";
 import { ethers } from "hardhat";
 import { DummyToken } from "../../typechain/DummyToken";
+import { DirectMinimalErc20 } from "foundry-contracts/typechain-types/DirectMinimalErc20";
 import { IVersioned } from "../../typechain/IVersioned";
 export const ZeroAddress = '0x' + '0'.repeat(40);
 export const Salt = '0x' + '12'.repeat(32);
@@ -281,4 +282,24 @@ export function seed0x() {
 
 export function expiryInFuture() {
     return Math.round(Date.now() / 1000) + 3600 * 100;
+}
+
+export async function distributeTestTokensIfTest(targets: string[], amount: string) {
+	if (process.env.LOCAL_NODE) {
+		const [owner] = await ethers.getSigners();
+		const tokF = await ethers.getContractFactory('DirectMinimalErc20');
+		const tok = await tokF.deploy() as DirectMinimalErc20;
+		await tok.init(owner.address, 'Test Token', 'TST', Wei.from('1000000000'));;
+		console.log(`Deployed a token at ${tok.address}`);
+		for(let i=0; i<targets.length; i++) {
+			if (targets[i]) {
+				console.log(`Sending ${amount} ETH to ${targets[i]}`);
+				await owner.sendTransaction({
+					to: targets[i],
+					value: Wei.from(amount),
+				});
+				await tok.transfer(targets[i], Wei.from('10000'));
+			}
+		}
+	}
 }

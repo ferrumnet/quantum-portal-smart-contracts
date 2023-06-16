@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "./IQuantumPortalLedgerMgr.sol";
 import "./poa/IQuantumPortalAuthorityMgr.sol";
 import "./poa/IQuantumPortalFeeConvertor.sol";
+import "./poa/IQuantumPortalMinerMembership.sol";
 import "foundry-contracts/contracts/common/IVersioned.sol";
 import "foundry-contracts/contracts/common/WithAdmin.sol";
 import "foundry-contracts/contracts/math/FullMath.sol";
@@ -179,6 +180,12 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         return (localBlocks[key], localBlockTransactions[key]);
     }
 
+    function registerMiner() external {
+        uint256 stake = stakeOf(msg.sender);
+        require(stake >= minerMinimumStake, "QPLM: not enough stake");
+        IQuantumPortalMinerMembership(minerMgr).registerMiner(msg.sender);
+    }
+
     bytes32 constant MINE_REMOTE_BLOCK =
         keccak256("MineRemoteBlock(uint64 remoteChainId,uint64 blockNonce,bytes32 transactions,bytes32 salt)");
 
@@ -201,6 +208,10 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         bytes memory multiSignature
     ) external {
         require(remoteChainId != 0, "QPLM: remoteChainId required");
+        {
+        uint256 stake = stakeOf(msg.sender);
+        require(stake >= minerMinimumStake, "QPLM: not enough stake");
+        }
         uint256 lastNonce = lastMinedBlock[remoteChainId].nonce;
         // TODO: allow branching in case of conflicting blocks. When branching happens 
         // it is guaranteed that one branch is invalid and miners need to punished.
@@ -213,6 +224,15 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         console.log("BLOCK_NONCE", blockNonce);
         console.log("MSG HASH");
         console.logBytes32(blockHash);
+        // TODO: We require the remote chain's and local chain's clocks to be reasonably sync.
+        // Consider replacing this relationship to a method that does not require the chains to 
+        // have correct timestamps.
+        {
+        uint256 remoteBlockTimestamp = transactions[transactions.length - 1].timestamp;
+        require(IQuantumPortalMinerMembership(minerMgr).selectMiner(msg.sender, blockHash, remoteBlockTimestamp)
+            , "QPLM: mining out of order");
+        }
+
         uint256 totalValue = 0;
         uint256 totalSize = 0;
         for (uint i=0; i < transactions.length; i++) {
@@ -420,6 +440,10 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             uint256 txGas = FullMath.mulDiv(gasPrice,
                 t.gas, // TODO: include base fee and miner fee, etc.
                 FixedPoint128.Q128);
+            console.log("Price is...", gasPrice);
+            console.log("Gas provided in eth: ", t.gas, txGas);
+            txGas = txGas / tx.gasprice;
+            console.log("Gas limit provided", txGas);
             uint256 baseGasUsed = qp.executeRemoteTransaction(i, b.blockMetadata, t, txGas);
             totalVarWork += baseGasUsed;
             console.log("REMOTE TX EXECUTED vs used", t.gas, baseGasUsed);

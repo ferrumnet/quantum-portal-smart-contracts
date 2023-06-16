@@ -6,6 +6,10 @@ import "foundry-contracts/contracts/common/WithAdmin.sol";
 import "./QuantumPortalLib.sol";
 import "hardhat/console.sol";
 
+interface CanEstimateGas {
+    function executeTxAndRevertToEstimateGas(address addr, bytes memory method) external;
+}
+
 contract PortalLedger is WithAdmin {
     event ExecutionReverted(uint256 remoteChainId, address localContract, bytes32 revertReason);
     address public mgr;
@@ -37,6 +41,7 @@ contract PortalLedger is WithAdmin {
         console.log("EXECUTING", preGas);
         console.log("AMOUNT", t.amount);
         console.log("REMOTE CONTRACT", t.remoteContract);
+        console.log("USING GAS", gas);
         if (t.method.length == 0) {
             // This is a withdraw tx. There is no remote balance to be updated.
             // I.e. when the remote contract creates decides to pay out,
@@ -65,12 +70,57 @@ contract PortalLedger is WithAdmin {
                 // Commit the uncommitedBalance. This could have been changed during callRemoteMehod
                 remoteBalances[b.chainId][t.token][t.remoteContract] = context.uncommitedBalance;
             } else {
-                revertRemoteBalance(_context);
+                // We cannot revert because we don't know where to get the fee from.
+                // revertRemoteBalance(_context);
             }
+            resetContext();
         }
         uint postGas = gasleft();
         gasUsed = preGas - postGas;
         console.log("gas used? ", postGas);
+    }
+
+    function estimateGasForRemoteTransaction(
+        uint256 remoteChainId,
+        address sourceMsgSender,
+        address remoteContract,
+        address beneficiary,
+        bytes memory method,
+        address token,
+        uint256 amount
+    ) external {
+        QuantumPortalLib.RemoteTransaction memory t = QuantumPortalLib.RemoteTransaction({
+            timestamp: uint64(block.timestamp),
+            remoteContract: remoteContract,
+            sourceMsgSender: sourceMsgSender,
+            sourceBeneficiary: beneficiary,
+            token: token,
+            amount: amount,
+            method: method,
+            gas: 0, 
+            fixedFee: 0
+        });
+        QuantumPortalLib.Block memory b = QuantumPortalLib.Block({
+            chainId: uint64(remoteChainId),
+            nonce: 1,
+            timestamp: uint64(block.timestamp)
+        });
+        QuantumPortalLib.Context memory _context = QuantumPortalLib.Context({
+            index: uint64(1),
+            blockMetadata: b,
+            transaction: t,
+            uncommitedBalance: remoteBalances[b.chainId][t.token][t.remoteContract] + t.amount
+        });
+
+        context = _context;
+        // This call will revert after execution but the tx should go through, hence enabling gas estimation
+        address(this).call(abi.encodeWithSelector(CanEstimateGas.executeTxAndRevertToEstimateGas.selector, t.remoteContract, t.method));
+        resetContext();
+    }
+
+    function executeTxAndRevertToEstimateGas(address addr, bytes memory method) public {
+        addr.call(method);
+        revert();
     }
 
     function remoteBalanceOf(
@@ -118,9 +168,12 @@ contract PortalLedger is WithAdmin {
         // TODO: Include gas properly, and catch the proper error when there is not enough gas
         // (success,) = addr.call{gas: gas}(method);
         bytes memory data;
+        console.log("CALLING ", addr);
         (success, data) = addr.call{gas: gas}(method);
+        // (success, data) = addr.call(method);
         if (!success) {
             bytes32 revertReason = extractRevertReasonSingleBytes32(data);
+            console.log("CALL TO CONTRACT FAILED");
             console.logBytes32(revertReason);
             emit ExecutionReverted(remoteChainId, localContract, revertReason);
         }
@@ -169,5 +222,9 @@ contract PortalLedger is WithAdmin {
                 }
             }
         }
+    }
+
+    function resetContext() private {
+        delete context;
     }
 }

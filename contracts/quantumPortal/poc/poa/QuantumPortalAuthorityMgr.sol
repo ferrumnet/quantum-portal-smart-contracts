@@ -50,6 +50,9 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, QuantumPortalW
         require(salt != 0, "QPAM: salt required");
         require(expiry > block.timestamp, "QPAM: signature expired");
         bytes32 message = keccak256(abi.encode(VALIDATE_AUTHORITY_SIGNATURE, uint256(action), msgHash, salt, expiry));
+        console.log("verifyUniqueSalt");
+        console.logBytes32(message);
+        // console.logBytes(salt);
         verifyUniqueSalt(message, salt, 1, signature);
     }
 

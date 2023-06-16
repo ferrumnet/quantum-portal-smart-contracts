@@ -16,6 +16,10 @@ abstract contract QuantumPortalPoc is TokenReceivable, PortalLedger, IQuantumPor
         feeTarget = _feeTarget;
     }
 
+    function setFeeToken(address _feeToken) external onlyAdmin {
+        feeToken = _feeToken;
+    }
+
     function txContext() external override view returns (QuantumPortalLib.Context memory) {
         return context;
     }
