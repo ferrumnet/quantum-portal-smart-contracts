@@ -121,6 +121,18 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         uint256 amount,
         bytes memory method
     ) external override onlyLedger {
+        _registerTransaction(remoteChainId, remoteContract, msgSender, beneficiary, token, amount, method);
+    }
+
+    function _registerTransaction(
+        uint64 remoteChainId,
+        address remoteContract,
+        address msgSender,
+        address beneficiary,
+        address token,
+        uint256 amount,
+        bytes memory method
+    ) internal {
         require(remoteChainId != CHAIN_ID, "QPLM: bad remoteChainId");
         QuantumPortalLib.Block memory b = lastLocalBlock[remoteChainId];
         console.log("ORIGINAL NONCE IS", b.nonce);
@@ -151,6 +163,51 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         uint256 varFee = IQuantumPortalWorkPoolServer(minerMgr).collectFee(remoteChainId, b.nonce, fixedFee);
         remoteTx.gas = varFee;
         localBlockTransactions[key].push(remoteTx);
+    }
+
+    /**
+     * @notice Fraud proof consisted of a signed block, by a miner from a remote chain, that does not match a local 
+     *         block.
+     */
+    function submitFraudProof(
+        uint64 minedOnChainId,
+        uint64 localBlockNonce,
+        uint64 localBlockTimestamp,
+        QuantumPortalLib.RemoteTransaction[] memory transactions,
+        bytes32 salt,
+        uint64 expiry,
+        bytes memory multiSignature,
+        address fradulentMiner,
+        address rewardReceiver
+    ) external override {
+        // TODO: extract the miner address from signature and make sure it is the fraudulent miner.
+        uint256 key = blockIdx(CHAIN_ID, localBlockNonce);
+        QuantumPortalLib.Block memory block = localBlocks[key].metadata;
+        bool fraudDetected = block.chainId != minedOnChainId || block.nonce != localBlockNonce || block.timestamp != localBlockTimestamp
+            || transactions.length != localBlockTransactions[key].length;
+        if (!fraudDetected) {
+            for(uint i=0; i < transactions.length; i++) {
+                QuantumPortalLib.RemoteTransaction memory t = localBlockTransactions[key][i];
+                fraudDetected = fraudDetected || (!QuantumPortalLib.txEquals(t1, t2));
+                if (fraudDetected) { break; }
+            }
+        }
+        if (fraudDetected) {
+            bytes32 blockHash = _calculateBlockHash(
+                CHAIN_ID,
+                localBlockNonce,
+                transactions
+            );
+            _registerTransaction(
+                minedOnChainId,
+                QuantumPortalLib.FRAUD_PROOF,
+                address(this),
+                rewardReceiver,
+                address(0),
+                0,
+                abi.encode(blockhash);
+            );
+        }
     }
 
     /**
@@ -444,7 +501,15 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             console.log("Gas provided in eth: ", t.gas, txGas);
             txGas = txGas / tx.gasprice;
             console.log("Gas limit provided", txGas);
-            uint256 baseGasUsed = qp.executeRemoteTransaction(i, b.blockMetadata, t, txGas);
+            uint256 baseGasUsed;
+            if (tx.contract == QuantumPortalLib.FRAUD_PROOF) {
+                // TODO: verify the fradulent block is actually mined
+                // Slash fradulent miner's funds
+                // Pay the reward to tx.benefciary
+                executeFraudProof(i, t, txGas);
+            } else {
+                baseGasUsed = qp.executeRemoteTransaction(i, b.blockMetadata, t, txGas);
+            }
             totalVarWork += baseGasUsed;
             console.log("REMOTE TX EXECUTED vs used", t.gas, baseGasUsed);
             // TODO: Refund extra gas based on the ratio of gas used vs gas provided.
