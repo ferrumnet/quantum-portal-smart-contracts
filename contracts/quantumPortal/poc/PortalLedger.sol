@@ -13,7 +13,6 @@ interface CanEstimateGas {
 contract PortalLedger is WithAdmin {
     event ExecutionReverted(uint256 remoteChainId, address localContract, bytes32 revertReason);
     address public mgr;
-    mapping(uint256 => mapping(address => mapping(address => uint256))) remoteBalances;
     QuantumPortalLib.Context public context;
     uint256 immutable internal CHAIN_ID; // To support override
 
@@ -51,14 +50,15 @@ contract PortalLedger is WithAdmin {
             // or not enough balance, which should never happen.
             console.log("UPDATING BALANCE FOR ", t.remoteContract, t.amount);
             if (t.amount != 0) {
-                remoteBalances[b.chainId][t.token][t.remoteContract] += t.amount;
+                state.setRemoteBalances(b.chainId, t.token, t.remoteContract,
+                    state.getRemoteBalances(b.chainId, t.token, t.remoteContract) + t.amount);
             }
         } else {
             QuantumPortalLib.Context memory _context = QuantumPortalLib.Context({
                 index: uint64(blockIndex),
                 blockMetadata: b,
                 transaction: t,
-                uncommitedBalance: remoteBalances[b.chainId][t.token][t.remoteContract] + t.amount
+                uncommitedBalance: state.getRemoteBalances(b.chainId, t.token, t.remoteContract) + t.amount
             });
 
             context = _context;
@@ -68,7 +68,7 @@ contract PortalLedger is WithAdmin {
             bool success = callRemoteMethod(b.chainId, t.remoteContract, t.remoteContract, t.method, gas);
             if (success) {
                 // Commit the uncommitedBalance. This could have been changed during callRemoteMehod
-                remoteBalances[b.chainId][t.token][t.remoteContract] = context.uncommitedBalance;
+                state.setRemoteBalances(b.chainId, t.token, t.remoteContract, context.uncommitedBalance);
             } else {
                 // We cannot revert because we don't know where to get the fee from.
                 // revertRemoteBalance(_context);
@@ -109,7 +109,7 @@ contract PortalLedger is WithAdmin {
             index: uint64(1),
             blockMetadata: b,
             transaction: t,
-            uncommitedBalance: remoteBalances[b.chainId][t.token][t.remoteContract] + t.amount
+            uncommitedBalance: state.getRemoteBalances(b.chainId, t.token, t.remoteContract) + t.amount
         });
 
         context = _context;
@@ -132,7 +132,7 @@ contract PortalLedger is WithAdmin {
         if (addr == t.remoteContract && token == t.token) {
             return context.uncommitedBalance;
         }
-        return remoteBalances[chainId][token][addr];
+        return state.getRemoteBalances(chainId, token, addr);
     }
 
     function clearContext() external onlyMgr {

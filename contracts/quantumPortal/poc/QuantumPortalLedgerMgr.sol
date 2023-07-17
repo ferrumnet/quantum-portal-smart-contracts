@@ -21,44 +21,10 @@ import "hardhat/console.sol";
  However, they are completely deterministic and updated as transactions are being added.
 */
 contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersioned {
-    struct LocalBlock {
-        QuantumPortalLib.Block metadata;
-    }
-
-    struct MinedBlock {
-        bytes32 blockHash;
-        address miner;
-        uint256 stake;
-        uint256 totalValue;
-        QuantumPortalLib.Block blockMetadata;
-    }
-
-    struct FinalizerStake { // TODO: Compress
-        address finalizer;
-        uint256 staked;
-    }
-
-    struct FinalizationMetadata {
-        address executor;
-        bytes32 finalizedBlocksHash;
-        bytes32 finalizersHash;
-        uint256 totalBlockStake;
-    }
-
 	string constant public override VERSION = "000.001";
     uint256 constant BLOCK_PERIOD = 60 * 2; // One block per two minutes?
     uint256 immutable CHAIN_ID;
     uint256 public minerMinimumStake = 10**18 * 1000000; // Minimum 1M tokens to become miner
-    mapping(uint256 => LocalBlock) public localBlocks;
-    mapping(uint256 => QuantumPortalLib.RemoteTransaction[]) public localBlockTransactions;
-    mapping(uint256 => MinedBlock) public minedBlocks;
-    mapping(uint256 => QuantumPortalLib.RemoteTransaction[]) public minedBlockTransactions;
-    mapping(bytes32 => address[]) public authorityFinalizers; // This is used in case stake was not enogh or max security required
-    mapping(uint256 => QuantumPortalLib.Block) public lastLocalBlock; // One block nonce per remote chain. txs local, to be run remotely
-    mapping(uint256 => QuantumPortalLib.Block) public lastMinedBlock; // One block nonce per remote chain. txs remote, to be run on here
-    mapping(uint256 => QuantumPortalLib.Block) public lastFinalizedBlock;
-    mapping(uint256 => FinalizationMetadata) public finalizations;
-    mapping(uint256 => FinalizerStake[]) public finalizationStakes;
     address public ledger;
     address public minerMgr;
     address public authorityMgr;
@@ -134,7 +100,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         bytes memory method
     ) internal {
         require(remoteChainId != CHAIN_ID, "QPLM: bad remoteChainId");
-        QuantumPortalLib.Block memory b = lastLocalBlock[remoteChainId];
+        QuantumPortalLib.Block memory b = state.getLastLocalBlock(remoteChainId);
         console.log("ORIGINAL NONCE IS", b.nonce);
         uint256 key = blockIdx(remoteChainId, b.nonce);
         uint256 fixedFee = calculateFixedFee(remoteChainId, method.length);
@@ -154,15 +120,15 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             b.nonce ++;
             b.timestamp = uint64(block.timestamp);
             b.chainId = remoteChainId;
-            lastLocalBlock[remoteChainId] = b;
+            state.setLastLocalBlock(remoteChainId, b);
             key = blockIdx(remoteChainId, b.nonce);
-            localBlocks[key] = LocalBlock({
+            state.setLocalBlocks(key, IQuantumPortalLedgerMgr.LocalBlock({
                 metadata: b
-            });
+            }));
         }
         uint256 varFee = IQuantumPortalWorkPoolServer(minerMgr).collectFee(remoteChainId, b.nonce, fixedFee);
         remoteTx.gas = varFee;
-        localBlockTransactions[key].push(remoteTx);
+        state.pushLocalBlockTransactions(key, remoteTx);
     }
 
     /**
@@ -184,10 +150,10 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         uint256 key = blockIdx(CHAIN_ID, localBlockNonce);
         QuantumPortalLib.Block memory block = localBlocks[key].metadata;
         bool fraudDetected = block.chainId != minedOnChainId || block.nonce != localBlockNonce || block.timestamp != localBlockTimestamp
-            || transactions.length != localBlockTransactions[key].length;
+            || transactions.length != getLocalBlockTransactionsLength(key);
         if (!fraudDetected) {
             for(uint i=0; i < transactions.length; i++) {
-                QuantumPortalLib.RemoteTransaction memory t = localBlockTransactions[key][i];
+                QuantumPortalLib.RemoteTransaction memory t = getLocalBlockTransactions(key, i);
                 fraudDetected = fraudDetected || (!QuantumPortalLib.txEquals(t1, t2));
                 if (fraudDetected) { break; }
             }
@@ -205,7 +171,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
                 rewardReceiver,
                 address(0),
                 0,
-                abi.encode(blockhash);
+                abi.encode(blockhash)
             );
         }
     }
@@ -215,26 +181,26 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
      @param chainId The chain ID.
      */
     function isLocalBlockReady(uint64 chainId) external view returns (bool) {
-        return _isLocalBlockReady(lastLocalBlock[chainId]);
+        return _isLocalBlockReady(state.getLastLocalBlock(chainId));
     }
 
     function lastRemoteMinedBlock(uint64 chainId) external view returns (QuantumPortalLib.Block memory _block) {
-        _block = lastMinedBlock[chainId];
+        _block = state.getLastMinedBlock(chainId);
     }
 
     function minedBlockByNonce(uint64 chainId, uint64 blockNonce
-    ) external view returns (MinedBlock memory b, QuantumPortalLib.RemoteTransaction[] memory txs) {
+    ) external view returns (IQuantumPortalLedgerMgr.MinedBlock memory b, QuantumPortalLib.RemoteTransaction[] memory txs) {
         uint256 key = blockIdx(chainId, blockNonce);
-        b = minedBlocks[key];
-        txs = minedBlockTransactions[key];
+        b = state.getMinedBlocks(key);
+        txs = state.getMinedBlockTransactions(key);
     }
 
     function localBlockByNonce(
         uint64 chainId,
         uint64 blockNonce
-    ) external view returns (LocalBlock memory, QuantumPortalLib.RemoteTransaction[] memory) {
+    ) external view returns (IQuantumPortalLedgerMgr.LocalBlock memory, QuantumPortalLib.RemoteTransaction[] memory) {
         uint256 key = blockIdx(chainId, blockNonce);
-        return (localBlocks[key], localBlockTransactions[key]);
+        return (state.getLocalBlocks(key), state.getLocalBlockTransactions(key));
     }
 
     function registerMiner() external {
@@ -269,7 +235,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         uint256 stake = stakeOf(msg.sender);
         require(stake >= minerMinimumStake, "QPLM: not enough stake");
         }
-        uint256 lastNonce = lastMinedBlock[remoteChainId].nonce;
+        uint256 lastNonce = state.getLastMinedBlock(remoteChainId).nonce;
         // TODO: allow branching in case of conflicting blocks. When branching happens 
         // it is guaranteed that one branch is invalid and miners need to punished.
         require(blockNonce == lastNonce + 1, "QPLM: cannot jump or retrace nonce");
@@ -318,8 +284,8 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             nonce: blockNonce,
             timestamp: uint64(block.timestamp)
         });
-        lastMinedBlock[remoteChainId] = blockMetadata;
-        MinedBlock memory mb = MinedBlock({
+        state.setLastMinedBlock(remoteChainId, blockMetadata);
+        IQuantumPortalLedgerMgr.MinedBlock memory mb = IQuantumPortalLedgerMgr.MinedBlock({
             blockHash: blockHash,
             miner: msg.sender,
             stake: stakeOf(msg.sender),
@@ -327,9 +293,9 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             blockMetadata: blockMetadata
         });
         uint256 key = blockIdx(remoteChainId, blockNonce);
-        minedBlocks[key] = mb;
+        state.setMinedBlocks(key, mb);
         for(uint i=0; i<transactions.length; i++) {
-            minedBlockTransactions[key].push(transactions[i]);
+            state.setMinedBlockTransactions(key, transactions[i]);
         }
     }
 
@@ -408,8 +374,8 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         bytes32 finalizersHash,
         address[] memory finalizers
     ) internal {
-        QuantumPortalLib.Block memory lastFinB = lastFinalizedBlock[remoteChainId];
-        QuantumPortalLib.Block memory lastMinedB = lastMinedBlock[remoteChainId];
+        QuantumPortalLib.Block memory lastFinB = state.getLastFinalizedBlock(remoteChainId);
+        QuantumPortalLib.Block memory lastMinedB = state.getLastMinedBlock(remoteChainId);
         require(lastMinedB.chainId != 0, "QPLM: No block is mined");
         require(blockNonce <= lastMinedB.nonce, "QPLM: nonce not mined");
         require(
@@ -425,8 +391,8 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             uint256 bkey = blockIdx(uint64(remoteChainId), uint64(i));
             // uint256 stake;
             // uint256 totalValue;
-            finHash = keccak256(abi.encodePacked(finHash, minedBlocks[bkey].blockHash));
-            totalBlockStake += minedBlocks[bkey].stake;
+            finHash = keccak256(abi.encodePacked(finHash, state.getMinedBlocks(bkey).blockHash));
+            totalBlockStake += state.getMinedBlocks(bkey).stake;
             (uint256 minedWork, uint256 varWork) = executeBlock(bkey);
             totalMinedWork += minedWork;
             totalVarWork += varWork;
@@ -434,27 +400,27 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         IQuantumPortalWorkPoolClient(minerMgr).registerWork(remoteChainId, msg.sender, totalMinedWork, blockNonce);
         IQuantumPortalWorkPoolClient(authorityMgr).registerWork(remoteChainId, msg.sender, totalVarWork, blockNonce);
 
-        FinalizationMetadata memory fin = FinalizationMetadata({
+        FinalizationMetadata memory fin = IQuantumPortalLedgerMgr.FinalizationMetadata({
             executor: msg.sender,
             finalizedBlocksHash: finHash,
             finalizersHash: finalizersHash,
             totalBlockStake: totalBlockStake
         });
         uint256 key = blockIdx(uint64(remoteChainId), uint64(blockNonce));
-        finalizations[key] = fin;
+        state.setFinalizations(key, fin);
 
         for(uint i=0; i<finalizers.length; i++) {
-            finalizationStakes[key].push(FinalizerStake({
+            state.pushFinalizationStake(key, IQuantumPortalLedgerMgr.FinalizerStake({
                 finalizer: finalizers[i],
                 staked: stakeOf(finalizers[i])
             }));
         }
 
-        lastFinalizedBlock[remoteChainId] = QuantumPortalLib.Block({
+        state.setLastFinalizedBlock(remoteChainId, QuantumPortalLib.Block({
             chainId: uint64(remoteChainId),
             nonce: uint64(blockNonce),
             timestamp: uint64(block.timestamp)
-        });
+        }));
         // TODO: Produce event
     }
 
@@ -487,10 +453,10 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
     function executeBlock(
         uint256 key
     ) internal returns (uint256 totalMineWork, uint256 totalVarWork) {
-        MinedBlock memory b = minedBlocks[key];
+        IQuantumPortalLedgerMgr.MinedBlock memory b = state.getMinedBlocks(key);
         PortalLedger qp = PortalLedger(ledger);
         uint256 gasPrice = IQuantumPortalFeeConvertor(feeConvertor).localChainGasTokenPriceX128();
-        QuantumPortalLib.RemoteTransaction[] memory transactions = minedBlockTransactions[key]; 
+        QuantumPortalLib.RemoteTransaction[] memory transactions = state.getMinedBlockTransactions(key); 
         for(uint i=0; i<transactions.length; i++) {
             QuantumPortalLib.RemoteTransaction memory t = transactions[i];
             totalMineWork += FIX_TX_SIZE + t.method.length;
@@ -502,7 +468,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             txGas = txGas / tx.gasprice;
             console.log("Gas limit provided", txGas);
             uint256 baseGasUsed;
-            if (tx.contract == QuantumPortalLib.FRAUD_PROOF) {
+            if (t.remoteContract == QuantumPortalLib.FRAUD_PROOF) {
                 // TODO: verify the fradulent block is actually mined
                 // Slash fradulent miner's funds
                 // Pay the reward to tx.benefciary
