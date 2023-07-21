@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 import "./IQuantumPortalLedgerMgr.sol";
+import "foundry-contracts/contracts/common/WithAdmin.sol";
 
-contract QuantumPortalState {
+contract QuantumPortalState is WithAdmin {
     modifier onlyMgr() {
         require(msg.sender == mgr, "QPS: Not allowed");
         _;
@@ -20,14 +21,14 @@ contract QuantumPortalState {
     mapping(uint256 => QuantumPortalLib.Block) private lastLocalBlock; // One block nonce per remote chain. txs local, to be run remotely
     mapping(uint256 => QuantumPortalLib.Block) private lastMinedBlock; // One block nonce per remote chain. txs remote, to be run on here
     mapping(uint256 => QuantumPortalLib.Block) private lastFinalizedBlock;
-    mapping(uint256 => FinalizationMetadata) private finalizations;
+    mapping(uint256 => IQuantumPortalLedgerMgr.FinalizationMetadata) private finalizations;
     mapping(uint256 => IQuantumPortalLedgerMgr.FinalizerStake[]) private finalizationStakes;
 
     mapping(uint256 => mapping(address => mapping(address => uint256))) remoteBalances;
     address public mgr;
     address public ledger;
 
-    function getLocalBlocks(uint256 key) external returns(IQuantumPortalLedgerMgr.LocalBlock) {
+    function getLocalBlocks(uint256 key) external view returns(IQuantumPortalLedgerMgr.LocalBlock memory) {
         return localBlocks[key];
     }
 
@@ -39,19 +40,19 @@ contract QuantumPortalState {
         localBlockTransactions[key].push(value);
     }
 
-    function getLocalBlockTransactionLength(uint256 key, uint256 idx) external returns (uint256) {
+    function getLocalBlockTransactionLength(uint256 key) external view returns (uint256) {
         return localBlockTransactions[key].length;
     }
 
-    function getLocalBlockTransaction(uint256 key, uint256 idx) external returns (QuantumPortalLib.RemoteTransaction) {
-        return localBlockTransactions[key][i];
+    function getLocalBlockTransaction(uint256 key, uint256 idx) external view returns (QuantumPortalLib.RemoteTransaction memory) {
+        return localBlockTransactions[key][idx];
     }
 
-    function getLocalBlockTransactions(uint256 key) external returns (QuantumPortalLib.RemoteTransaction[] memory value) {
+    function getLocalBlockTransactions(uint256 key) external view returns (QuantumPortalLib.RemoteTransaction[] memory value) {
         value = localBlockTransactions[key];
     }
 
-    function getMinedBlocks(uint256 key) external returns(IQuantumPortalLedgerMgr.MinedBlock) {
+    function getMinedBlocks(uint256 key) external view returns(IQuantumPortalLedgerMgr.MinedBlock memory) {
         return minedBlocks[key];
     }
 
@@ -59,7 +60,7 @@ contract QuantumPortalState {
         minedBlocks[key] = value;
     }
 
-    function getMinedBlockTransactions(uint256 key) external returns (QuantumPortalLib.RemoteTransaction[] memory value) {
+    function getMinedBlockTransactions(uint256 key) external view returns (QuantumPortalLib.RemoteTransaction[] memory value) {
         value = minedBlockTransactions[key];
     }
 
@@ -67,7 +68,7 @@ contract QuantumPortalState {
         minedBlockTransactions[key].push(value);
     }
 
-    function getLastLocalBlock(uint256 key) external returns(QuantumPortalLib.Block) {
+    function getLastLocalBlock(uint256 key) external view returns(QuantumPortalLib.Block memory) {
         return lastLocalBlock[key];
     }
 
@@ -75,7 +76,7 @@ contract QuantumPortalState {
         lastLocalBlock[key] = value;
     }
 
-    function getLastMinedBlock(uint256 key) external returns(QuantumPortalLib.Block) {
+    function getLastMinedBlock(uint256 key) external view returns(QuantumPortalLib.Block memory) {
         return lastMinedBlock[key];
     }
 
@@ -83,7 +84,7 @@ contract QuantumPortalState {
         lastMinedBlock[key] = value;
     }
 
-    function getLastFinalizedBlock(uint256 key) external returns(QuantumPortalLib.Block) {
+    function getLastFinalizedBlock(uint256 key) external view returns(QuantumPortalLib.Block memory) {
         return lastFinalizedBlock[key];
     }
 
@@ -91,15 +92,15 @@ contract QuantumPortalState {
         lastFinalizedBlock[key] = value;
     }
 
-    function setFinalization(uint256 key, IQuantumPortalLedgerMgr.FinalizationMetadata[] memory value) external onlyMgr {
+    function setFinalization(uint256 key, IQuantumPortalLedgerMgr.FinalizationMetadata memory value) external onlyMgr {
         finalizations[key] = value;
     }
 
-    function pushFinalizationStake(uint256 key, IQuantumPortalLedgerMgr.FinalizationMetadata memory value) external onlyMgr {
+    function pushFinalizationStake(uint256 key, IQuantumPortalLedgerMgr.FinalizerStake memory value) external onlyMgr {
         finalizationStakes[key].push(value);
     }
 
-    function getRemoteBalances(uint256 chainId, address token, address remoteContract) external returns (uint256) {
+    function getRemoteBalances(uint256 chainId, address token, address remoteContract) external view returns (uint256) {
         return remoteBalances[chainId][token][remoteContract];
     }
 

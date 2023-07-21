@@ -33,6 +33,18 @@ interface IQuantumPortalLedgerMgr {
         uint256 amount,
         bytes memory method
     ) external;
+
+    function submitFraudProof(
+        uint64 minedOnChainId,
+        uint64 localBlockNonce,
+        uint64 localBlockTimestamp,
+        QuantumPortalLib.RemoteTransaction[] memory transactions,
+        bytes32 salt,
+        uint64 expiry,
+        bytes memory multiSignature,
+        address fradulentMiner,
+        address rewardReceiver
+    ) external;
 }
 
 interface IQuantumPortalLedgerMgrDependencies {

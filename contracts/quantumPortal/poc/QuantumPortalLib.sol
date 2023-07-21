@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 library QuantumPortalLib {
-    address constant FRAUD_PROOF = 0x00000000000000000000000000000000000F4A0D;
+    address constant FRAUD_PROOF = 0x00000000000000000000000000000000000f4a0D;
     struct RemoteBalance {
         uint64 remoteChainId;
         address remoteAddress;
@@ -35,6 +35,7 @@ library QuantumPortalLib {
         uint256 uncommitedBalance; // Balance for transaction.token
     }
 
-    function txEquals(t1 memory RemoteTransaction, t2 memory RemoteTransaction) internal returns (bool) {
+    function txEquals(RemoteTransaction memory t1, RemoteTransaction memory t2) internal returns (bool) {
+        return false;
     }
 }

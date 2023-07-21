@@ -62,7 +62,7 @@ abstract contract QuantumPortalPoc is TokenReceivable, PortalLedger, IQuantumPor
     function runWithdraw(
         uint64 remoteChainId, address remoteAddress, address token, uint256 amount) external override {
         require(remoteChainId != CHAIN_ID, "Remote cannot be self");
-        remoteBalances[remoteChainId][token][msg.sender] -= amount;
+        state.setRemoteBalances(remoteChainId, token, msg.sender, state.getRemoteBalances(remoteChainId, token, msg.sender) - amount);
         IQuantumPortalLedgerMgr(mgr).registerTransaction(
             remoteChainId,
             remoteAddress,
@@ -81,16 +81,16 @@ abstract contract QuantumPortalPoc is TokenReceivable, PortalLedger, IQuantumPor
         if (chainId == context.blockMetadata.chainId && token == context.transaction.token) {
             context.uncommitedBalance -= amount;
         } else {
-            remoteBalances[chainId][token][msg.sender] -= amount;
+            state.setRemoteBalances(chainId, token, msg.sender, state.getRemoteBalances(chainId, token, msg.sender) - amount);
         }
-        remoteBalances[chainId][token][to] += amount;
+        state.setRemoteBalances(chainId, token, to, state.getRemoteBalances(chainId, token, to) + amount);
     }
 
     function withdraw(address token, uint256 amount) external {
         require(context.blockMetadata.chainId == 0, "QPP: cannot be called within a mining context");
-        uint256 bal = remoteBalances[CHAIN_ID][token][msg.sender];
+        uint256 bal = state.getRemoteBalances(CHAIN_ID, token, msg.sender);
         require(bal >= amount, "QPP: Not enough balance");
-        remoteBalances[CHAIN_ID][token][msg.sender] = bal - amount;
+        state.setRemoteBalances(CHAIN_ID, token, msg.sender, bal - amount);
         sendToken(token, msg.sender, amount);
     }
 

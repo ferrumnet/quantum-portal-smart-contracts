@@ -4,6 +4,8 @@ pragma solidity ^0.8.0;
 import "./IQuantumPortalLedgerMgr.sol";
 import "foundry-contracts/contracts/common/WithAdmin.sol";
 import "./QuantumPortalLib.sol";
+import "./QuantumPortalState.sol";
+
 import "hardhat/console.sol";
 
 interface CanEstimateGas {
@@ -13,6 +15,7 @@ interface CanEstimateGas {
 contract PortalLedger is WithAdmin {
     event ExecutionReverted(uint256 remoteChainId, address localContract, bytes32 revertReason);
     address public mgr;
+    QuantumPortalState public state;
     QuantumPortalLib.Context public context;
     uint256 immutable internal CHAIN_ID; // To support override
 
@@ -50,8 +53,8 @@ contract PortalLedger is WithAdmin {
             // or not enough balance, which should never happen.
             console.log("UPDATING BALANCE FOR ", t.remoteContract, t.amount);
             if (t.amount != 0) {
-                state.setRemoteBalances(b.chainId, t.token, t.remoteContract,
-                    state.getRemoteBalances(b.chainId, t.token, t.remoteContract) + t.amount);
+                state.setRemoteBalances(uint256(b.chainId), t.token, t.remoteContract,
+                    state.getRemoteBalances(uint256(b.chainId), t.token, t.remoteContract) + t.amount);
             }
         } else {
             QuantumPortalLib.Context memory _context = QuantumPortalLib.Context({
@@ -141,8 +144,9 @@ contract PortalLedger is WithAdmin {
         delete context;
     }
 
-    function setManager(address _mgr) external onlyAdmin {
+    function setManager(address _mgr, address _state) external onlyAdmin {
         mgr = _mgr;
+        state = QuantumPortalState(_state);
     }
 
     function revertRemoteBalance(QuantumPortalLib.Context memory _context) internal {
