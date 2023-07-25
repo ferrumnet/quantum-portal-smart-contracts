@@ -25,7 +25,7 @@ contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712, QuantumPortalW
     string public constant NAME = "FERRUM_QUANTUM_PORTAL_MINER_MGR";
     string public constant VERSION = "000.010";
     uint32 constant WEEK = 3600 * 24 * 7;
-    address public miningStake;
+    address public override miningStake;
 
     constructor() EIP712(NAME, VERSION) {
         bytes memory _data = IFerrumDeployer(msg.sender).initData();

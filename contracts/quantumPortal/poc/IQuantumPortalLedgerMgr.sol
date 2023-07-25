@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 import "./QuantumPortalLib.sol";
+import "./QuantumPortalState.sol";
 
 interface IQuantumPortalLedgerMgr {
     struct LocalBlock {
@@ -45,6 +46,8 @@ interface IQuantumPortalLedgerMgr {
         address fradulentMiner,
         address rewardReceiver
     ) external;
+
+    function state() external returns (QuantumPortalState);
 }
 
 interface IQuantumPortalLedgerMgrDependencies {

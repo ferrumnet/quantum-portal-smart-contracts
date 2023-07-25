@@ -2,9 +2,11 @@
 pragma solidity ^0.8.0;
 
 import "./IQuantumPortalLedgerMgr.sol";
+import "./poa/IQuantumPortalMinerMgr.sol";
 import "./poa/IQuantumPortalAuthorityMgr.sol";
 import "./poa/IQuantumPortalFeeConvertor.sol";
 import "./poa/IQuantumPortalMinerMembership.sol";
+import "./poa/IQuantumPortalStake.sol";
 import "foundry-contracts/contracts/common/IVersioned.sol";
 import "foundry-contracts/contracts/common/WithAdmin.sol";
 import "foundry-contracts/contracts/math/FullMath.sol";
@@ -25,13 +27,14 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
     uint256 constant BLOCK_PERIOD = 60 * 2; // One block per two minutes?
     uint256 immutable CHAIN_ID;
     uint256 public minerMinimumStake = 10**18 * 1000000; // Minimum 1M tokens to become miner
-    QuantumPortalState public state;
+    QuantumPortalState public override state;
     address public ledger;
     address public minerMgr;
     address public authorityMgr;
     address public feeConvertor;
     address public varFeeTarget;
     address public fixedFeeTarget;
+    address public stakes;
 
     modifier onlyLedger() {
         require(msg.sender == ledger, "QPLM: Not allowed");
@@ -237,8 +240,6 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
     ) external {
         require(remoteChainId != 0, "QPLM: remoteChainId required");
         {
-        uint256 stake = stakeOf(msg.sender);
-        require(stake >= minerMinimumStake, "QPLM: not enough stake");
         uint256 lastNonce = state.getLastMinedBlock(remoteChainId).nonce;
         // TODO: allow branching in case of conflicting blocks. When branching happens 
         // it is guaranteed that one branch is invalid and miners need to punished.
@@ -257,14 +258,6 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         console.log("BLOCK_NONCE", blockNonce);
         console.log("MSG HASH");
         console.logBytes32(blockHash);
-        // TODO: We require the remote chain's and local chain's clocks to be reasonably sync.
-        // Consider replacing this relationship to a method that does not require the chains to 
-        // have correct timestamps.
-        {
-        uint256 remoteBlockTimestamp = transactions[transactions.length - 1].timestamp;
-        require(IQuantumPortalMinerMembership(minerMgr).selectMiner(msg.sender, blockHash, remoteBlockTimestamp)
-            , "QPLM: mining out of order");
-        }
 
         uint256 totalValue = 0;
         uint256 totalSize = 0;
@@ -282,7 +275,21 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             totalValue,
             minerMinimumStake
         );
+
+        // TODO: We require the remote chain's and local chain's clocks to be reasonably sync.
+        // Consider replacing this relationship to a method that does not require the chains to 
+        // have correct timestamps.
+        {
+        uint256 remoteBlockTimestamp = transactions[transactions.length - 1].timestamp;
+        require(IQuantumPortalMinerMembership(minerMgr).selectMiner(miner, blockHash, remoteBlockTimestamp)
+            , "QPLM: mining out of order");
+        }
+
         console.log("MINER IS", miner);
+        {
+        uint256 stake = stakeOf(miner);
+        require(stake >= minerMinimumStake, "QPLM: not enough stake");
+        }
         if (validationResult != IQuantumPortalMinerMgr.ValidationResult.Valid) {
             require(validationResult != IQuantumPortalMinerMgr.ValidationResult.NotEnoughStake, "QPLM: miner has not enough stake");
             revert("QPLM: miner signature cannot be verified");
@@ -298,7 +305,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         mb = IQuantumPortalLedgerMgr.MinedBlock({
             blockHash: blockHash,
             miner: msg.sender,
-            stake: stakeOf(msg.sender),
+            stake: stakeOf(miner),
             totalValue: totalValue,
             blockMetadata: blockMetadata
         });
@@ -529,7 +536,9 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
     function stakeOf(
         address staker
     ) internal virtual returns (uint256) {
-        return 0;
+        address _stake = IQuantumPortalMinerMgr(minerMgr).miningStake();
+        console.log("Checking stake for ", staker);
+        return IQuantumPortalStake(_stake).delegatedStakeOf(staker);
     }
 
     /**

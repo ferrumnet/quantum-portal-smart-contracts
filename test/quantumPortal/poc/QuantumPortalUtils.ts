@@ -14,6 +14,7 @@ import { ERC20 } from "foundry-contracts/dist/test/common/UniswapV2";
 import { Signer } from "ethers";
 import { QuantumPortalMinerMgr } from "../../../typechain-types/QuantumPortalMinerMgr";
 import { QuantumPortalFeeConverterDirect } from "../../../typechain-types/QuantumPortalFeeConverterDirect";
+import { QuantumPortalState } from '../../../typechain-types/QuantumPortalState';
 
 export const FERRUM_TOKENS = {
     26000: '0x00',
@@ -26,13 +27,15 @@ export class QuantumPortalUtils {
         chain1: number,
         chain2: number,
         source: QuantumPortalLedgerMgrTest,
+        sourceState: QuantumPortalState,
         target: QuantumPortalLedgerMgrTest,
+        targetState: QuantumPortalState,
         minerSk: string,
     ): Promise<boolean> {
         const blockReady = await source.isLocalBlockReady(chain2);
         console.log('Local block ready?', blockReady)
         if (!blockReady) { return false; }
-        const lastB = await source.lastLocalBlock(chain2);
+        const lastB = await sourceState.getLastLocalBlock(chain2);
         const nonce = lastB.nonce.toNumber();
         const lastMinedBlock = await target.lastRemoteMinedBlock(chain1);
         const minedNonce = lastMinedBlock.nonce.toNumber();
@@ -127,10 +130,11 @@ export class QuantumPortalUtils {
     static async finalize(
         sourceChainId: number,
         mgr: QuantumPortalLedgerMgrTest,
+        state: QuantumPortalState,
         finalizerSk: string,
     ) {
         const block = await mgr.lastRemoteMinedBlock(sourceChainId);
-        const lastFin = await mgr.lastFinalizedBlock(sourceChainId);
+        const lastFin = await state.getLastFinalizedBlock(sourceChainId);
         const blockNonce = block.nonce.toNumber();
         const fin = lastFin.nonce.toNumber();
         if (blockNonce > fin) {
@@ -182,12 +186,13 @@ export class QuantumPortalUtils {
         realChainId: number, // used for EIP-712 signature generation
         remoteChainId: number,
         mgr: QuantumPortalLedgerMgrTest,
+        state: QuantumPortalState,
         authMgrAddr: string,
         finalizers: string[],
         finalizersSk: string[],
     ) {
         const block = await mgr.lastRemoteMinedBlock(remoteChainId);
-        const lastFin = await mgr.lastFinalizedBlock(remoteChainId);
+        const lastFin = await state.getLastFinalizedBlock(remoteChainId);
         console.log(block);
         const blockNonce = block.nonce.toNumber();
         const fin = lastFin.nonce.toNumber();
@@ -253,15 +258,18 @@ export class QuantumPortalUtils {
         return isAllZero(block) ? undefined : block;
     }
 
-    static async stakeAndDelegate(stake: QuantumPortalStake, amount: string, staker: string, delegatee: string, signer: Signer) {
+    static async stakeAndDelegate(mgr: QuantumPortalLedgerMgrTest, stake: QuantumPortalStake, amount: string, staker: string, delegatee: string, signer: Signer, delegateeSk: string) {
         const id = await stake.STAKE_ID();
         const tokenAddress = await stake.baseToken(id);
         const token = new ERC20(tokenAddress);
         await (await token.token()).connect(signer).transfer(stake.address, await token.amountToMachine(amount));
         await stake.stake(staker, await stake.STAKE_ID());
-        console.log(`Staked ${amount} for ${staker}`)
+        console.log(`- Staked ${amount} for ${staker}`)
         await stake.connect(signer).delegate(delegatee);
-        console.log(`Delegated to ${delegatee}`);
+        console.log(`- Delegated to ${delegatee}`);
+        console.log('Registering miner...');
+        const wallet = new ethers.Wallet(delegateeSk, ethers.provider);
+        await mgr.connect(wallet).registerMiner();
     }
 }
 
@@ -272,6 +280,7 @@ export interface PortalContext extends TestContext {
         poc: QuantumPortalPocTest;
         token: DummyToken;
         autorityMgr: QuantumPortalAuthorityMgr;
+        state: QuantumPortalState,
         minerMgr: QuantumPortalMinerMgr;
         stake: QuantumPortalStake;
         feeConverter: QuantumPortalFeeConverterDirect;
@@ -282,6 +291,7 @@ export interface PortalContext extends TestContext {
         poc: QuantumPortalPocTest;
         token: DummyToken;
         autorityMgr: QuantumPortalAuthorityMgr;
+        state: QuantumPortalState,
         minerMgr: QuantumPortalMinerMgr;
         stake: QuantumPortalStake;
         feeConverter: QuantumPortalFeeConverterDirect;
@@ -346,15 +356,30 @@ export async function deployAll(): Promise<PortalContext> {
     await miningMgr2.connect(ctx.signers.acc1).setRemote(chainId1, miningMgr1.address);
     await autorityMgr2.connect(ctx.signers.acc1).updateMgr(mgr2.address);
 
-    await poc1.setManager(mgr1.address);
+    console.log(`Deploying QP State`);
+    const stateF = await ethers.getContractFactory('QuantumPortalState');
+    const state1 = await stateF.deploy() as QuantumPortalState;
+    await state1.setMgr(mgr1.address);
+    await state1.setLedger(poc1.address);
+    const state2 = await stateF.deploy() as QuantumPortalState;
+    await state2.setMgr(mgr2.address);
+    await state2.setLedger(poc2.address);
+
+    await poc1.setManager(mgr1.address, state1.address);
     await poc1.setFeeTarget(miningMgr1.address);
     await poc1.setFeeToken(tok1.address);
-    await poc2.setManager(mgr2.address);
+    await poc2.setManager(mgr2.address, state2.address);
     await poc2.setFeeTarget(miningMgr2.address);
     await poc2.setFeeToken(tok1.address);
     await mgr1.updateLedger(poc1.address);
+    await mgr1.updateState(state1.address);
     await mgr2.updateLedger(poc2.address);
-    console.log('Set.')
+    await mgr2.updateState(state2.address);
+    console.log('Set.');
+
+    console.log('Sending eth to the miner wallet');
+    await ctx.signers.owner.sendTransaction({to: ctx.wallets[0], value: Wei.from('1')});
+    await ctx.signers.owner.sendTransaction({to: ctx.wallets[1], value: Wei.from('1')});
 
 	return {
         ...ctx,
@@ -364,6 +389,7 @@ export async function deployAll(): Promise<PortalContext> {
             poc: poc1,
             autorityMgr: autorityMgr1,
             minerMgr: miningMgr1,
+            state: state1,
             token: tok1,
             stake,
             feeConverter,
@@ -374,6 +400,7 @@ export async function deployAll(): Promise<PortalContext> {
             poc: poc2,
             autorityMgr: autorityMgr2,
             minerMgr: miningMgr2,
+            state: state2,
             token: tok1,
             stake,
             feeConverter,
