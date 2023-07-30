@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import "./IQuantumPortalMinerMembership.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @notice Membership management for the miner. A single unique miner can be selected for on a given hash for a time block.
  *         Miners can register, unregister, and replace.
@@ -21,8 +23,10 @@ abstract contract QuantumPortalMinerMembership is IQuantumPortalMinerMembership 
      * @notice Overwride and make sure this can only be called by the mgr
      */
     function _selectMiner(address requestedMiner, bytes32 blockHash, uint256 blockTimestamp) internal returns (bool) {
+        console.log("Selecting miner", requestedMiner);
         uint256 offset = (block.timestamp - blockTimestamp) % (timeBlockSize * 2);
         uint256 registeredMinerIdx = minerIdx(blockHash, blockTimestamp, offset);
+        console.log("Random miner IDX", registeredMinerIdx, miners[registeredMinerIdx]);
         address registeredMiner = miners[registeredMinerIdx];
         if (registeredMiner != requestedMiner) {
             return false;

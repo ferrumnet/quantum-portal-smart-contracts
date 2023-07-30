@@ -11,11 +11,13 @@ import { UniswapOracle } from "../../../typechain/UniswapOracle";
 import { loadQpDeployConfig, QpDeployConfig } from "../../utils/DeployUtils";
 import { Signer } from "ethers";
 import { QuantumPortalFeeConverterDirect } from "../../../typechain-types/QuantumPortalFeeConverterDirect";
+import { QuantumPortalState } from "../../../typechain-types/QuantumPortalState";
 
 const DEFAULT_QP_CONFIG_FILE = 'QpDeployConfig.yaml';
 
 interface Ctx {
     gateway: QuantumPortalGateway;
+    state: QuantumPortalState;
     poc: QuantumPortalPoc;
     mgr: QuantumPortalLedgerMgr;
     auth: QuantumPortalAuthorityMgr;
@@ -84,6 +86,7 @@ async function prep(conf: QpDeployConfig) {
     }
 
     let newGateway: boolean;
+    let newState: boolean;
     let newPoc: boolean;
     let newLedgerMgr: boolean;
     let newAut: boolean;
@@ -102,6 +105,7 @@ async function prep(conf: QpDeployConfig) {
             return deped;
         });
 
+    [ctx.state, newState] = await deployOrAttach(conf, conf.QuantumPortalState, 'QuantumPortalState', conf.Owner, '0x', qpWallet,);
     [ctx.poc, newPoc] = await deployOrAttach(conf, conf.QuantumPortalPoc, 'QuantumPortalPocImpl', conf.Owner, '0x', qpWallet,);
     [ctx.mgr, newLedgerMgr] = await deployOrAttach(conf, conf.QuantumPortalLedgerMgr, 'QuantumPortalLedgerMgrImpl', conf.Owner, '0x', qpWallet,);
     [ctx.auth, newAut] = await deployOrAttach(conf, conf.QuantumPortalAuthorityMgr, 'QuantumPortalAuthorityMgr', conf.Owner, '0x', qpWallet,);
@@ -140,6 +144,8 @@ async function prep(conf: QpDeployConfig) {
     if (newLedgerMgr || newPoc) {
         console.log('New POC. Updating ledgerMgr');
         await ctx.mgr.connect(qpWallet).updateLedger(ctx.poc.address);
+        await ctx.poc.connect(qpWallet).setManager(ctx.mgr.addr, ctx.state.address);
+
     }
     if (newLedgerMgr || newMinerMgr) {
         console.log('New miner mgr. Updating ledgerMgr');
@@ -164,6 +170,11 @@ async function prep(conf: QpDeployConfig) {
     if (newPoc || newLedgerMgr || newMinerMgr) {
         console.log('Initializing minerMgr');
         await ctx.miner.connect(qpWallet).initServer(ctx.poc.address, ctx.mgr.address, stakeToken);
+    }
+    if (newState) {
+        console.log('Updating state on ledgerMgr and Poc');
+        await ctx.mgr.connect(qpWallet).updateState(ctx.state.address);
+        await ctx.poc.connect(qpWallet).setManager(ctx.mgr.addr, ctx.state.address);
     }
     if (newPoc || newMinerMgr) {
         console.log('Updating the fee target');

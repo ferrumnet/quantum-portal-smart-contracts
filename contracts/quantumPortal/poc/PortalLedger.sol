@@ -4,6 +4,8 @@ pragma solidity ^0.8.0;
 import "./IQuantumPortalLedgerMgr.sol";
 import "foundry-contracts/contracts/common/WithAdmin.sol";
 import "./QuantumPortalLib.sol";
+import "./QuantumPortalState.sol";
+
 import "hardhat/console.sol";
 
 interface CanEstimateGas {
@@ -13,7 +15,7 @@ interface CanEstimateGas {
 contract PortalLedger is WithAdmin {
     event ExecutionReverted(uint256 remoteChainId, address localContract, bytes32 revertReason);
     address public mgr;
-    mapping(uint256 => mapping(address => mapping(address => uint256))) remoteBalances;
+    QuantumPortalState public state;
     QuantumPortalLib.Context public context;
     uint256 immutable internal CHAIN_ID; // To support override
 
@@ -51,14 +53,15 @@ contract PortalLedger is WithAdmin {
             // or not enough balance, which should never happen.
             console.log("UPDATING BALANCE FOR ", t.remoteContract, t.amount);
             if (t.amount != 0) {
-                remoteBalances[b.chainId][t.token][t.remoteContract] += t.amount;
+                state.setRemoteBalances(uint256(b.chainId), t.token, t.remoteContract,
+                    state.getRemoteBalances(uint256(b.chainId), t.token, t.remoteContract) + t.amount);
             }
         } else {
             QuantumPortalLib.Context memory _context = QuantumPortalLib.Context({
                 index: uint64(blockIndex),
                 blockMetadata: b,
                 transaction: t,
-                uncommitedBalance: remoteBalances[b.chainId][t.token][t.remoteContract] + t.amount
+                uncommitedBalance: state.getRemoteBalances(b.chainId, t.token, t.remoteContract) + t.amount
             });
 
             context = _context;
@@ -68,7 +71,7 @@ contract PortalLedger is WithAdmin {
             bool success = callRemoteMethod(b.chainId, t.remoteContract, t.remoteContract, t.method, gas);
             if (success) {
                 // Commit the uncommitedBalance. This could have been changed during callRemoteMehod
-                remoteBalances[b.chainId][t.token][t.remoteContract] = context.uncommitedBalance;
+                state.setRemoteBalances(b.chainId, t.token, t.remoteContract, context.uncommitedBalance);
             } else {
                 // We cannot revert because we don't know where to get the fee from.
                 // revertRemoteBalance(_context);
@@ -109,7 +112,7 @@ contract PortalLedger is WithAdmin {
             index: uint64(1),
             blockMetadata: b,
             transaction: t,
-            uncommitedBalance: remoteBalances[b.chainId][t.token][t.remoteContract] + t.amount
+            uncommitedBalance: state.getRemoteBalances(b.chainId, t.token, t.remoteContract) + t.amount
         });
 
         context = _context;
@@ -132,7 +135,7 @@ contract PortalLedger is WithAdmin {
         if (addr == t.remoteContract && token == t.token) {
             return context.uncommitedBalance;
         }
-        return remoteBalances[chainId][token][addr];
+        return state.getRemoteBalances(chainId, token, addr);
     }
 
     function clearContext() external onlyMgr {
@@ -141,8 +144,9 @@ contract PortalLedger is WithAdmin {
         delete context;
     }
 
-    function setManager(address _mgr) external onlyAdmin {
+    function setManager(address _mgr, address _state) external onlyAdmin {
         mgr = _mgr;
+        state = QuantumPortalState(_state);
     }
 
     function revertRemoteBalance(QuantumPortalLib.Context memory _context) internal {

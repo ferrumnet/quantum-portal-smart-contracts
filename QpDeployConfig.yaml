@@ -13,9 +13,10 @@
 Owner: "0xf1b1145f83cadd5199f8D8E937Aa07979e2806Aa"
 DeployerContract: "0xDACa19A67eB89D610eDFd891594108B569c379c0"
 DeployerSalt: "0x65ff7961289d09280b311966c72b708989daabefb729d1a5b64fe72a9ad26049"
-QuantumPortalGateway: "0x46734BccB07B9fAD5599589290F6cBE4765Da5E4"
-QuantumPortalPoc: "0x206a27370056DBBCff571C33C55fe6D7a770d213"
-QuantumPortalLedgerMgr: "0x4be51932cb2FA040050773d767f5Be8C25f7dcA0"
+QuantumPortalGateway: 
+QuantumPortalState:
+QuantumPortalPoc: 
+QuantumPortalLedgerMgr: 
 QuantumPortalAuthorityMgr: "0xe776Fedb74e85CFe6677b6774E5898c1d41867D7"
 QuantumPortalFeeConvertorDirect: "0x431D332F39A90e4478Ae3a13C8e17Bae1BfdDC73"
 QuantumPortalMinerMgr: "0x391870f7FFEC11582f3d1Dc6bc0EE7ec8e63C16f"

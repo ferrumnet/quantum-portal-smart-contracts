@@ -44,6 +44,10 @@ contract QuantumPortalGateway is WithAdmin, IQuantumPortalPoc {
         quantumPortalStake = IQuantumPortalStake(qpStake);
     }
 
+    function state() external returns (address) {
+        return address(quantumPortalLedgerMgr.state());
+    }
+
     /**
      * @notice Stake for miner.
      * @param to The address to stake for.

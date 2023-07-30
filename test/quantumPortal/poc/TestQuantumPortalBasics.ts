@@ -1,4 +1,4 @@
-import { abi, expiryInFuture, seed0x as salt0x, throws, Wei, ZeroAddress } from 
+import { throws, Wei, ZeroAddress } from 
     'foundry-contracts/dist/test/common/Utils';
 import { expect } from "chai";
 import { advanceTimeAndBlock } from "../../common/TimeTravel";
@@ -18,8 +18,9 @@ function blockMetadata(m: any): { chainId: number,  nonce: number, timestamp: nu
 
 async function mineAndFinilizeOneToTwo(ctx: PortalContext, nonce: number) {
     let key = (await ctx.chain1.ledgerMgr.getBlockIdx(ctx.chain2.chainId, nonce)).toString();
-    let tx = await ctx.chain1.ledgerMgr.localBlockTransactions(key, nonce - 1); 
-    await QuantumPortalUtils.stakeAndDelegate(ctx.chain1.stake, '10', ctx.owner, ctx.wallets[0], ctx.signers.owner);
+    let tx = await ctx.chain1.state.getLocalBlockTransaction(key, nonce - 1); 
+    await QuantumPortalUtils.stakeAndDelegate(ctx.chain2.ledgerMgr, ctx.chain2.stake, '10', ctx.owner, ctx.wallets[0], ctx.signers.owner, ctx.sks[0]);
+    console.log('Staked and delegated...');
     const txs = [{
                 token: tx.token.toString(),
                 amount: tx.amount.toString(),
@@ -50,16 +51,17 @@ async function mineAndFinilizeOneToTwo(ctx: PortalContext, nonce: number) {
     await QuantumPortalUtils.finalize(
         ctx.chain1.chainId,
         ctx.chain2.ledgerMgr,
+        ctx.chain2.state,
         ctx.sks[0],
     );
 }
 
 async function mineAndFinilizeTwoToOne(ctx: PortalContext, nonce: number) {
     let key = (await ctx.chain2.ledgerMgr.getBlockIdx(ctx.chain1.chainId, nonce)).toString();
-    let tx = await ctx.chain2.ledgerMgr.localBlockTransactions(key, nonce - 1); 
+    let tx = await ctx.chain2.state.getLocalBlockTransaction(key, nonce - 1); 
     // Commenting out because stake contract is shared in this test
     await ctx.chain1.token.transfer(ctx.acc1, Wei.from('10'));
-    await QuantumPortalUtils.stakeAndDelegate(ctx.chain2.stake, '10', ctx.acc1, ctx.wallets[1], ctx.signers.acc1);
+    await QuantumPortalUtils.stakeAndDelegate(ctx.chain1.ledgerMgr, ctx.chain2.stake, '10', ctx.acc1, ctx.wallets[1], ctx.signers.acc1, ctx.sks[1]);
     const txs = [{
                 token: tx.token.toString(),
                 amount: tx.amount.toString(),
@@ -90,6 +92,7 @@ async function mineAndFinilizeTwoToOne(ctx: PortalContext, nonce: number) {
     await QuantumPortalUtils.finalize(
         ctx.chain2.chainId,
         ctx.chain1.ledgerMgr,
+        ctx.chain1.state,
         ctx.sks[0],
     );
 }
@@ -118,7 +121,7 @@ describe("Test qp", function () {
             ctx.chain1.token.address,
             '0x')
         // Check the block
-        let lastLocalBlock = await ctx.chain1.ledgerMgr.lastLocalBlock(ctx.chain2.chainId);
+        let lastLocalBlock = await ctx.chain1.state.getLastLocalBlock(ctx.chain2.chainId);
         expect(lastLocalBlock.nonce).to.be.equal(1, 'Unexpected nonce!');
 
         console.log('Is the fee collected?');
@@ -131,13 +134,13 @@ describe("Test qp", function () {
         let isBlockReady = await ctx.chain1.ledgerMgr.isLocalBlockReady(ctx.chain2.chainId);
         console.log('Is block ready on chain 1? ', isBlockReady);
         expect(isBlockReady).to.be.false;
-        let lastNonce = await ctx.chain1.ledgerMgr.lastLocalBlock(ctx.chain2.chainId);
+        let lastNonce = await ctx.chain1.state.getLastLocalBlock(ctx.chain2.chainId);
         console.log('Last nonce is ', lastNonce.nonce);
         let block = (await ctx.chain1.ledgerMgr.localBlockByNonce(ctx.chain2.chainId, 1))[0];
         console.log('Local block is: ', blockMetadata(block.metadata));
         let key = (await ctx.chain1.ledgerMgr.getBlockIdx(ctx.chain2.chainId, 1)).toString();
         console.log('Key is', ctx.chain2.chainId, ',', key);
-        let tx = await ctx.chain1.ledgerMgr.localBlockTransactions(key, 0);
+        let tx = await ctx.chain1.state.getLocalBlockTransaction(key, 0);
         console.log('Local block txs.0', tx);
 
         console.log('Moving time forward');
@@ -147,7 +150,10 @@ describe("Test qp", function () {
         expect(isBlockReady).to.be.true;
 
         console.log('Now, mining a block on chain 2');
-        await QuantumPortalUtils.stakeAndDelegate(ctx.chain1.stake, '10', ctx.owner, ctx.wallets[0], ctx.signers.owner);
+        await QuantumPortalUtils.stakeAndDelegate(ctx.chain2.ledgerMgr, ctx.chain2.stake, '10', ctx.owner, ctx.wallets[0], ctx.signers.owner, ctx.sks[0]);
+        console.log('- Staked and delegated....');
+        // await mgr2.connect(ctx.signers.owner).registerMiner();
+
         const txs = [{
                     token: tx.token.toString(),
                     amount: tx.amount.toString(),
@@ -166,6 +172,7 @@ describe("Test qp", function () {
             txs,
             ctx.sks[0], // Miner...
         );
+        console.log('Mining remote block');
         await ctx.chain2.ledgerMgr.mineRemoteBlock(
             ctx.chain1.chainId,
             '1',
@@ -189,6 +196,7 @@ describe("Test qp", function () {
         await QuantumPortalUtils.finalize(
             ctx.chain1.chainId,
             ctx.chain2.ledgerMgr,
+            ctx.chain2.state,
             ctx.sks[0],
         );
 
@@ -203,8 +211,8 @@ describe("Test qp", function () {
         workDone = await ctx.chain2.autorityMgr.totalWork(ctx.chain1.chainId);
         myWork = await ctx.chain2.autorityMgr.works(ctx.chain1.chainId, ctx.owner);
         console.log(`Work done by authority is ${workDone} - vs mine: ${myWork} - ${ctx.owner}`); // Finalizer work is registered to the owner
-        expect(workDone.toString()).to.be.equal('26435');
-        expect(myWork.toString()).to.be.equal('26435');
+        expect(workDone.toString()).to.be.equal('32986');
+        expect(myWork.toString()).to.be.equal('32986');
 
         // await ctx.chain2.ledgerMgr.finalize(ctx.chain1.chainId, 1, Salt, [], salt0x(), expiryInFuture(), '0x');
         // let remoteBalance = Wei.to((await ctx.chain2.poc.remoteBalanceOf(ctx.chain1.chainId, ctx.chain1.token.address, ctx.acc1)).toString());
