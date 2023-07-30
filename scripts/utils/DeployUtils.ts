@@ -7,6 +7,7 @@ export interface QpDeployConfig {
     DeployerContract: string;
     DeployerSalt; string;
     QuantumPortalGateway?: string;
+    QuantumPortalState?: string;
     QuantumPortalPoc?: string;
     QuantumPortalLedgerMgr?: string;
     QuantumPortalAuthorityMgr?: string;
