@@ -36,6 +36,14 @@ library QuantumPortalLib {
     }
 
     function txEquals(RemoteTransaction memory t1, RemoteTransaction memory t2) internal pure returns (bool) {
-        return false;
+        return t1.timestamp == t2.timestamp &&
+            t1.remoteContract == t2.remoteContract &&
+            t1.sourceMsgSender == t2.sourceMsgSender &&
+            t1.sourceBeneficiary == t2.sourceBeneficiary &&
+            t1.token == t2.token &&
+            t1.amount == t2.amount &&
+            keccak256(t1.method) == keccak256(t2.method) &&
+            t1.gas == t2.gas &&
+            t1.fixedFee == t2.fixedFee;
     }
 }
