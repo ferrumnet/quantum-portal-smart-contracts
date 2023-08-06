@@ -99,6 +99,22 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         _registerTransaction(remoteChainId, remoteContract, msgSender, beneficiary, token, amount, method);
     }
 
+    event RemoteTransactionRegistered(
+        uint64 timestamp,
+        address remoteContract,
+        address sourceMsgSender,
+        address sourceBeneficiary,
+        address token,
+        uint256 amount,
+        bytes method,
+        uint256 gas,
+        uint256 fixedFee
+    );
+    event LocalBlockCreated(
+        uint64 remoteChainId,
+        uint64 nonce,
+        uint64 timestamp
+    );
     function _registerTransaction(
         uint64 remoteChainId,
         address remoteContract,
@@ -134,10 +150,21 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             state.setLocalBlocks(key, IQuantumPortalLedgerMgr.LocalBlock({
                 metadata: b
             }));
+            emit LocalBlockCreated(b.chainId, b.nonce, b.timestamp);
         }
         uint256 varFee = IQuantumPortalWorkPoolServer(minerMgr).collectFee(remoteChainId, b.nonce, fixedFee);
         remoteTx.gas = varFee;
         state.pushLocalBlockTransactions(key, remoteTx);
+        emit RemoteTransactionRegistered(
+            remoteTx.timestamp,
+            remoteTx.remoteContract,
+            remoteTx.sourceMsgSender,
+            remoteTx.sourceBeneficiary,
+            remoteTx.token,
+            remoteTx.amount,
+            remoteTx.method,
+            remoteTx.gas,
+            remoteTx.fixedFee);
     }
 
     /**
@@ -224,6 +251,13 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         IQuantumPortalMinerMembership(minerMgr).registerMiner(msg.sender);
     }
 
+    event MinedBlockCreated(
+        bytes32 blockHash,
+        address miner,
+        uint256 stake,
+        uint256 totalValue,
+        QuantumPortalLib.Block blockMetadata
+    );
     bytes32 constant MINE_REMOTE_BLOCK =
         keccak256("MineRemoteBlock(uint64 remoteChainId,uint64 blockNonce,bytes32 transactions,bytes32 salt)");
 
@@ -309,13 +343,15 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             timestamp: uint64(block.timestamp)
         });
         state.setLastMinedBlock(remoteChainId, blockMetadata);
+        uint256 minerStake = stakeOf(miner);
         mb = IQuantumPortalLedgerMgr.MinedBlock({
             blockHash: blockHash,
             miner: msg.sender,
-            stake: stakeOf(miner),
+            stake: minerStake,
             totalValue: totalValue,
             blockMetadata: blockMetadata
         });
+        emit MinedBlockCreated(blockHash, msg.sender, minerStake, totalValue, blockMetadata);
 
         } // Stack depth
         uint256 key = blockIdx(remoteChainId, blockNonce);
@@ -379,6 +415,12 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         }
     }
 
+    event FinalizedBlock(
+        uint256 remoteChainId,
+        uint blockNonce,
+        uint256 timestamp,
+        address[] finalizers
+    );
     function doFinalize(
         uint256 remoteChainId,
         uint256 blockNonce,
@@ -439,7 +481,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             nonce: uint64(blockNonce),
             timestamp: uint64(block.timestamp)
         }));
-        // TODO: Produce event
+        emit FinalizedBlock(remoteChainId, blockNonce, block.timestamp, finalizers);
     }
 
     /**
