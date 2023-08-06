@@ -95,6 +95,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         uint256 amount,
         bytes memory method
     ) external override onlyLedger {
+        require (remoteContract != QuantumPortalLib.FRAUD_PROOF, "QPLM: Invalid remoteContract");
         _registerTransaction(remoteChainId, remoteContract, msgSender, beneficiary, token, amount, method);
     }
 
@@ -155,10 +156,20 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         address rewardReceiver
     ) external override {
         // TODO: extract the miner address from signature and make sure it is the fraudulent miner.
+        bool fraudDetected;
+        bytes memory method;
+        bytes32 blockHash;
+        {
         uint256 key = blockIdx(uint64(CHAIN_ID), localBlockNonce);
         QuantumPortalLib.Block memory _block = state.getLocalBlocks(key).metadata;
-        bool fraudDetected = _block.chainId != minedOnChainId || _block.nonce != localBlockNonce || _block.timestamp != localBlockTimestamp
+        fraudDetected = _block.chainId != minedOnChainId || _block.nonce != localBlockNonce || _block.timestamp != localBlockTimestamp
             || transactions.length != state.getLocalBlockTransactionLength(key);
+        blockHash = _calculateBlockHash(
+                uint64(CHAIN_ID),
+                localBlockNonce,
+                transactions
+            );
+        method = abi.encode(uint256(blockHash), localBlockNonce, fradulentMiner);
         if (!fraudDetected) {
             for(uint i=0; i < transactions.length; i++) {
                 QuantumPortalLib.RemoteTransaction memory t = state.getLocalBlockTransaction(key, i);
@@ -166,12 +177,8 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
                 if (fraudDetected) { break; }
             }
         }
+        }
         if (fraudDetected) {
-            bytes32 blockHash = _calculateBlockHash(
-                uint64(CHAIN_ID),
-                localBlockNonce,
-                transactions
-            );
             _registerTransaction(
                 minedOnChainId,
                 QuantumPortalLib.FRAUD_PROOF,
@@ -179,7 +186,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
                 rewardReceiver,
                 address(0),
                 0,
-                abi.encode(uint256(blockHash))
+                method
             );
         }
     }
@@ -199,7 +206,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
     function minedBlockByNonce(uint64 chainId, uint64 blockNonce
     ) external view returns (IQuantumPortalLedgerMgr.MinedBlock memory b, QuantumPortalLib.RemoteTransaction[] memory txs) {
         uint256 key = blockIdx(chainId, blockNonce);
-        b = state.getMinedBlocks(key);
+        b = state.getMinedBlock(key);
         txs = state.getMinedBlockTransactions(key);
     }
 
@@ -312,25 +319,10 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
 
         } // Stack depth
         uint256 key = blockIdx(remoteChainId, blockNonce);
-        state.setMinedBlocks(key, mb);
+        state.setMinedBlock(key, mb);
         for(uint i=0; i<transactions.length; i++) {
             state.pushMinedBlockTransactions(key, transactions[i]);
         }
-    }
-
-    /**
-     @notice Creates an invalid block report. The raw proof is provided. 
-     It would be up to the slashing mechanism to punish the malicous block producer.
-     */
-    function reportInvalidBlock(
-        uint64 remoteChainId,
-        uint64 blockNonce,
-        QuantumPortalLib.RemoteTransaction[] memory transactions,
-        bytes32 salt,
-        uint64 expiry,
-        bytes memory multiSignature
-    ) external {
-        // TODO: implement
     }
 
     bytes32 constant FINALIZE_METHOD =
@@ -414,8 +406,8 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             uint256 bkey = blockIdx(uint64(remoteChainId), uint64(i));
             // uint256 stake;
             // uint256 totalValue;
-            finHash = keccak256(abi.encodePacked(finHash, state.getMinedBlocks(bkey).blockHash));
-            totalBlockStake += state.getMinedBlocks(bkey).stake;
+            finHash = keccak256(abi.encodePacked(finHash, state.getMinedBlock(bkey).blockHash));
+            totalBlockStake += state.getMinedBlock(bkey).stake;
             (uint256 minedWork, uint256 varWork) = executeBlock(bkey);
             totalMinedWork += minedWork;
             totalVarWork += varWork;
@@ -479,7 +471,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
     function executeBlock(
         uint256 key
     ) internal returns (uint256 totalMineWork, uint256 totalVarWork) {
-        IQuantumPortalLedgerMgr.MinedBlock memory b = state.getMinedBlocks(key);
+        IQuantumPortalLedgerMgr.MinedBlock memory b = state.getMinedBlock(key);
         PortalLedger qp = PortalLedger(ledger);
         uint256 gasPrice = IQuantumPortalFeeConvertor(feeConvertor).localChainGasTokenPriceX128();
         QuantumPortalLib.RemoteTransaction[] memory transactions = state.getMinedBlockTransactions(key); 
@@ -487,7 +479,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             QuantumPortalLib.RemoteTransaction memory t = transactions[i];
             totalMineWork += FIX_TX_SIZE + t.method.length;
             uint256 txGas = FullMath.mulDiv(gasPrice,
-                t.gas, // TODO: include base fee and miner fee, etc.
+                t.gas,
                 FixedPoint128.Q128);
             console.log("Price is...", gasPrice);
             console.log("Gas provided in eth: ", t.gas, txGas);
@@ -495,10 +487,12 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             console.log("Gas limit provided", txGas);
             uint256 baseGasUsed;
             if (t.remoteContract == QuantumPortalLib.FRAUD_PROOF) {
-                // TODO: verify the fradulent block is actually mined
-                // Slash fradulent miner's funds
-                // Pay the reward to tx.benefciary
-                // executeFraudProof(i, t, txGas);
+                // What if the FraudProof is fradulent itself?
+                // Can msgSender be tempered with? Only if the miner is malicous. In that case the whole tx can be fabricated
+                // so there is no benefit in checking the msgSender.
+                // A malicous miner can technically submit a fake Fraud Proof to hurt other miners, however, they will
+                // be caught and their stake will be slashed. Also, the finalizers are expected to validate blocks before finalizing.
+                baseGasUsed = processFraudProof(t, b.blockMetadata.chainId);
             } else {
                 baseGasUsed = qp.executeRemoteTransaction(i, b.blockMetadata, t, txGas);
             }
@@ -508,6 +502,24 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             // Need to convert the base gas to FRM first, and reduce the base fee.
         }
         qp.clearContext();
+    }
+
+    function processFraudProof(QuantumPortalLib.RemoteTransaction memory t, uint64 sourceChainId) internal returns(uint256 gasUsed) {
+        uint preGas = gasleft();
+        // Ensure the block is actually mined
+
+        (bytes32 blockHash, uint256 nonce, address fradulentMiner) = abi.decode(t.method, (bytes32, uint256, address));
+        uint256 key = blockIdx(sourceChainId, uint64(nonce));
+        IQuantumPortalLedgerMgr.MinedBlock memory b = state.getMinedBlock(key);
+        if(b.blockHash == blockHash) { // Block is indeed mined
+            // TODO:
+            // Slash fradulent miner's funds
+            // And pay the reward to tx.benefciary
+            IQuantumPortalMinerMgr(minerMgr).slashMinerForFraud(fradulentMiner, blockHash, t.sourceBeneficiary);
+        }
+        uint postGas = gasleft();
+        gasUsed = preGas - postGas;
+        console.log("gas used? ", postGas);
     }
 
     /**
@@ -529,7 +541,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
     }
 
     /**
-     @notice Returns available stake of the staker. TODO: Implement
+     @notice Returns available stake of the staker.
      @param staker The staker address
      @return The available staked amount
      */

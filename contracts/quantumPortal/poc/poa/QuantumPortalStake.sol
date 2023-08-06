@@ -44,7 +44,11 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
     function delegatedStakeOf(address delegatee
     ) external override view returns (uint256) {
         require(delegatee != address(0), "QPS: delegatee required");
-        address staker = reverseDelegation[delegatee];
+        ReverseDelegation memory rd = reverseDelegation[delegatee];
+        if (rd.deleted == 1) {
+            return 0;
+        }
+        address staker = rd.delegatee;
         require(staker != address(0), "QPS: delegatee not valid");
 		return state.stakes[STAKE_ID][staker];
 	}

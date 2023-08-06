@@ -5,6 +5,7 @@ import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
 import "foundry-contracts/contracts/signature/MultiSigLib.sol";
 import "./IQuantumPortalMinerMgr.sol";
 import "./IQuantumPortalStake.sol";
+import "./IDelegator.sol";
 import "./QuantumPortalWorkPoolClient.sol";
 import "./QuantumPortalWorkPoolServer.sol";
 import "./QuantumPortalMinerMembership.sol";
@@ -105,5 +106,32 @@ contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712, QuantumPortalW
 
     function withdraw(uint256 remoteChain, address worker, uint fee) external {
         QuantumPortalWorkPoolClient.withdraw(IQuantumPortalWorkPoolServer.withdrawFixedRemote.selector, remoteChain, worker, fee);
+    }
+
+
+    struct SlashHistory {
+        address delegatedMiner;
+        address miner;
+        bytes32 blockHash;
+        address beneficiary;
+    }
+    event SlashRequested(SlashHistory data);
+    mapping(bytes32=>SlashHistory) slashes;
+
+    function slashMinerForFraud(address delegatedMiner, bytes32 blockHash, address beneficiary) external override onlyMgr {
+        // TODO: For this version, we just record the slash, then the validator quorum will do the slash manually.
+        // This is expexted to be a rare enough event.
+        // Unregister the miner
+        address miner = IDelegator(miningStake).getReverseDelegation(delegatedMiner).delegatee;
+        SlashHistory memory data = SlashHistory({
+            delegatedMiner: delegatedMiner,
+            miner: miner,
+            blockHash: blockHash,
+            beneficiary: beneficiary
+        });
+        slashes[blockHash] = data;
+        if (minerIdxsPlusOne[miner] != 0) {
+            _unregisterMiner(delegatedMiner);
+        }
     }
 }

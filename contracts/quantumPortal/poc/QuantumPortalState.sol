@@ -53,11 +53,11 @@ contract QuantumPortalState is WithAdmin {
         value = localBlockTransactions[key];
     }
 
-    function getMinedBlocks(uint256 key) external view returns(IQuantumPortalLedgerMgr.MinedBlock memory) {
+    function getMinedBlock(uint256 key) external view returns(IQuantumPortalLedgerMgr.MinedBlock memory) {
         return minedBlocks[key];
     }
 
-    function setMinedBlocks(uint256 key, IQuantumPortalLedgerMgr.MinedBlock calldata value) external onlyMgr {
+    function setMinedBlock(uint256 key, IQuantumPortalLedgerMgr.MinedBlock calldata value) external onlyMgr {
         minedBlocks[key] = value;
     }
 

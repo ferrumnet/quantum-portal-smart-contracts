@@ -170,7 +170,6 @@ contract PortalLedger is WithAdmin {
         }
         // TODO: What happens if addr does not exist or is an address
         // TODO: Include gas properly, and catch the proper error when there is not enough gas
-        // (success,) = addr.call{gas: gas}(method);
         bytes memory data;
         console.log("CALLING ", addr);
         (success, data) = addr.call{gas: gas}(method);

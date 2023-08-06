@@ -16,5 +16,6 @@ interface IQuantumPortalMinerMgr {
         uint256 msgValue,
         uint256 minStakeAllowed
     ) external view returns (ValidationResult res, address signer);
+    function slashMinerForFraud(address miner, bytes32 blockHash, address beneficiary) external;
 }
 
