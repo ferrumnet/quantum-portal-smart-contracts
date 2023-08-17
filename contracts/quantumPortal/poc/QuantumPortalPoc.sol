@@ -84,14 +84,17 @@ abstract contract QuantumPortalPoc is TokenReceivable, PortalLedger, IQuantumPor
             state.setRemoteBalances(chainId, token, msg.sender, state.getRemoteBalances(chainId, token, msg.sender) - amount);
         }
         state.setRemoteBalances(chainId, token, to, state.getRemoteBalances(chainId, token, to) + amount);
+        emit RemoteTransfer(chainId, token, msg.sender, to, amount);
     }
 
+    event LocalTransfer(address token, address to, uint256 amount);
     function withdraw(address token, uint256 amount) external {
         require(context.blockMetadata.chainId == 0, "QPP: cannot be called within a mining context");
         uint256 bal = state.getRemoteBalances(CHAIN_ID, token, msg.sender);
         require(bal >= amount, "QPP: Not enough balance");
         state.setRemoteBalances(CHAIN_ID, token, msg.sender, bal - amount);
         sendToken(token, msg.sender, amount);
+        emit LocalTransfer(token, msg.sender, amount);
     }
 
     /**

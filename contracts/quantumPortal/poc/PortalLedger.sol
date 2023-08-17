@@ -28,6 +28,7 @@ contract PortalLedger is WithAdmin {
         CHAIN_ID = overrideChainId == 0 ? block.chainid : overrideChainId;
     }
 
+    event RemoteTransfer(uint256 chainId, address token, address from, address to, uint256 amount);
     /**
      @notice Executes a transaction within a remote block context
      @param blockIndex The block index
@@ -71,9 +72,14 @@ contract PortalLedger is WithAdmin {
             bool success = callRemoteMethod(b.chainId, t.remoteContract, t.remoteContract, t.method, gas);
             if (success) {
                 // Commit the uncommitedBalance. This could have been changed during callRemoteMehod
+                uint256 oldBal = state.getRemoteBalances(uint256(b.chainId), t.token, t.remoteContract);
                 state.setRemoteBalances(b.chainId, t.token, t.remoteContract, context.uncommitedBalance);
+                if (context.uncommitedBalance > oldBal) {
+                    emit RemoteTransfer(b.chainId, t.token, t.sourceMsgSender, t.remoteContract, context.uncommitedBalance - oldBal);
+                }
             } else {
                 // We cannot revert because we don't know where to get the fee from.
+                // TODO:
                 // revertRemoteBalance(_context);
             }
             resetContext();
