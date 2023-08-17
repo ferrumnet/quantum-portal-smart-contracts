@@ -75,6 +75,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
     }
 
     uint256 constant FIX_TX_SIZE = 9 * 32;
+    uint256 constant FIXED_REJECT_SIZE = 9 * 32; // TODO: Calculate the right amount for rejectioin tasks
     /**
      * @notice Calculate the fixed fee.
      */
@@ -347,6 +348,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         mb = IQuantumPortalLedgerMgr.MinedBlock({
             blockHash: blockHash,
             miner: msg.sender,
+            invalidBlock: 0,
             stake: minerStake,
             totalValue: totalValue,
             blockMetadata: blockMetadata
@@ -372,6 +374,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
     function finalize(
         uint256 remoteChainId,
         uint256 blockNonce,
+        uint256[] memory invalidBlockNonces,
         bytes32 finalizersHash,
         address[] memory finalizers,
         bytes32 salt,
@@ -383,7 +386,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         console.logBytes32(FINALIZE_METHOD);
         console.logBytes32(msgHash);
         IQuantumPortalAuthorityMgr(authorityMgr).validateAuthoritySignature(IQuantumPortalAuthorityMgr.Action.FINALIZE, msgHash, salt, expiry, multiSignature);
-        doFinalize(remoteChainId, blockNonce, finalizersHash, finalizers);
+        doFinalize(remoteChainId, blockNonce, invalidBlockNonces, finalizersHash, finalizers);
     }
 
     bytes32 constant FINALIZE_SINGLE_SIGNER_METHOD =
@@ -397,6 +400,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
     function finalizeSingleSigner(
         uint256 remoteChainId,
         uint256 blockNonce,
+        uint256[] memory invalidBlockNonces,
         bytes32 finalizersHash,
         address[] memory finalizers,
         bytes32 salt,
@@ -411,51 +415,99 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         
         if (quorumComplete) {
             console.log("Quorum complete, calling finalize");
-            doFinalize(remoteChainId, blockNonce, finalizersHash, signers);
+            doFinalize(remoteChainId, blockNonce, invalidBlockNonces, finalizersHash, signers);
         }
     }
 
     event FinalizedBlock(
         uint256 remoteChainId,
-        uint blockNonce,
-        uint256 timestamp,
+        uint256 blockNonce,
+        uint256 timestamp
+    );
+    event FinalizedInvalidBlock(
+        uint256 remoteChainId,
+        uint256 blockNonce,
+        uint256 timestamp
+    );
+    event FinalizedSnapshot(
+        uint256 remoteChainId,
+        uint256 startBlockNonce,
+        uint256 endBlockNonce,
         address[] finalizers
     );
     function doFinalize(
         uint256 remoteChainId,
         uint256 blockNonce,
+        uint256[] memory invalidNoncesOrdered,
         bytes32 finalizersHash,
         address[] memory finalizers
     ) internal {
-        QuantumPortalLib.Block memory lastFinB = state.getLastFinalizedBlock(remoteChainId);
-
         {
         QuantumPortalLib.Block memory lastMinedB = state.getLastMinedBlock(remoteChainId);
         require(lastMinedB.chainId != 0, "QPLM: No block is mined");
         require(blockNonce <= lastMinedB.nonce, "QPLM: nonce not mined");
         }
 
+        QuantumPortalLib.Block memory lastFinB = state.getLastFinalizedBlock(remoteChainId);
         require(
             lastFinB.chainId == 0 || // First time finalizing
             blockNonce > lastFinB.nonce, "QPLM: already finalized");
-
-        bytes32 finHash = 0;
-        uint256 totalBlockStake = 0;
         uint256 finalizeFrom = lastFinB.chainId == 0 ? 0 : lastFinB.nonce + 1;
-        uint256 totalMinedWork = 0;
-        uint256 totalVarWork = 0;
-        for(uint i=finalizeFrom; i <= blockNonce; i++) {
-            uint256 bkey = blockIdx(uint64(remoteChainId), uint64(i));
-            // uint256 stake;
-            // uint256 totalValue;
-            finHash = keccak256(abi.encodePacked(finHash, state.getMinedBlock(bkey).blockHash));
-            totalBlockStake += state.getMinedBlock(bkey).stake;
-            (uint256 minedWork, uint256 varWork) = executeBlock(bkey);
-            totalMinedWork += minedWork;
-            totalVarWork += varWork;
+
+        if (invalidNoncesOrdered.length > 1) {
+            for(uint i=1; i<invalidNoncesOrdered.length; i++) {
+                require(invalidNoncesOrdered[i] > invalidNoncesOrdered[i-1], "QPLM: invalidNonces not ordered");
+            }
         }
+        uint256 finalizedKey = blockIdx(uint64(remoteChainId), uint64(blockNonce));
+
+        (
+            uint256 totalMinedWork,
+            uint256 totalVarWork
+        ) = doFinalizeLoop(remoteChainId, finalizeFrom, blockNonce, invalidNoncesOrdered, finalizersHash, finalizedKey);
+
         IQuantumPortalWorkPoolClient(minerMgr).registerWork(remoteChainId, msg.sender, totalMinedWork, blockNonce);
         IQuantumPortalWorkPoolClient(authorityMgr).registerWork(remoteChainId, msg.sender, totalVarWork, blockNonce);
+
+        for(uint i=0; i<finalizers.length; i++) {
+            state.pushFinalizationStake(finalizedKey, IQuantumPortalLedgerMgr.FinalizerStake({
+                finalizer: finalizers[i],
+                staked: stakeOf(finalizers[i])
+            }));
+        }
+        state.setLastFinalizedBlock(remoteChainId, QuantumPortalLib.Block({
+            chainId: uint64(remoteChainId),
+            nonce: uint64(blockNonce),
+            timestamp: uint64(block.timestamp)
+        }));
+        emit FinalizedSnapshot(remoteChainId, finalizeFrom, blockNonce, finalizers);
+    }
+
+    function doFinalizeLoop(uint256 remoteChainId, uint256 fromNonce, uint256 toNonce, uint256[] memory invalids, bytes32 finalizersHash, uint256 finalizedKey
+    ) internal returns (uint256 totalMinedWork, uint256 totalVarWork) {
+        bytes32 finHash = 0;
+        uint256 invalidIdx = 0;
+        uint256 totalBlockStake = 0;
+        for(uint i=fromNonce; i <= toNonce; i++) {
+            uint256 bkey = blockIdx(uint64(remoteChainId), uint64(i));
+            // TODO: Consider XOR ing the block hashes. AS the hashes are random, this will not be theoretically secure
+            // but as we have a small finite list of items that can be played with, (e.g. block hashes form a range of epocs)
+            // a simple xor is enough. The finHash is only used for sanity check offline, so it is not critical information
+            finHash = finHash ^ state.getMinedBlock(bkey).blockHash;
+            totalBlockStake += state.getMinedBlock(bkey).stake;
+            if (invalids.length != 0 && i == invalidIdx && invalids.length > invalidIdx) {
+                // This is an inbvalid block
+                (uint256 minedWork) = rejectBlock(bkey);
+                totalMinedWork += minedWork;
+                invalidIdx ++;
+                emit FinalizedInvalidBlock(remoteChainId, toNonce, block.timestamp);
+            } else {
+                (uint256 minedWork, uint256 varWork) = executeBlock(bkey);
+                totalMinedWork += minedWork;
+                totalVarWork += varWork;
+                emit FinalizedBlock(remoteChainId, toNonce, block.timestamp);
+            }
+        }
 
         IQuantumPortalLedgerMgr.FinalizationMetadata memory fin = IQuantumPortalLedgerMgr.FinalizationMetadata({
             executor: msg.sender,
@@ -463,25 +515,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             finalizersHash: finalizersHash,
             totalBlockStake: totalBlockStake
         });
-
-        {
-        uint256 key = blockIdx(uint64(remoteChainId), uint64(blockNonce));
-        state.setFinalization(key, fin);
-
-        for(uint i=0; i<finalizers.length; i++) {
-            state.pushFinalizationStake(key, IQuantumPortalLedgerMgr.FinalizerStake({
-                finalizer: finalizers[i],
-                staked: stakeOf(finalizers[i])
-            }));
-        }
-        }
-
-        state.setLastFinalizedBlock(remoteChainId, QuantumPortalLib.Block({
-            chainId: uint64(remoteChainId),
-            nonce: uint64(blockNonce),
-            timestamp: uint64(block.timestamp)
-        }));
-        emit FinalizedBlock(remoteChainId, blockNonce, block.timestamp, finalizers);
+        state.setFinalization(finalizedKey, fin);
     }
 
     /**
@@ -540,6 +574,31 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             }
             totalVarWork += baseGasUsed;
             console.log("REMOTE TX EXECUTED vs used", t.gas, baseGasUsed);
+            // TODO: Refund extra gas based on the ratio of gas used vs gas provided.
+            // Need to convert the base gas to FRM first, and reduce the base fee.
+        }
+        qp.clearContext();
+    }
+
+    function rejectBlock(
+        uint256 key
+    ) internal returns (uint256 totalMineWork) {
+        state.setMinedBlockAsInvalid(key);
+        IQuantumPortalLedgerMgr.MinedBlock memory b = state.getMinedBlock(key);
+        PortalLedger qp = PortalLedger(ledger);
+        uint256 gasPrice = IQuantumPortalFeeConvertor(feeConvertor).localChainGasTokenPriceX128();
+        QuantumPortalLib.RemoteTransaction[] memory transactions = state.getMinedBlockTransactions(key); 
+        for(uint i=0; i<transactions.length; i++) {
+            QuantumPortalLib.RemoteTransaction memory t = transactions[i];
+            totalMineWork += FIX_TX_SIZE + t.method.length + FIXED_REJECT_SIZE;
+            uint256 txGas = FullMath.mulDiv(gasPrice,
+                t.gas,
+                FixedPoint128.Q128);
+            console.log("Price is...", gasPrice);
+            console.log("Gas provided in eth: ", t.gas, txGas);
+            txGas = txGas / tx.gasprice;
+            console.log("Gas limit provided", txGas);
+            qp.rejectRemoteTransaction(b.blockMetadata.chainId, t, txGas);
             // TODO: Refund extra gas based on the ratio of gas used vs gas provided.
             // Need to convert the base gas to FRM first, and reduce the base fee.
         }

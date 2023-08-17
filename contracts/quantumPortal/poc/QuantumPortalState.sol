@@ -61,6 +61,10 @@ contract QuantumPortalState is WithAdmin {
         minedBlocks[key] = value;
     }
 
+    function setMinedBlockAsInvalid(uint256 key) external onlyMgr {
+        minedBlocks[key].invalidBlock = 1;
+    }
+
     function getMinedBlockTransactions(uint256 key) external view returns (QuantumPortalLib.RemoteTransaction[] memory value) {
         value = minedBlockTransactions[key];
     }

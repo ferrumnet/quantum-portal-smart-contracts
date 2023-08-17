@@ -89,6 +89,29 @@ contract PortalLedger is WithAdmin {
         console.log("gas used? ", postGas);
     }
 
+    function rejectRemoteTransaction(
+        uint256 sourceChainId,
+        QuantumPortalLib.RemoteTransaction memory t,
+        uint256 gas
+    ) external onlyMgr returns (uint256 gasUsed) {
+        uint preGas = gasleft();
+        console.log("REJECTING...");
+        console.log("EXECUTING", preGas);
+        console.log("AMOUNT", t.amount);
+        console.log("REMOTE CONTRACT", t.remoteContract);
+        console.log("USING GAS", gas);
+
+        //Refund the remote value to the beneficiary
+        if (t.amount != 0) {
+            state.setRemoteBalances(sourceChainId, t.token, t.sourceBeneficiary,
+                state.getRemoteBalances(sourceChainId, t.token, t.sourceBeneficiary) + t.amount);
+        }
+
+        uint postGas = gasleft();
+        gasUsed = preGas - postGas;
+        console.log("gas used? ", postGas);
+    }
+
     function estimateGasForRemoteTransaction(
         uint256 remoteChainId,
         address sourceMsgSender,
