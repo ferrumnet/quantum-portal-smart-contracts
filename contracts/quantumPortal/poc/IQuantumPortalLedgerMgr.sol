@@ -10,6 +10,7 @@ interface IQuantumPortalLedgerMgr {
     struct MinedBlock {
         bytes32 blockHash;
         address miner;
+        uint8 invalidBlock;
         uint256 stake;
         uint256 totalValue;
         QuantumPortalLib.Block blockMetadata;
