@@ -211,8 +211,8 @@ describe("Test qp", function () {
         workDone = await ctx.chain2.autorityMgr.totalWork(ctx.chain1.chainId);
         myWork = await ctx.chain2.autorityMgr.works(ctx.chain1.chainId, ctx.owner);
         console.log(`Work done by authority is ${workDone} - vs mine: ${myWork} - ${ctx.owner}`); // Finalizer work is registered to the owner
-        expect(workDone.toString()).to.be.equal('32986');
-        expect(myWork.toString()).to.be.equal('32986');
+        expect(workDone.toString()).to.be.equal('33053');
+        expect(myWork.toString()).to.be.equal('33053');
 
         // await ctx.chain2.ledgerMgr.finalize(ctx.chain1.chainId, 1, Salt, [], salt0x(), expiryInFuture(), '0x');
         // let remoteBalance = Wei.to((await ctx.chain2.poc.remoteBalanceOf(ctx.chain1.chainId, ctx.chain1.token.address, ctx.acc1)).toString());

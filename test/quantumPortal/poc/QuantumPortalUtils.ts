@@ -132,6 +132,7 @@ export class QuantumPortalUtils {
         mgr: QuantumPortalLedgerMgrTest,
         state: QuantumPortalState,
         finalizerSk: string,
+        invalidBlocks: string[] = [],
     ) {
         const block = await mgr.lastRemoteMinedBlock(sourceChainId);
         const lastFin = await state.getLastFinalizedBlock(sourceChainId);
@@ -171,6 +172,7 @@ export class QuantumPortalUtils {
             console.log("Returned from bridgeMethodCall", multiSig.hash);
             await mgr.finalize(sourceChainId,
                 blockNonce,
+                invalidBlocks,
                 finalizersHash,
                 [], // TODO: Remove this parameter
                 salt,
@@ -190,6 +192,7 @@ export class QuantumPortalUtils {
         authMgrAddr: string,
         finalizers: string[],
         finalizersSk: string[],
+        invalidBlocks: string[] = [],
     ) {
         const block = await mgr.lastRemoteMinedBlock(remoteChainId);
         const lastFin = await state.getLastFinalizedBlock(remoteChainId);
@@ -237,6 +240,7 @@ export class QuantumPortalUtils {
         console.log("Returned from bridgeMethodCall");
         await mgr.finalizeSingleSigner(remoteChainId,
             blockNonce,
+            invalidBlocks,
             finalizersHash,
             finalizers,
             salt,
