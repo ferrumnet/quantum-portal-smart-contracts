@@ -79,7 +79,14 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
     /**
      * @notice Calculate the fixed fee.
      */
-    function calculateFixedFee(uint256 targetChainId, uint256 varSize) private view returns (uint256) {
+    function calculateFixedFee(uint256 targetChainId, uint256 varSize) external view returns (uint256) {
+        return _calculateFixedFee(targetChainId, varSize);
+    }
+
+    /**
+     * @notice Calculate the fixed fee.
+     */
+    function _calculateFixedFee(uint256 targetChainId, uint256 varSize) private view returns (uint256) {
         return IQuantumPortalFeeConvertor(feeConvertor).targetChainFixedFee(targetChainId, FIX_TX_SIZE + varSize);
     }
 
@@ -129,7 +136,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         QuantumPortalLib.Block memory b = state.getLastLocalBlock(remoteChainId);
         console.log("ORIGINAL NONCE IS", b.nonce);
         uint256 key = blockIdx(remoteChainId, b.nonce);
-        uint256 fixedFee = calculateFixedFee(remoteChainId, method.length);
+        uint256 fixedFee = _calculateFixedFee(remoteChainId, method.length);
         console.log("Fixed Fee is", fixedFee);
         QuantumPortalLib.RemoteTransaction memory remoteTx = QuantumPortalLib.RemoteTransaction({
             timestamp: uint64(block.timestamp),
