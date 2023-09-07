@@ -42,7 +42,7 @@ contract DummyMultiChainApp is IDummyMultiChainApp {
             method,
             token,
             amount);
-        uint varFee = gasleft() - gasFrom;
+        uint varFee = gasFrom - gasleft();
         IERC20(feeToken).safeTransfer(portal.feeTarget(), fixedFee + varFee);
 
         // Send the value and run the remote tx...

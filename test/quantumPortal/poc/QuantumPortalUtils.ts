@@ -252,6 +252,89 @@ export class QuantumPortalUtils {
         }
     }
 
+    static async mineAndFinilizeOneToTwo(ctx: PortalContext, nonce: number, invalid: boolean = false) {
+        let key = (await ctx.chain1.ledgerMgr.getBlockIdx(ctx.chain2.chainId, nonce)).toString();
+        let tx = await ctx.chain1.state.getLocalBlockTransaction(key, nonce - 1); 
+        await QuantumPortalUtils.stakeAndDelegate(ctx.chain2.ledgerMgr, ctx.chain2.stake, '10', ctx.owner, ctx.wallets[0], ctx.signers.owner, ctx.sks[0]);
+        console.log('Staked and delegated...');
+        const txs = [{
+                    token: tx.token.toString(),
+                    amount: tx.amount.toString(),
+                    gas: tx.gas.toString(),
+                    fixedFee: tx.fixedFee.toString(),
+                    method: tx.method.toString(),
+                    remoteContract: tx.remoteContract.toString(),
+                    sourceBeneficiary: tx.sourceBeneficiary.toString(),
+                    sourceMsgSender: tx.sourceMsgSender.toString(),
+                    timestamp: tx.timestamp.toString(),
+            }];
+        const [salt, expiry, signature] = await QuantumPortalUtils.generateSignatureForMining(
+            ctx.chain2.ledgerMgr,
+            ctx.chain1.chainId.toString(),
+            nonce.toString(),
+            txs,
+            ctx.sks[0], // Miner...
+        );
+        await ctx.chain2.ledgerMgr.mineRemoteBlock(
+            ctx.chain1.chainId,
+            nonce.toString(),
+            txs,
+            salt,
+            expiry,
+            signature,
+        );
+        console.log('Now finalizing on chain2');
+        await QuantumPortalUtils.finalize(
+            ctx.chain1.chainId,
+            ctx.chain2.ledgerMgr,
+            ctx.chain2.state,
+            ctx.sks[0],
+            invalid ? [nonce.toString()] : []
+        );
+    }
+
+    static async mineAndFinilizeTwoToOne(ctx: PortalContext, nonce: number, invalid: boolean = false) {
+        let key = (await ctx.chain2.ledgerMgr.getBlockIdx(ctx.chain1.chainId, nonce)).toString();
+        let tx = await ctx.chain2.state.getLocalBlockTransaction(key, nonce - 1); 
+        // Commenting out because stake contract is shared in this test
+        await ctx.chain1.token.transfer(ctx.acc1, Wei.from('10'));
+        await QuantumPortalUtils.stakeAndDelegate(ctx.chain1.ledgerMgr, ctx.chain2.stake, '10', ctx.acc1, ctx.wallets[1], ctx.signers.acc1, ctx.sks[1]);
+        const txs = [{
+                    token: tx.token.toString(),
+                    amount: tx.amount.toString(),
+                    gas: tx.gas.toString(),
+                    fixedFee: tx.fixedFee.toString(),
+                    method: tx.method.toString(),
+                    remoteContract: tx.remoteContract.toString(),
+                    sourceBeneficiary: tx.sourceBeneficiary.toString(),
+                    sourceMsgSender: tx.sourceMsgSender.toString(),
+                    timestamp: tx.timestamp.toString(),
+            }];
+        const [salt, expiry, signature] = await QuantumPortalUtils.generateSignatureForMining(
+            ctx.chain1.ledgerMgr,
+            ctx.chain2.chainId.toString(),
+            nonce.toString(),
+            txs,
+            ctx.sks[1], // Miner...
+        );
+        await ctx.chain1.ledgerMgr.mineRemoteBlock(
+            ctx.chain2.chainId,
+            nonce.toString(),
+            txs,
+            salt,
+            expiry,
+            signature,
+        );
+        console.log('Now finalizing on chain1');
+        await QuantumPortalUtils.finalize(
+            ctx.chain2.chainId,
+            ctx.chain1.ledgerMgr,
+            ctx.chain1.state,
+            ctx.sks[0],
+            invalid ? [nonce.toString()] : []
+        );
+    }
+    
     static async minedBlockHash(
         chain: number,
         nonce: number,

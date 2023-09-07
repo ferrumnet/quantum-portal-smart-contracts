@@ -16,87 +16,6 @@ function blockMetadata(m: any): { chainId: number,  nonce: number, timestamp: nu
     }
 }
 
-async function mineAndFinilizeOneToTwo(ctx: PortalContext, nonce: number) {
-    let key = (await ctx.chain1.ledgerMgr.getBlockIdx(ctx.chain2.chainId, nonce)).toString();
-    let tx = await ctx.chain1.state.getLocalBlockTransaction(key, nonce - 1); 
-    await QuantumPortalUtils.stakeAndDelegate(ctx.chain2.ledgerMgr, ctx.chain2.stake, '10', ctx.owner, ctx.wallets[0], ctx.signers.owner, ctx.sks[0]);
-    console.log('Staked and delegated...');
-    const txs = [{
-                token: tx.token.toString(),
-                amount: tx.amount.toString(),
-                gas: tx.gas.toString(),
-                fixedFee: tx.fixedFee.toString(),
-                method: tx.method.toString(),
-                remoteContract: tx.remoteContract.toString(),
-                sourceBeneficiary: tx.sourceBeneficiary.toString(),
-                sourceMsgSender: tx.sourceMsgSender.toString(),
-                timestamp: tx.timestamp.toString(),
-        }];
-    const [salt, expiry, signature] = await QuantumPortalUtils.generateSignatureForMining(
-        ctx.chain2.ledgerMgr,
-        ctx.chain1.chainId.toString(),
-        nonce.toString(),
-        txs,
-        ctx.sks[0], // Miner...
-    );
-    await ctx.chain2.ledgerMgr.mineRemoteBlock(
-        ctx.chain1.chainId,
-        nonce.toString(),
-        txs,
-        salt,
-        expiry,
-        signature,
-    );
-    console.log('Now finalizing on chain2');
-    await QuantumPortalUtils.finalize(
-        ctx.chain1.chainId,
-        ctx.chain2.ledgerMgr,
-        ctx.chain2.state,
-        ctx.sks[0],
-    );
-}
-
-async function mineAndFinilizeTwoToOne(ctx: PortalContext, nonce: number) {
-    let key = (await ctx.chain2.ledgerMgr.getBlockIdx(ctx.chain1.chainId, nonce)).toString();
-    let tx = await ctx.chain2.state.getLocalBlockTransaction(key, nonce - 1); 
-    // Commenting out because stake contract is shared in this test
-    await ctx.chain1.token.transfer(ctx.acc1, Wei.from('10'));
-    await QuantumPortalUtils.stakeAndDelegate(ctx.chain1.ledgerMgr, ctx.chain2.stake, '10', ctx.acc1, ctx.wallets[1], ctx.signers.acc1, ctx.sks[1]);
-    const txs = [{
-                token: tx.token.toString(),
-                amount: tx.amount.toString(),
-                gas: tx.gas.toString(),
-                fixedFee: tx.fixedFee.toString(),
-                method: tx.method.toString(),
-                remoteContract: tx.remoteContract.toString(),
-                sourceBeneficiary: tx.sourceBeneficiary.toString(),
-                sourceMsgSender: tx.sourceMsgSender.toString(),
-                timestamp: tx.timestamp.toString(),
-        }];
-    const [salt, expiry, signature] = await QuantumPortalUtils.generateSignatureForMining(
-        ctx.chain1.ledgerMgr,
-        ctx.chain2.chainId.toString(),
-        nonce.toString(),
-        txs,
-        ctx.sks[1], // Miner...
-    );
-    await ctx.chain1.ledgerMgr.mineRemoteBlock(
-        ctx.chain2.chainId,
-        nonce.toString(),
-        txs,
-        salt,
-        expiry,
-        signature,
-    );
-    console.log('Now finalizing on chain1');
-    await QuantumPortalUtils.finalize(
-        ctx.chain2.chainId,
-        ctx.chain1.ledgerMgr,
-        ctx.chain1.state,
-        ctx.sks[0],
-    );
-}
-
 describe("Test qp", function () {
 	it('Create an x-chain tx, mine and finalize!', async function() {
         const ctx = await deployAll();
@@ -119,7 +38,7 @@ describe("Test qp", function () {
             ctx.acc1,
             ZeroAddress,
             ctx.chain1.token.address,
-            '0x')
+            '0x');
         // Check the block
         let lastLocalBlock = await ctx.chain1.state.getLastLocalBlock(ctx.chain2.chainId);
         expect(lastLocalBlock.nonce).to.be.equal(1, 'Unexpected nonce!');
@@ -235,7 +154,7 @@ describe("Test qp", function () {
             ZeroAddress,
             ctx.chain1.token.address,
             '0x');
-        await mineAndFinilizeOneToTwo(ctx, 1);
+        await QuantumPortalUtils.mineAndFinilizeOneToTwo(ctx, 1);
         console.log('Mined and finalized');
         console.log("Now lets check our miner's balance");
         feeAmount = await ctx.chain2.feeConverter.targetChainFixedFee(ctx.chain1.chainId, QuantumPortalUtils.FIXED_FEE_SIZE + 300 /* withdraw call estimate */);
@@ -243,7 +162,7 @@ describe("Test qp", function () {
         await ctx.chain2.minerMgr.withdraw(ctx.chain1.chainId, ctx.wallets[0], feeAmount);
         console.log('Called withdraw. Now we need to mine and finalize');
         console.log(`Current balance is: ${(await ctx.chain2.token.balanceOf(ctx.acc1)).toString()}`);
-        await mineAndFinilizeTwoToOne(ctx, 1);
+        await QuantumPortalUtils.mineAndFinilizeTwoToOne(ctx, 1);
         console.log('Ensure some balance is updated');
         const finalBal = Wei.to((await ctx.chain2.token.balanceOf(ctx.wallets[0])).toString());
         console.log(`POST - Current balance is: ${finalBal}`);
