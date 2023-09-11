@@ -29,13 +29,26 @@ describe("Test fraud proofs", function () {
         const ctx = await deployAll();
         const dumCtx = await deployDummies(ctx);
 
+        let contractBal = await ctx.chain1.token.balanceOf(dumCtx.dummy1.address);
+        console.log('1st: Current Tok balance for dummy1 ', contractBal.toString());
         await dumCtx.dummy1.callOnRemote(ctx.chain2.chainId, dumCtx.dummy2.address, ctx.acc2, ctx.chain1.token.address, Wei.from('0'));
-        QuantumPortalUtils.mineAndFinilizeOneToTwo(ctx, 1);
+        console.log('dumCtx.dummy1.callOnRemote...');
+        await QuantumPortalUtils.mineAndFinilizeOneToTwo(ctx, 1);
+        console.log('Min and fin finished...');
+
         await dumCtx.dummy1.callOnRemote(ctx.chain2.chainId, dumCtx.dummy2.address, ctx.acc2, ctx.chain1.token.address, Wei.from('1'));
+        contractBal = await ctx.chain1.token.balanceOf(dumCtx.dummy1.address);
+        // expect(contractBal).to.be.equal('98415999999999585222');
+        console.log('2nd: Current Tok balance for dummy1 ', contractBal.toString());
         console.log('Balance should have been reduced by 1');
-        QuantumPortalUtils.mineAndFinilizeOneToTwo(ctx, 2, true);
+        let bal = await ctx.chain2.poc.remoteBalanceOf(ctx.chain1.chainId, ctx.chain1.token.address, ctx.acc2);
+        console.log('Remote balance is: ', bal.toString());
+        await QuantumPortalUtils.mineAndFinilizeOneToTwo(ctx, 2, true);
 
         console.log('We just fialized an invalid block. We should be refunded the 1 as remote balance');
+        bal = await ctx.chain2.poc.remoteBalanceOf(ctx.chain1.chainId, ctx.chain1.token.address, ctx.acc2);
+        console.log('Remote balance is: ', bal.toString());
+        expect(bal.toString()).to.be.equal('1000000000000000000');
     });
 
 	it('finalizer can mark some blocks as invalid, and they will get refunded - advanced middle failed', async function() {

@@ -33,6 +33,7 @@ contract DummyMultiChainApp is IDummyMultiChainApp {
         // This estimate fee will work becaue the remote contract code and local ones are identical. In real world scenarios
         // there is no way for the local contract to calculate the var tx fee. Only the offchain application can do this by
         // calling the estimateGasForRemoteTransaction method on the remote QP ledger manager.
+        console.log("Estimating gas...");
         uint gasFrom = gasleft();
         portal.estimateGasForRemoteTransaction(
             remoteChainId,
@@ -43,12 +44,16 @@ contract DummyMultiChainApp is IDummyMultiChainApp {
             token,
             amount);
         uint varFee = gasFrom - gasleft();
+        console.log("Estimating gas... Done.");
         IERC20(feeToken).safeTransfer(portal.feeTarget(), fixedFee + varFee);
+        console.log("Sent fee: ", fixedFee + varFee);
 
         // Send the value and run the remote tx...
         IERC20(token).safeTransfer(address(portal), amount);
+        console.log("Sent amount: ", amount);
         portal.runWithValue(
             uint64(remoteChainId), remoteContract, beneficiary, token, method);
+        console.log("Remote run...");
     }
 
     function receiveCall() external override {

@@ -95,8 +95,7 @@ contract PortalLedger is WithAdmin {
         uint256 gas
     ) external onlyMgr returns (uint256 gasUsed) {
         uint preGas = gasleft();
-        console.log("REJECTING...");
-        console.log("EXECUTING", preGas);
+        console.log("REJECTING...", preGas);
         console.log("AMOUNT", t.amount);
         console.log("REMOTE CONTRACT", t.remoteContract);
         console.log("USING GAS", gas);

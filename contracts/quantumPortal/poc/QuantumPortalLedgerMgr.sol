@@ -159,6 +159,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
                 metadata: b
             }));
             emit LocalBlockCreated(b.chainId, b.nonce, b.timestamp);
+            console.log("NEW BLOCK NONCE", b.nonce);
         }
         uint256 varFee = IQuantumPortalWorkPoolServer(minerMgr).collectFee(remoteChainId, b.nonce, fixedFee);
         remoteTx.gas = varFee;
@@ -495,6 +496,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         bytes32 finHash = 0;
         uint256 invalidIdx = 0;
         uint256 totalBlockStake = 0;
+        console.log("PRE-FIN BLOCKS", invalids.length);
         for(uint i=fromNonce; i <= toNonce; i++) {
             uint256 bkey = blockIdx(uint64(remoteChainId), uint64(i));
             // TODO: Consider XOR ing the block hashes. AS the hashes are random, this will not be theoretically secure
@@ -502,8 +504,9 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
             // a simple xor is enough. The finHash is only used for sanity check offline, so it is not critical information
             finHash = finHash ^ state.getMinedBlock(bkey).blockHash;
             totalBlockStake += state.getMinedBlock(bkey).stake;
-            if (invalids.length != 0 && i == invalidIdx && invalids.length > invalidIdx) {
+            if (invalids.length != 0 && i == invalids[invalidIdx] &&  invalids.length > invalidIdx) {
                 // This is an inbvalid block
+                console.log("INVALID BLOCKS", invalids.length);
                 (uint256 minedWork) = rejectBlock(bkey);
                 totalMinedWork += minedWork;
                 invalidIdx ++;
