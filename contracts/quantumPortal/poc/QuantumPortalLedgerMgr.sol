@@ -188,10 +188,13 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
         bytes32 salt,
         uint64 expiry,
         bytes memory multiSignature,
-        address fradulentMiner,
         address rewardReceiver
     ) external override {
-        // TODO: extract the miner address from signature and make sure it is the fraudulent miner.
+        // We don't know the MinerMgr contract address on the remote chain, so we cannot extract that the 
+        // fragulent block is signed by the claimed "fradulentMiner".
+        // This is not a problem because we will check this before accepting the fraud proof tx on the other side
+        // Here, we only confirm that the presented block is fradulent.
+
         bool fraudDetected;
         bytes memory method;
         bytes32 blockHash;
@@ -205,7 +208,7 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
                 localBlockNonce,
                 transactions
             );
-        method = abi.encode(uint256(blockHash), localBlockNonce, fradulentMiner);
+        method = abi.encode(uint256(blockHash), localBlockNonce, expiry, salt, multiSignature);
         if (!fraudDetected) {
             for(uint i=0; i < transactions.length; i++) {
                 QuantumPortalLib.RemoteTransaction memory t = state.getLocalBlockTransaction(key, i);
@@ -617,12 +620,15 @@ contract QuantumPortalLedgerMgr is WithAdmin, IQuantumPortalLedgerMgr, IVersione
 
     function processFraudProof(QuantumPortalLib.RemoteTransaction memory t, uint64 sourceChainId) internal returns(uint256 gasUsed) {
         uint preGas = gasleft();
-        // Ensure the block is actually mined
+        // Ensure the block is actually mined.
 
-        (bytes32 blockHash, uint256 nonce, address fradulentMiner) = abi.decode(t.method, (bytes32, uint256, address));
+        (bytes32 blockHash, uint256 nonce, uint64 expiry, bytes32 salt, bytes memory multiSignature) = abi.decode(t.method, (bytes32, uint256, address));
         uint256 key = blockIdx(sourceChainId, uint64(nonce));
         IQuantumPortalLedgerMgr.MinedBlock memory b = state.getMinedBlock(key);
         if(b.blockHash == blockHash) { // Block is indeed mined
+            // First extract the miner address from the signature
+            address fradulentMiner = minerMgr.extractMinerAddress(b.blockhash, expiry, salt, multiSignature);
+
             // TODO:
             // Slash fradulent miner's funds
             // And pay the reward to tx.benefciary

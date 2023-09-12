@@ -49,6 +49,15 @@ contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712, QuantumPortalW
         _unregisterMiner(msg.sender);
     }
 
+    function extractMinerAddress(
+        bytes32 msgHash,
+        uint64 expiry,
+        bytes32 salt,
+        bytes memory multiSig
+    ) external override view returns (address) {
+        return _extractMinerAddress(msgHash, expiry, salt, multiSig);
+    }
+
     function verifyMinerSignature(
         bytes32 msgHash,
         uint64 expiry,
@@ -72,7 +81,7 @@ contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712, QuantumPortalW
         res = stake >= minStakeAllowed ? ValidationResult.Valid : ValidationResult.NotEnoughStake;
     }
 
-    bytes32 constant MINER_SIGNATURE = keccak256("MinerSignature(bytes32 msgHash,uint64 expiry,bytes32 salt)");
+    bytes32 constant public MINER_SIGNATURE = keccak256("MinerSignature(bytes32 msgHash,uint64 expiry,bytes32 salt)");
     function verifySignature(
         bytes32 msgHash,
         uint64 expiry,
@@ -85,6 +94,17 @@ contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712, QuantumPortalW
         require(block.timestamp < expiry, "CR: signature timed out");
         require(expiry < block.timestamp + WEEK, "CR: expiry too far");
         require(salt != 0, "MSC: salt required");
+        address _signer = _extractMinerAddress(msgHash, expiry, salt, multiSig);
+        require(_signer != address(0), "QPMM: wrong number of signatures");
+        return _signer;
+    }
+
+    function _extractMinerAddress(
+        bytes32 msgHash,
+        uint64 expiry,
+        bytes32 salt,
+        bytes memory multiSig
+    ) internal view returns (address) {
         bytes32 message = keccak256(abi.encode(MINER_SIGNATURE, msgHash, expiry, salt));
         console.log("METHOD HASH");
         console.logBytes32(message);
@@ -94,7 +114,9 @@ contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712, QuantumPortalW
         console.log("CHAIN_ID", block.chainid);
         console.log("ME", address(this));
         MultiSigLib.Sig[] memory signatures = MultiSigLib.parseSig(multiSig);
-        require(signatures.length == 1, "QPMM: wrong number of signatures");
+        if (signatures.length != 1) {
+            return address(0);
+        }
         address _signer = ECDSA.recover(
             digest,
             signatures[0].v,

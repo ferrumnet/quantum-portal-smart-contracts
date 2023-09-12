@@ -8,6 +8,12 @@ interface IQuantumPortalMinerMgr {
         NotEnoughStake
     }
     function miningStake() external view returns (address) ;
+    function extractMinerAddress(
+        bytes32 msgHash,
+        uint64 expiry,
+        bytes32 salt,
+        bytes memory multiSig
+    ) external view returns (address);
     function verifyMinerSignature(
         bytes32 msgHash,
         uint64 expiry,
