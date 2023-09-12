@@ -44,7 +44,6 @@ interface IQuantumPortalLedgerMgr {
         bytes32 salt,
         uint64 expiry,
         bytes memory multiSignature,
-        address fradulentMiner,
         address rewardReceiver
     ) external;
 
