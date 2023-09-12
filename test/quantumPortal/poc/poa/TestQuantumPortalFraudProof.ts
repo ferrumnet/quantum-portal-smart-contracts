@@ -52,10 +52,32 @@ describe("Test fraud proofs", function () {
     });
 
 	it('finalizer can mark some blocks as invalid, and they will get refunded - advanced middle failed', async function() {
-        // create five txs and three blocks
+        // create three txs and three blocks
         // middle one invalid
         // finalize invalid block
         // make sure we are refunded, and the others have gone through
+        const ctx = await deployAll();
+        const dumCtx = await deployDummies(ctx);
+
+        console.log('1st tx ...');
+        await dumCtx.dummy1.callOnRemote(ctx.chain2.chainId, dumCtx.dummy2.address, ctx.acc1, ctx.chain1.token.address, Wei.from('1'));
+        await QuantumPortalUtils.mineAndFinilizeOneToTwo(ctx, 1);
+
+        console.log('2st tx ...');
+        await dumCtx.dummy1.callOnRemote(ctx.chain2.chainId, dumCtx.dummy2.address, ctx.acc2, ctx.chain1.token.address, Wei.from('1'));
+        await QuantumPortalUtils.mineAndFinilizeOneToTwo(ctx, 2, true);
+
+        console.log('3rd tx ...');
+        await dumCtx.dummy1.callOnRemote(ctx.chain2.chainId, dumCtx.dummy2.address, ctx.acc3, ctx.chain1.token.address, Wei.from('1'));
+        await QuantumPortalUtils.mineAndFinilizeOneToTwo(ctx, 3);
+
+        const bal1 = await ctx.chain2.poc.remoteBalanceOf(ctx.chain1.chainId, ctx.chain1.token.address, ctx.acc1);
+        const bal2 = await ctx.chain2.poc.remoteBalanceOf(ctx.chain1.chainId, ctx.chain1.token.address, ctx.acc2);
+        const bal3 = await ctx.chain2.poc.remoteBalanceOf(ctx.chain1.chainId, ctx.chain1.token.address, ctx.acc3);
+        console.log('Remote balancees are: ', bal1.toString(), bal2.toString(), bal3.toString());
+        expect(bal1.toString()).to.be.equal('0');
+        expect(bal2.toString()).to.be.equal('1000000000000000000');
+        expect(bal3.toString()).to.be.equal('0');
     });
 
 	it('finalizer can mark some blocks as invalid, and they will get refunded - advanced last failed', async function() {
@@ -63,5 +85,27 @@ describe("Test fraud proofs", function () {
         // last one invalid
         // finalize invalid block
         // make sure we are refunded, and the others have gone through
+        const ctx = await deployAll();
+        const dumCtx = await deployDummies(ctx);
+
+        console.log('1st tx ...');
+        await dumCtx.dummy1.callOnRemote(ctx.chain2.chainId, dumCtx.dummy2.address, ctx.acc1, ctx.chain1.token.address, Wei.from('1'));
+        await QuantumPortalUtils.mineAndFinilizeOneToTwo(ctx, 1);
+
+        console.log('2st tx ...');
+        await dumCtx.dummy1.callOnRemote(ctx.chain2.chainId, dumCtx.dummy2.address, ctx.acc2, ctx.chain1.token.address, Wei.from('1'));
+        await QuantumPortalUtils.mineAndFinilizeOneToTwo(ctx, 2);
+
+        console.log('3rd tx ...');
+        await dumCtx.dummy1.callOnRemote(ctx.chain2.chainId, dumCtx.dummy2.address, ctx.acc3, ctx.chain1.token.address, Wei.from('1'));
+        await QuantumPortalUtils.mineAndFinilizeOneToTwo(ctx, 3, true);
+
+        const bal1 = await ctx.chain2.poc.remoteBalanceOf(ctx.chain1.chainId, ctx.chain1.token.address, ctx.acc1);
+        const bal2 = await ctx.chain2.poc.remoteBalanceOf(ctx.chain1.chainId, ctx.chain1.token.address, ctx.acc2);
+        const bal3 = await ctx.chain2.poc.remoteBalanceOf(ctx.chain1.chainId, ctx.chain1.token.address, ctx.acc3);
+        console.log('Remote balancees are: ', bal1.toString(), bal2.toString(), bal3.toString());
+        expect(bal1.toString()).to.be.equal('0');
+        expect(bal2.toString()).to.be.equal('0');
+        expect(bal3.toString()).to.be.equal('1000000000000000000');
     });
 });
