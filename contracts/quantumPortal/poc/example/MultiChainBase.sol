@@ -18,14 +18,17 @@ abstract contract MultiChainBase is Ownable, ReentrancyGuard {
     function initialize() internal virtual {
         uint256 overrideChainID; // for test only. provide 0 outside a test
         address _portal;
-        (_portal, overrideChainID) = abi.decode(IFerrumDeployer(msg.sender).initData(), (address, uint256));
+        (_portal, overrideChainID) = abi.decode(
+            IFerrumDeployer(msg.sender).initData(),
+            (address, uint256)
+        );
         portal = IQuantumPortalPoc(_portal);
         CHAIN_ID = overrideChainID == 0 ? block.chainid : overrideChainID;
     }
 }
 
 abstract contract MultiChainMasterBase is MultiChainBase {
-    mapping (uint256 => address) public remotes;
+    mapping(uint256 => address) public remotes;
 
     modifier onlyMasterChain() {
         require(CHAIN_ID == block.chainid, "MCS: Only on master chain");
@@ -49,4 +52,3 @@ abstract contract MultiChainClientBase is MultiChainBase {
         masterContract = _masterContract;
     }
 }
-

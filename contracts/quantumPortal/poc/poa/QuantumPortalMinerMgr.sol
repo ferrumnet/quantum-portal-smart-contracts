@@ -22,7 +22,13 @@ import "hardhat/console.sol";
          Anybody can become a miner with staking. But there are rules of minimum stake
          and lock amount.
  */
-contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712, QuantumPortalWorkPoolServer, QuantumPortalWorkPoolClient, QuantumPortalMinerMembership {
+contract QuantumPortalMinerMgr is
+    IQuantumPortalMinerMgr,
+    EIP712,
+    QuantumPortalWorkPoolServer,
+    QuantumPortalWorkPoolClient,
+    QuantumPortalMinerMembership
+{
     string public constant NAME = "FERRUM_QUANTUM_PORTAL_MINER_MGR";
     string public constant VERSION = "000.010";
     uint32 constant WEEK = 3600 * 24 * 7;
@@ -33,7 +39,11 @@ contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712, QuantumPortalW
         (miningStake) = abi.decode(_data, (address));
     }
 
-    function selectMiner(address requestedMiner, bytes32 blockHash, uint256 blockTimestamp) external override onlyMgr returns (bool) {
+    function selectMiner(
+        address requestedMiner,
+        bytes32 blockHash,
+        uint256 blockTimestamp
+    ) external override onlyMgr returns (bool) {
         return _selectMiner(requestedMiner, blockHash, blockTimestamp);
     }
 
@@ -54,7 +64,7 @@ contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712, QuantumPortalW
         uint64 expiry,
         bytes32 salt,
         bytes memory multiSig
-    ) external override view returns (address) {
+    ) external view override returns (address) {
         return _extractMinerAddress(msgHash, expiry, salt, multiSig);
     }
 
@@ -76,12 +86,18 @@ contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712, QuantumPortalW
         signer = verifySignature(msgHash, expiry, salt, multiSig);
         require(signer != address(0), "QPMM: invalid signature");
         console.log("Signer is ?", signer);
-        uint256 stake = IQuantumPortalStake(miningStake).delegatedStakeOf(signer);
-        require(stake!=0, "QPMM: Not a valid miner");
-        res = stake >= minStakeAllowed ? ValidationResult.Valid : ValidationResult.NotEnoughStake;
+        uint256 stake = IQuantumPortalStake(miningStake).delegatedStakeOf(
+            signer
+        );
+        require(stake != 0, "QPMM: Not a valid miner");
+        res = stake >= minStakeAllowed
+            ? ValidationResult.Valid
+            : ValidationResult.NotEnoughStake;
     }
 
-    bytes32 constant public MINER_SIGNATURE = keccak256("MinerSignature(bytes32 msgHash,uint64 expiry,bytes32 salt)");
+    bytes32 public constant MINER_SIGNATURE =
+        keccak256("MinerSignature(bytes32 msgHash,uint64 expiry,bytes32 salt)");
+
     function verifySignature(
         bytes32 msgHash,
         uint64 expiry,
@@ -105,7 +121,9 @@ contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712, QuantumPortalW
         bytes32 salt,
         bytes memory multiSig
     ) internal view returns (address) {
-        bytes32 message = keccak256(abi.encode(MINER_SIGNATURE, msgHash, expiry, salt));
+        bytes32 message = keccak256(
+            abi.encode(MINER_SIGNATURE, msgHash, expiry, salt)
+        );
         console.log("METHOD HASH");
         console.logBytes32(message);
         bytes32 digest = _hashTypedDataV4(message);
@@ -127,9 +145,13 @@ contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712, QuantumPortalW
     }
 
     function withdraw(uint256 remoteChain, address worker, uint fee) external {
-        QuantumPortalWorkPoolClient.withdraw(IQuantumPortalWorkPoolServer.withdrawFixedRemote.selector, remoteChain, worker, fee);
+        QuantumPortalWorkPoolClient.withdraw(
+            IQuantumPortalWorkPoolServer.withdrawFixedRemote.selector,
+            remoteChain,
+            worker,
+            fee
+        );
     }
-
 
     struct SlashHistory {
         address delegatedMiner;
@@ -138,13 +160,19 @@ contract QuantumPortalMinerMgr is IQuantumPortalMinerMgr, EIP712, QuantumPortalW
         address beneficiary;
     }
     event SlashRequested(SlashHistory data);
-    mapping(bytes32=>SlashHistory) slashes;
+    mapping(bytes32 => SlashHistory) slashes;
 
-    function slashMinerForFraud(address delegatedMiner, bytes32 blockHash, address beneficiary) external override onlyMgr {
+    function slashMinerForFraud(
+        address delegatedMiner,
+        bytes32 blockHash,
+        address beneficiary
+    ) external override onlyMgr {
         // TODO: For this version, we just record the slash, then the validator quorum will do the slash manually.
         // This is expexted to be a rare enough event.
         // Unregister the miner
-        address miner = IDelegator(miningStake).getReverseDelegation(delegatedMiner).delegatee;
+        address miner = IDelegator(miningStake)
+            .getReverseDelegation(delegatedMiner)
+            .delegatee;
         SlashHistory memory data = SlashHistory({
             delegatedMiner: delegatedMiner,
             miner: miner,

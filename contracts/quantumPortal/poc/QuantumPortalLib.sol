@@ -35,8 +35,12 @@ library QuantumPortalLib {
         uint256 uncommitedBalance; // Balance for transaction.token
     }
 
-    function txEquals(RemoteTransaction memory t1, RemoteTransaction memory t2) internal pure returns (bool) {
-        return t1.timestamp == t2.timestamp &&
+    function txEquals(
+        RemoteTransaction memory t1,
+        RemoteTransaction memory t2
+    ) internal pure returns (bool) {
+        return
+            t1.timestamp == t2.timestamp &&
             t1.remoteContract == t2.remoteContract &&
             t1.sourceMsgSender == t2.sourceMsgSender &&
             t1.sourceBeneficiary == t2.sourceBeneficiary &&

@@ -29,11 +29,14 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
     address slashTarget;
     IQuantumPortalAuthorityMgr public auth;
     mapping(address => Pair) public withdrawItemsQueueParam;
-    mapping(address => mapping (uint => WithdrawItem)) public withdrawItemsQueue;
+    mapping(address => mapping(uint => WithdrawItem)) public withdrawItemsQueue;
 
     constructor() {
         bytes memory _data = IFerrumDeployer(msg.sender).initData();
-        (address token, address authority) = abi.decode(_data, (address, address));
+        (address token, address authority) = abi.decode(
+            _data,
+            (address, address)
+        );
         address[] memory tokens = new address[](1);
         tokens[0] = token;
         _init(token, "QP Stake", tokens);
@@ -41,8 +44,9 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
         auth = IQuantumPortalAuthorityMgr(authority);
     }
 
-    function delegatedStakeOf(address delegatee
-    ) external override view returns (uint256) {
+    function delegatedStakeOf(
+        address delegatee
+    ) external view override returns (uint256) {
         require(delegatee != address(0), "QPS: delegatee required");
         ReverseDelegation memory rd = reverseDelegation[delegatee];
         if (rd.deleted == 1) {
@@ -50,8 +54,8 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
         }
         address staker = rd.delegatee;
         require(staker != address(0), "QPS: delegatee not valid");
-		return state.stakes[STAKE_ID][staker];
-	}
+        return state.stakes[STAKE_ID][staker];
+    }
 
     /**
      @notice This will only move items to the withdraw queue.
@@ -90,8 +94,9 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
      * @return paidTo Returns the list of payments.
      * @return amounts Returns the list of payments.
      */
-    function releaseWithdrawItems(address staker
-    ) external returns(address[] memory paidTo, uint256[] memory amounts) {
+    function releaseWithdrawItems(
+        address staker
+    ) external returns (address[] memory paidTo, uint256[] memory amounts) {
         require(staker != address(0), "QPS: staker requried");
         require(msg.sender == staker, "QPS: not owner");
         address token = baseInfo.baseToken[STAKE_ID];
@@ -100,7 +105,7 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
         amounts = new uint256[](pair.end - pair.start);
         console.log("PEEKED", wi.opensAt, block.timestamp);
         uint i = 0;
-        while(wi.opensAt != 0 && wi.opensAt < block.timestamp) {
+        while (wi.opensAt != 0 && wi.opensAt < block.timestamp) {
             popFromQueue(staker, pair);
             console.log("Sending tokens ", wi.amount);
             sendToken(token, wi.to, wi.amount);
@@ -114,6 +119,7 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
 
     bytes32 constant SLASH_STAKE =
         keccak256("SlashStake(address user,uint256 amount)");
+
     /**
      * @notice Slashes a user stake. First, all pending withdrawals are cancelled.
      * This is to ensure withdrawers are also penalized at the same rate.
@@ -126,7 +132,13 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
         bytes memory multiSignature
     ) external returns (uint256) {
         bytes32 message = keccak256(abi.encode(SLASH_STAKE, user, amount));
-        auth.validateAuthoritySignature(IQuantumPortalAuthorityMgr.Action.SLASH, message, salt, expiry, multiSignature);
+        auth.validateAuthoritySignature(
+            IQuantumPortalAuthorityMgr.Action.SLASH,
+            message,
+            salt,
+            expiry,
+            multiSignature
+        );
         amount = cancelWithdrawals(user);
         return slashStake(user, amount);
     }
@@ -135,10 +147,15 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
         address staker,
         uint256 amount
     ) internal returns (uint256 remaining) {
-		uint stake = state.stakes[STAKE_ID][staker];
+        uint stake = state.stakes[STAKE_ID][staker];
         stake = amount < stake ? amount : stake;
         remaining = amount - stake;
-        _withdrawOnlyUpdateStateAndPayRewards(slashTarget, STAKE_ID, staker, stake);
+        _withdrawOnlyUpdateStateAndPayRewards(
+            slashTarget,
+            STAKE_ID,
+            staker,
+            stake
+        );
         address token = baseInfo.baseToken[STAKE_ID];
         sendToken(token, slashTarget, amount);
     }
@@ -152,7 +169,7 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
         address staker
     ) internal returns (uint256 total) {
         Pair memory param = withdrawItemsQueueParam[staker];
-        for (uint i=param.start; i<param.end; i++) {
+        for (uint i = param.start; i < param.end; i++) {
             WithdrawItem memory wi = withdrawItemsQueue[staker][i];
             delete withdrawItemsQueue[staker][i];
             _stakeUpdateStateOnly(staker, STAKE_ID, wi.amount);
@@ -172,7 +189,9 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
         delete withdrawItemsQueue[staker][pair.start];
     }
 
-    function peekQueue(address staker) private view returns (Pair memory pair, WithdrawItem memory wi) {
+    function peekQueue(
+        address staker
+    ) private view returns (Pair memory pair, WithdrawItem memory wi) {
         pair = withdrawItemsQueueParam[staker];
         wi = withdrawItemsQueue[staker][pair.start];
     }

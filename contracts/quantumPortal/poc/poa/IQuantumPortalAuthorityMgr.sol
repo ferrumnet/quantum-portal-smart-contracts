@@ -2,7 +2,12 @@
 pragma solidity ^0.8.0;
 
 interface IQuantumPortalAuthorityMgr {
-    enum Action { NONE, FINALIZE, SLASH }
+    enum Action {
+        NONE,
+        FINALIZE,
+        SLASH
+    }
+
     function validateAuthoritySignature(
         Action action,
         bytes32 msgHash,
@@ -10,6 +15,7 @@ interface IQuantumPortalAuthorityMgr {
         uint64 expiry,
         bytes memory signature
     ) external;
+
     function validateAuthoritySignatureSingleSigner(
         Action action,
         bytes32 msgHash,

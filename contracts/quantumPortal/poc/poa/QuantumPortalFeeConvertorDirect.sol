@@ -6,7 +6,10 @@ import "foundry-contracts/contracts/common/WithAdmin.sol";
 
 import "hardhat/console.sol";
 
-contract QuantumPortalFeeConverterDirect is IQuantumPortalFeeConvertor, WithAdmin {
+contract QuantumPortalFeeConverterDirect is
+    IQuantumPortalFeeConvertor,
+    WithAdmin
+{
     address public override qpFeeToken;
     uint256 public feePerByte;
 
@@ -14,24 +17,36 @@ contract QuantumPortalFeeConverterDirect is IQuantumPortalFeeConvertor, WithAdmi
         feePerByte = fpb;
     }
 
-    function updatePrice() external override { }
+    function updatePrice() external override {}
 
-    function localChainGasTokenPriceX128() external pure override returns (uint256) {
+    function localChainGasTokenPriceX128()
+        external
+        pure
+        override
+        returns (uint256)
+    {
         return FixedPoint128.Q128;
     }
 
-    function targetChainGasTokenPriceX128(uint256 targetChainId) external view override returns (uint256) {
+    function targetChainGasTokenPriceX128(
+        uint256 targetChainId
+    ) external view override returns (uint256) {
         return _targetChainGasTokenPriceX128(targetChainId);
     }
 
-    function _targetChainGasTokenPriceX128(uint256 targetChainId) internal view returns (uint256) {
+    function _targetChainGasTokenPriceX128(
+        uint256 targetChainId
+    ) internal view returns (uint256) {
         // TODO: set manually
         return FixedPoint128.Q128;
     }
 
-    function targetChainFixedFee(uint256 targetChainId, uint256 size) external override view returns (uint256) {
+    function targetChainFixedFee(
+        uint256 targetChainId,
+        uint256 size
+    ) external view override returns (uint256) {
         uint256 price = _targetChainGasTokenPriceX128(targetChainId);
         console.log("CALCING FEE PER BYTE", price, targetChainId);
-        return price * size * feePerByte / FixedPoint128.Q128;
+        return (price * size * feePerByte) / FixedPoint128.Q128;
     }
 }

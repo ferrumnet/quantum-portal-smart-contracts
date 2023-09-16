@@ -11,11 +11,8 @@ import "foundry-contracts/contracts/common/FerrumDeployer.sol";
 import "foundry-contracts/contracts/dummy/DummyToken.sol";
 import "foundry-contracts/contracts/token/MiniErc20Direct.sol";
 
-contract DummyToken_ is DummyToken {
-}
+contract DummyToken_ is DummyToken {}
 
-contract DirectMinimalErc20_ is DirectMinimalErc20 {
-}
+contract DirectMinimalErc20_ is DirectMinimalErc20 {}
 
-contract FerrumDeployer_ is FerrumDeployer {
-}
+contract FerrumDeployer_ is FerrumDeployer {}

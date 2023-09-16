@@ -24,11 +24,15 @@ contract QuantumPortalGateway is WithAdmin, IQuantumPortalPoc {
     }
 
     function quantumPortalAuthorityMgr() external view returns (address) {
-        return IQuantumPortalLedgerMgrDependencies(address(quantumPortalLedgerMgr)).authorityMgr();
+        return
+            IQuantumPortalLedgerMgrDependencies(address(quantumPortalLedgerMgr))
+                .authorityMgr();
     }
 
     function quantumPortalMinerMgr() external view returns (address) {
-        return IQuantumPortalLedgerMgrDependencies(address(quantumPortalLedgerMgr)).minerMgr();
+        return
+            IQuantumPortalLedgerMgrDependencies(address(quantumPortalLedgerMgr))
+                .minerMgr();
     }
 
     /**
@@ -37,7 +41,10 @@ contract QuantumPortalGateway is WithAdmin, IQuantumPortalPoc {
      * @param ledgerMgr The ledger manager
      * @param qpStake The stake
      */
-    function upgrade(address poc, address ledgerMgr, address qpStake
+    function upgrade(
+        address poc,
+        address ledgerMgr,
+        address qpStake
     ) external onlyAdmin {
         quantumPortalPoc = IQuantumPortalPoc(poc);
         quantumPortalLedgerMgr = IQuantumPortalLedgerMgr(ledgerMgr);
@@ -53,25 +60,31 @@ contract QuantumPortalGateway is WithAdmin, IQuantumPortalPoc {
      * @param to The address to stake for.
      * @param amount The amount to stake. 0 if staking on the FRM chain.
      */
-    function stake(address to, uint256 amount
-    ) external payable {
+    function stake(address to, uint256 amount) external payable {
         _stake(to, amount);
     }
 
-    function _stake(address to, uint256 amount
-    ) private {
+    function _stake(address to, uint256 amount) private {
         require(to != address(0), "'to' is required");
         address baseToken = quantumPortalStake.STAKE_ID(); // Base token is the same as ID
         if (baseToken == WFRM) {
             uint256 frmAmount = msg.value;
             require(frmAmount != 0, "Value required");
-            IWETH(WFRM).deposit{ value: frmAmount }();
-            require(IERC20(WFRM).balanceOf(address(this)) >= frmAmount, "Value not deposited");
+            IWETH(WFRM).deposit{value: frmAmount}();
+            require(
+                IERC20(WFRM).balanceOf(address(this)) >= frmAmount,
+                "Value not deposited"
+            );
             IWETH(WFRM).transfer(address(quantumPortalStake), frmAmount);
             require(frmAmount != 0, "QPG: amount is required");
             IStakeV2(address(quantumPortalStake)).stake(to, baseToken);
         } else {
-            amount = SafeAmount.safeTransferFrom(baseToken, msg.sender, address(quantumPortalStake), amount);
+            amount = SafeAmount.safeTransferFrom(
+                baseToken,
+                msg.sender,
+                address(quantumPortalStake),
+                amount
+            );
             require(amount != 0, "QPG: amount is required");
             IStakeV2(address(quantumPortalStake)).stake(to, baseToken);
         }
@@ -80,44 +93,85 @@ contract QuantumPortalGateway is WithAdmin, IQuantumPortalPoc {
     /**
      * Proxy methods for IQuantumPortalPoc
      */
-    function feeTarget(
-    ) external override view returns(address) {
+    function feeTarget() external view override returns (address) {
         return quantumPortalPoc.feeTarget();
     }
 
-    function feeToken(
-    ) external override view returns(address) {
+    function feeToken() external view override returns (address) {
         return quantumPortalPoc.feeToken();
     }
 
-    function run(uint64 remoteChain, address remoteContract, address beneficiary, bytes memory remoteMethodCall
+    function run(
+        uint64 remoteChain,
+        address remoteContract,
+        address beneficiary,
+        bytes memory remoteMethodCall
     ) external override {
-        quantumPortalPoc.run(remoteChain, remoteContract, beneficiary, remoteMethodCall);
+        quantumPortalPoc.run(
+            remoteChain,
+            remoteContract,
+            beneficiary,
+            remoteMethodCall
+        );
     }
 
     function runWithValue(
-        uint64 remoteChain, address remoteContract, address beneficiary, address token, bytes memory method
+        uint64 remoteChain,
+        address remoteContract,
+        address beneficiary,
+        address token,
+        bytes memory method
     ) external override {
-        quantumPortalPoc.runWithValue(remoteChain, remoteContract, beneficiary, token, method);
+        quantumPortalPoc.runWithValue(
+            remoteChain,
+            remoteContract,
+            beneficiary,
+            token,
+            method
+        );
     }
 
     function runWithdraw(
-        uint64 remoteChainId, address remoteAddress, address token, uint256 amount
+        uint64 remoteChainId,
+        address remoteAddress,
+        address token,
+        uint256 amount
     ) external override {
-        quantumPortalPoc.runWithdraw(remoteChainId, remoteAddress, token, amount);
+        quantumPortalPoc.runWithdraw(
+            remoteChainId,
+            remoteAddress,
+            token,
+            amount
+        );
     }
 
-    function msgSender(
-    ) external override view returns (uint256 sourceNetwork, address sourceMsgSender, address sourceBeneficiary) {
+    function msgSender()
+        external
+        view
+        override
+        returns (
+            uint256 sourceNetwork,
+            address sourceMsgSender,
+            address sourceBeneficiary
+        )
+    {
         return quantumPortalPoc.msgSender();
     }
 
-    function txContext(
-    ) external override view returns (QuantumPortalLib.Context memory) {
+    function txContext()
+        external
+        view
+        override
+        returns (QuantumPortalLib.Context memory)
+    {
         return quantumPortalPoc.txContext();
     }
 
-    function remoteTransfer(uint256 chainId, address token, address to, uint256 amount
+    function remoteTransfer(
+        uint256 chainId,
+        address token,
+        address to,
+        uint256 amount
     ) external override {
         return quantumPortalPoc.remoteTransfer(chainId, token, to, amount);
     }

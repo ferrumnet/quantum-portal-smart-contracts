@@ -14,7 +14,9 @@ import "hardhat/console.sol";
  *         passed. In this case the miner is allowed to be selected, and it will drop out the replaced miner.
  *         The replaced miner has to register again.
  */
-abstract contract QuantumPortalMinerMembership is IQuantumPortalMinerMembership {
+abstract contract QuantumPortalMinerMembership is
+    IQuantumPortalMinerMembership
+{
     uint256 public timeBlockSize = 60 * 3; // Three minutes for a miner to react
     address[] public miners;
     mapping(address => uint256) public minerIdxsPlusOne; // Informational. Plus one so that we can have idx zero too
@@ -22,11 +24,24 @@ abstract contract QuantumPortalMinerMembership is IQuantumPortalMinerMembership 
     /**
      * @notice Overwride and make sure this can only be called by the mgr
      */
-    function _selectMiner(address requestedMiner, bytes32 blockHash, uint256 blockTimestamp) internal returns (bool) {
+    function _selectMiner(
+        address requestedMiner,
+        bytes32 blockHash,
+        uint256 blockTimestamp
+    ) internal returns (bool) {
         console.log("Selecting miner", requestedMiner);
-        uint256 offset = (block.timestamp - blockTimestamp) % (timeBlockSize * 2);
-        uint256 registeredMinerIdx = minerIdx(blockHash, blockTimestamp, offset);
-        console.log("Random miner IDX", registeredMinerIdx, miners[registeredMinerIdx]);
+        uint256 offset = (block.timestamp - blockTimestamp) %
+            (timeBlockSize * 2);
+        uint256 registeredMinerIdx = minerIdx(
+            blockHash,
+            blockTimestamp,
+            offset
+        );
+        console.log(
+            "Random miner IDX",
+            registeredMinerIdx,
+            miners[registeredMinerIdx]
+        );
         address registeredMiner = miners[registeredMinerIdx];
         if (registeredMiner != requestedMiner) {
             return false;
@@ -34,29 +49,46 @@ abstract contract QuantumPortalMinerMembership is IQuantumPortalMinerMembership 
         if (offset != 0) {
             // Unregister the initial miner that was not active
             uint256 originalMinerIdx = minerIdx(blockHash, blockTimestamp, 0);
-            if (originalMinerIdx != registeredMinerIdx) { // If there is more than one miner
+            if (originalMinerIdx != registeredMinerIdx) {
+                // If there is more than one miner
                 unregisterMinerByIdx(originalMinerIdx);
             }
         }
         return true;
     }
 
-    function findMiner(bytes32 blockHash, uint256 blockTimestamp) external override view returns (address) {
+    function findMiner(
+        bytes32 blockHash,
+        uint256 blockTimestamp
+    ) external view override returns (address) {
         return findMinerAtTime(blockHash, blockTimestamp, block.timestamp);
     }
 
     /**
-     * @notice To be used by client to verify if they are 
+     * @notice To be used by client to verify if they are
      */
-    function findMinerAtTime(bytes32 blockHash, uint256 blockTimestamp, uint256 chainTimestamp) public override view returns (address) {
-        uint256 offset = (chainTimestamp - blockTimestamp) % (timeBlockSize * 2);
-        uint256 registeredMinerIdx = minerIdx(blockHash, blockTimestamp, offset);
+    function findMinerAtTime(
+        bytes32 blockHash,
+        uint256 blockTimestamp,
+        uint256 chainTimestamp
+    ) public view override returns (address) {
+        uint256 offset = (chainTimestamp - blockTimestamp) %
+            (timeBlockSize * 2);
+        uint256 registeredMinerIdx = minerIdx(
+            blockHash,
+            blockTimestamp,
+            offset
+        );
         return miners[registeredMinerIdx];
     }
 
-    function minerIdx(bytes32 blockHash, uint256 blockTimestamp, uint256 offset) internal view returns (uint256) {
+    function minerIdx(
+        bytes32 blockHash,
+        uint256 blockTimestamp,
+        uint256 offset
+    ) internal view returns (uint256) {
         uint256 blockEpoch = blockTimestamp / timeBlockSize;
-        uint256 idx = uint256(blockHash) << 64 + blockEpoch + offset;
+        uint256 idx = uint256(blockHash) << (64 + blockEpoch + offset);
         return idx % miners.length;
     }
 
@@ -80,7 +112,7 @@ abstract contract QuantumPortalMinerMembership is IQuantumPortalMinerMembership 
 
     /**
      * @notice Ensure it is only called by the mgr. And there is enough stake before registering.
-     *         Consider including a 
+     *         Consider including a
      */
     function _registerMiner(address miner) internal {
         require(minerIdxsPlusOne[miner] == 0, "QPMM: already registered");

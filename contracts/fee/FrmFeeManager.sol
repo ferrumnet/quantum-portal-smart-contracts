@@ -17,7 +17,7 @@ import "foundry-contracts/contracts/math/FixedPoint128.sol";
 contract FrmFeeManager is TokenReceivable, WithAdmin, IFrmFeeManager {
     struct PriceOracleInfo {
         address univ2Oracle;
-        address[] pricePath; 
+        address[] pricePath;
     }
     mapping(address => PriceOracleInfo) public priceOracles;
     mapping(address => uint256) public balances;
@@ -65,13 +65,16 @@ contract FrmFeeManager is TokenReceivable, WithAdmin, IFrmFeeManager {
     function removeTrusterCaller(address caller) external onlyAdmin {
         delete trustedCallers[caller];
     }
-    
+
     /**
      @notice Allows a univ2 oracle
      @param univ2Oracle The Univ2 oracle
      @param isDefault If the oracle is default
      */
-    function allowUniV2Oracle(address univ2Oracle, bool isDefault) external onlyAdmin {
+    function allowUniV2Oracle(
+        address univ2Oracle,
+        bool isDefault
+    ) external onlyAdmin {
         registeredOracles[univ2Oracle] = true;
         if (isDefault) {
             defaultPriceOracle = univ2Oracle;
@@ -91,13 +94,19 @@ contract FrmFeeManager is TokenReceivable, WithAdmin, IFrmFeeManager {
      @param univ2Oracle The univ2 oracle. Must already be registered
      @param pricePath The price path
      */
-    function registerPriceOracle(address univ2Oracle, address[] calldata pricePath) external onlyAdmin {
-        require(pricePath[pricePath.length - 1] == liquidityBaseToken, "FFM: pricePath should end in lp base token");
+    function registerPriceOracle(
+        address univ2Oracle,
+        address[] calldata pricePath
+    ) external onlyAdmin {
+        require(
+            pricePath[pricePath.length - 1] == liquidityBaseToken,
+            "FFM: pricePath should end in lp base token"
+        );
         require(registeredOracles[univ2Oracle], "FFM: oracle not allowed");
         address token = pricePath[0];
         // Clean up
         uint256 len = priceOracles[token].pricePath.length;
-        for(uint i= 0; i<len; i--) {
+        for (uint i = 0; i < len; i--) {
             priceOracles[token].pricePath.pop();
         }
         priceOracles[token].univ2Oracle = univ2Oracle;
@@ -114,7 +123,11 @@ contract FrmFeeManager is TokenReceivable, WithAdmin, IFrmFeeManager {
      @param amount The fee amount based on the provided token
      @return True if the fee charge was successful
      */
-    function payFee(address user, address token, uint256 amount) external override returns (bool) {
+    function payFee(
+        address user,
+        address token,
+        uint256 amount
+    ) external override returns (bool) {
         require(user != address(0), "FFM: user requried");
         require(token != address(0), "FFM: token requried");
         require(trustedCallers[msg.sender], "FFM: caller not allowed");
@@ -127,7 +140,10 @@ contract FrmFeeManager is TokenReceivable, WithAdmin, IFrmFeeManager {
         }
         address[] memory path = priceOracles[token].pricePath;
         require(path[0] == token, "FFM: Invalid path start");
-        require(path[path.length - 1] == liquidityBaseToken, "FFM: Invalid path end");
+        require(
+            path[path.length - 1] == liquidityBaseToken,
+            "FFM: Invalid path end"
+        );
 
         (uint256 feeAmount, bool success) = convertTokenToFee(token, amount);
         if (!success) {
@@ -157,7 +173,10 @@ contract FrmFeeManager is TokenReceivable, WithAdmin, IFrmFeeManager {
      To trouble shoot, (if function returns false) first make sure token path is set
      and token price can be retrieved. Then the same for feeToken
      */
-    function convertTokenToFee(address token, uint256 amount) internal returns (uint256, bool) {
+    function convertTokenToFee(
+        address token,
+        uint256 amount
+    ) internal returns (uint256, bool) {
         uint256 tokenPrice = getPriceX128(token);
         if (tokenPrice == 0) {
             return (0, false);
@@ -166,7 +185,11 @@ contract FrmFeeManager is TokenReceivable, WithAdmin, IFrmFeeManager {
         if (frmPrice == 0) {
             return (0, false);
         }
-        uint256 ratio = FullMath.mulDiv(frmPrice, FixedPoint128.Q128, tokenPrice);
+        uint256 ratio = FullMath.mulDiv(
+            frmPrice,
+            FixedPoint128.Q128,
+            tokenPrice
+        );
         return (FullMath.mulDiv(ratio, amount, FixedPoint128.Q128), true);
     }
 

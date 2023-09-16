@@ -15,7 +15,8 @@ interface IQuantumPortalLedgerMgr {
         uint256 totalValue;
         QuantumPortalLib.Block blockMetadata;
     }
-    struct FinalizerStake { // TODO: Compress
+    struct FinalizerStake {
+        // TODO: Compress
         address finalizer;
         uint256 staked;
     }
@@ -52,5 +53,6 @@ interface IQuantumPortalLedgerMgr {
 
 interface IQuantumPortalLedgerMgrDependencies {
     function minerMgr() external view returns (address);
+
     function authorityMgr() external view returns (address);
 }

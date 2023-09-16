@@ -9,15 +9,22 @@ import "./QuantumPortalState.sol";
 import "hardhat/console.sol";
 
 interface CanEstimateGas {
-    function executeTxAndRevertToEstimateGas(address addr, bytes memory method) external;
+    function executeTxAndRevertToEstimateGas(
+        address addr,
+        bytes memory method
+    ) external;
 }
 
 contract PortalLedger is WithAdmin {
-    event ExecutionReverted(uint256 remoteChainId, address localContract, bytes32 revertReason);
+    event ExecutionReverted(
+        uint256 remoteChainId,
+        address localContract,
+        bytes32 revertReason
+    );
     address public mgr;
     QuantumPortalState public state;
     QuantumPortalLib.Context public context;
-    uint256 immutable internal CHAIN_ID; // To support override
+    uint256 internal immutable CHAIN_ID; // To support override
 
     modifier onlyMgr() {
         require(msg.sender == mgr, "PL: Not allowed");
@@ -28,7 +35,14 @@ contract PortalLedger is WithAdmin {
         CHAIN_ID = overrideChainId == 0 ? block.chainid : overrideChainId;
     }
 
-    event RemoteTransfer(uint256 chainId, address token, address from, address to, uint256 amount);
+    event RemoteTransfer(
+        uint256 chainId,
+        address token,
+        address from,
+        address to,
+        uint256 amount
+    );
+
     /**
      @notice Executes a transaction within a remote block context
      @param blockIndex The block index
@@ -50,32 +64,66 @@ contract PortalLedger is WithAdmin {
             // I.e. when the remote contract creates decides to pay out,
             // it reduces the remote balance for itself, and generates a withdraw tx
             // Withdraw txs may not fail. If the actual withdraw failed, there is
-            // either an issue with the token, which we cannot do anything about, 
+            // either an issue with the token, which we cannot do anything about,
             // or not enough balance, which should never happen.
             console.log("UPDATING BALANCE FOR ", t.remoteContract, t.amount);
             if (t.amount != 0) {
-                state.setRemoteBalances(uint256(b.chainId), t.token, t.remoteContract,
-                    state.getRemoteBalances(uint256(b.chainId), t.token, t.remoteContract) + t.amount);
+                state.setRemoteBalances(
+                    uint256(b.chainId),
+                    t.token,
+                    t.remoteContract,
+                    state.getRemoteBalances(
+                        uint256(b.chainId),
+                        t.token,
+                        t.remoteContract
+                    ) + t.amount
+                );
             }
         } else {
-            QuantumPortalLib.Context memory _context = QuantumPortalLib.Context({
-                index: uint64(blockIndex),
-                blockMetadata: b,
-                transaction: t,
-                uncommitedBalance: state.getRemoteBalances(b.chainId, t.token, t.remoteContract) + t.amount
-            });
+            QuantumPortalLib.Context memory _context = QuantumPortalLib
+                .Context({
+                    index: uint64(blockIndex),
+                    blockMetadata: b,
+                    transaction: t,
+                    uncommitedBalance: state.getRemoteBalances(
+                        b.chainId,
+                        t.token,
+                        t.remoteContract
+                    ) + t.amount
+                });
 
             context = _context;
             // update remote balance for the remote contract
             // based on tokens
             // then run the method. If failed, revert the balances
-            bool success = callRemoteMethod(b.chainId, t.remoteContract, t.remoteContract, t.method, gas);
+            bool success = callRemoteMethod(
+                b.chainId,
+                t.remoteContract,
+                t.remoteContract,
+                t.method,
+                gas
+            );
             if (success) {
                 // Commit the uncommitedBalance. This could have been changed during callRemoteMehod
-                uint256 oldBal = state.getRemoteBalances(uint256(b.chainId), t.token, t.remoteContract);
-                state.setRemoteBalances(b.chainId, t.token, t.remoteContract, context.uncommitedBalance);
+                uint256 oldBal = state.getRemoteBalances(
+                    uint256(b.chainId),
+                    t.token,
+                    t.remoteContract
+                );
+                state.setRemoteBalances(
+                    b.chainId,
+                    t.token,
+                    t.remoteContract,
+                    context.uncommitedBalance
+                );
                 if (context.uncommitedBalance > oldBal) {
-                    emit RemoteTransfer(b.chainId, t.token, t.sourceMsgSender, t.remoteContract, context.uncommitedBalance - oldBal);
+                    emit RemoteTransfer(
+                        b.chainId,
+                        t.token,
+                        t.sourceMsgSender,
+                        t.remoteContract,
+                        context.uncommitedBalance - oldBal
+                    );
                 }
             } else {
                 // We cannot revert because we don't know where to get the fee from.
@@ -102,8 +150,16 @@ contract PortalLedger is WithAdmin {
 
         //Refund the remote value to the beneficiary
         if (t.amount != 0) {
-            state.setRemoteBalances(sourceChainId, t.token, t.sourceBeneficiary,
-                state.getRemoteBalances(sourceChainId, t.token, t.sourceBeneficiary) + t.amount);
+            state.setRemoteBalances(
+                sourceChainId,
+                t.token,
+                t.sourceBeneficiary,
+                state.getRemoteBalances(
+                    sourceChainId,
+                    t.token,
+                    t.sourceBeneficiary
+                ) + t.amount
+            );
         }
 
         uint postGas = gasleft();
@@ -120,17 +176,18 @@ contract PortalLedger is WithAdmin {
         address token,
         uint256 amount
     ) external {
-        QuantumPortalLib.RemoteTransaction memory t = QuantumPortalLib.RemoteTransaction({
-            timestamp: uint64(block.timestamp),
-            remoteContract: remoteContract,
-            sourceMsgSender: sourceMsgSender,
-            sourceBeneficiary: beneficiary,
-            token: token,
-            amount: amount,
-            method: method,
-            gas: 0, 
-            fixedFee: 0
-        });
+        QuantumPortalLib.RemoteTransaction memory t = QuantumPortalLib
+            .RemoteTransaction({
+                timestamp: uint64(block.timestamp),
+                remoteContract: remoteContract,
+                sourceMsgSender: sourceMsgSender,
+                sourceBeneficiary: beneficiary,
+                token: token,
+                amount: amount,
+                method: method,
+                gas: 0,
+                fixedFee: 0
+            });
         QuantumPortalLib.Block memory b = QuantumPortalLib.Block({
             chainId: uint64(remoteChainId),
             nonce: 1,
@@ -140,16 +197,29 @@ contract PortalLedger is WithAdmin {
             index: uint64(1),
             blockMetadata: b,
             transaction: t,
-            uncommitedBalance: state.getRemoteBalances(b.chainId, t.token, t.remoteContract) + t.amount
+            uncommitedBalance: state.getRemoteBalances(
+                b.chainId,
+                t.token,
+                t.remoteContract
+            ) + t.amount
         });
 
         context = _context;
         // This call will revert after execution but the tx should go through, hence enabling gas estimation
-        address(this).call(abi.encodeWithSelector(CanEstimateGas.executeTxAndRevertToEstimateGas.selector, t.remoteContract, t.method));
+        address(this).call(
+            abi.encodeWithSelector(
+                CanEstimateGas.executeTxAndRevertToEstimateGas.selector,
+                t.remoteContract,
+                t.method
+            )
+        );
         resetContext();
     }
 
-    function executeTxAndRevertToEstimateGas(address addr, bytes memory method) public {
+    function executeTxAndRevertToEstimateGas(
+        address addr,
+        bytes memory method
+    ) public {
         addr.call(method);
         revert();
     }
@@ -177,7 +247,9 @@ contract PortalLedger is WithAdmin {
         state = QuantumPortalState(_state);
     }
 
-    function revertRemoteBalance(QuantumPortalLib.Context memory _context) internal {
+    function revertRemoteBalance(
+        QuantumPortalLib.Context memory _context
+    ) internal {
         // Register a revert transaction to be mined
         // TODO: Where does the gas come from?
         IQuantumPortalLedgerMgr(mgr).registerTransaction(
@@ -187,11 +259,16 @@ contract PortalLedger is WithAdmin {
             address(0),
             _context.transaction.token,
             _context.transaction.amount,
-            "");
+            ""
+        );
     }
 
     function callRemoteMethod(
-        uint256 remoteChainId, address localContract, address addr, bytes memory method, uint256 gas
+        uint256 remoteChainId,
+        address localContract,
+        address addr,
+        bytes memory method,
+        uint256 gas
     ) private returns (bool success) {
         if (method.length == 0) {
             return true;
@@ -213,7 +290,7 @@ contract PortalLedger is WithAdmin {
     /**
      @notice extracts the revert reason. First bytes32
      */
-    function extractRevertReasonSingleBytes32 (
+    function extractRevertReasonSingleBytes32(
         bytes memory revertData
     ) internal pure returns (bytes32 reason) {
         if (revertData.length < 4) {
@@ -221,8 +298,10 @@ contract PortalLedger is WithAdmin {
             return "No revert message";
         } else {
             bytes4 errorSelector;
-            if (errorSelector == bytes4(0x4e487b71) /* `seth sig "Panic(uint256)"` */) {
-
+            if (
+                errorSelector ==
+                bytes4(0x4e487b71) /* `seth sig "Panic(uint256)"` */
+            ) {
                 // case 2: Panic(uint256) (Defined since 0.8.0)
                 // solhint-disable-next-line max-line-length
                 // ref: https://docs.soliditylang.org/en/v0.8.0/control-structures.html#panic-via-assert-and-error-via-require)
@@ -236,8 +315,12 @@ contract PortalLedger is WithAdmin {
                     let e1 := add(and(errorCode, 0xf), 0x30)
                     let e2 := shl(8, add(shr(4, and(errorCode, 0xf0)), 0x30))
                     reasonWord := or(
-                        and(reasonWord, 0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000),
-                        or(e2, e1))
+                        and(
+                            reasonWord,
+                            0xffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff0000
+                        ),
+                        or(e2, e1)
+                    )
                     reason := reasonWord
                     // mstore(reason, reasonWord)
                 }
