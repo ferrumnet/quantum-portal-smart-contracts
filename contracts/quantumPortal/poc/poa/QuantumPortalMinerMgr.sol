@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
-import "foundry-contracts/contracts/signature/MultiSigLib.sol";
 import "./IQuantumPortalMinerMgr.sol";
 import "./IQuantumPortalStake.sol";
 import "./IDelegator.sol";
+import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
+import "foundry-contracts/contracts/signature/MultiSigLib.sol";
 import "./QuantumPortalWorkPoolClient.sol";
 import "./QuantumPortalWorkPoolServer.sol";
 import "./QuantumPortalMinerMembership.sol";

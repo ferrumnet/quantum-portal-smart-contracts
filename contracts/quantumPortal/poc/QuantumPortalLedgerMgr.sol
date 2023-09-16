@@ -14,6 +14,7 @@ import "foundry-contracts/contracts/math/FixedPoint128.sol";
 import "./poa/QuantumPortalMinerMgr.sol";
 import "./QuantumPortalLib.sol";
 import "./PortalLedger.sol";
+
 import "hardhat/console.sol";
 
 /**
