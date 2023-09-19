@@ -29,16 +29,29 @@ contract QuantumPortalMinerMgr is
     QuantumPortalWorkPoolClient,
     QuantumPortalMinerMembership
 {
+    struct SlashHistory {
+        address delegatedMiner;
+        address miner;
+        bytes32 blockHash;
+        address beneficiary;
+    }
+
+    uint32 constant WEEK = 3600 * 24 * 7;
     string public constant NAME = "FERRUM_QUANTUM_PORTAL_MINER_MGR";
     string public constant VERSION = "000.010";
-    uint32 constant WEEK = 3600 * 24 * 7;
     address public override miningStake;
+    mapping(bytes32 => SlashHistory) slashes;
+
+    event SlashRequested(SlashHistory data);
 
     constructor() EIP712(NAME, VERSION) {
         bytes memory _data = IFerrumDeployer(msg.sender).initData();
         (miningStake) = abi.decode(_data, (address));
     }
 
+    /**
+     * @inheritdoc IQuantumPortalMinerMembership
+     */
     function selectMiner(
         address requestedMiner,
         bytes32 blockHash,
@@ -47,18 +60,30 @@ contract QuantumPortalMinerMgr is
         return _selectMiner(requestedMiner, blockHash, blockTimestamp);
     }
 
+    /**
+     * @inheritdoc IQuantumPortalMinerMembership
+     */
     function registerMiner(address miner) external override onlyMgr {
         _registerMiner(miner);
     }
 
+    /**
+     * @inheritdoc IQuantumPortalMinerMembership
+     */
     function unregisterMiner(address miner) external override onlyMgr {
         _unregisterMiner(miner);
     }
 
+    /**
+     * @inheritdoc IQuantumPortalMinerMembership
+     */
     function unregister() external override {
         _unregisterMiner(msg.sender);
     }
 
+    /**
+     * @inheritdoc IQuantumPortalMinerMgr
+     */
     function extractMinerAddress(
         bytes32 msgHash,
         uint64 expiry,
@@ -68,6 +93,9 @@ contract QuantumPortalMinerMgr is
         return _extractMinerAddress(msgHash, expiry, salt, multiSig);
     }
 
+    /**
+     * @inheritdoc IQuantumPortalMinerMembership 
+     */
     function verifyMinerSignature(
         bytes32 msgHash,
         uint64 expiry,
@@ -95,9 +123,27 @@ contract QuantumPortalMinerMgr is
             : ValidationResult.NotEnoughStake;
     }
 
+    /**
+     * @notice Withdraw miner rewards on the remote chain
+     * @param remoteChain The remote chain ID
+     * @param worker The miner address
+     * @param fee The fee in FRM for the multi-chain transaction
+     */
+    function withdraw(uint256 remoteChain, address worker, uint fee) external {
+        QuantumPortalWorkPoolClient.withdraw(
+            IQuantumPortalWorkPoolServer.withdrawFixedRemote.selector,
+            remoteChain,
+            worker,
+            fee
+        );
+    }
+
     bytes32 public constant MINER_SIGNATURE =
         keccak256("MinerSignature(bytes32 msgHash,uint64 expiry,bytes32 salt)");
 
+    /**
+     * @inheritdoc IQuantumPortalMinerMgr
+     */
     function verifySignature(
         bytes32 msgHash,
         uint64 expiry,
@@ -115,6 +161,39 @@ contract QuantumPortalMinerMgr is
         return _signer;
     }
 
+    /**
+     * @inheritdoc IQuantumPortalMinerMgr
+     */
+    function slashMinerForFraud(
+        address delegatedMiner,
+        bytes32 blockHash,
+        address beneficiary
+    ) external override onlyMgr {
+        // TODO: For this version, we just record the slash, then the validator quorum will do the slash manually.
+        // This is expexted to be a rare enough event.
+        // Unregister the miner
+        address miner = IDelegator(miningStake)
+            .getReverseDelegation(delegatedMiner)
+            .delegatee;
+        SlashHistory memory data = SlashHistory({
+            delegatedMiner: delegatedMiner,
+            miner: miner,
+            blockHash: blockHash,
+            beneficiary: beneficiary
+        });
+        slashes[blockHash] = data;
+        if (minerIdxsPlusOne[miner] != 0) {
+            _unregisterMiner(delegatedMiner);
+        }
+    }
+
+    /**
+     * @notice Extract miner address from the signature
+     * @param msgHash The block hash
+     * @param expiry The expiry
+     * @param salt The salt
+     * @param multiSig The multi sig
+     */
     function _extractMinerAddress(
         bytes32 msgHash,
         uint64 expiry,
@@ -142,46 +221,5 @@ contract QuantumPortalMinerMgr is
             signatures[0].s
         );
         return _signer;
-    }
-
-    function withdraw(uint256 remoteChain, address worker, uint fee) external {
-        QuantumPortalWorkPoolClient.withdraw(
-            IQuantumPortalWorkPoolServer.withdrawFixedRemote.selector,
-            remoteChain,
-            worker,
-            fee
-        );
-    }
-
-    struct SlashHistory {
-        address delegatedMiner;
-        address miner;
-        bytes32 blockHash;
-        address beneficiary;
-    }
-    event SlashRequested(SlashHistory data);
-    mapping(bytes32 => SlashHistory) slashes;
-
-    function slashMinerForFraud(
-        address delegatedMiner,
-        bytes32 blockHash,
-        address beneficiary
-    ) external override onlyMgr {
-        // TODO: For this version, we just record the slash, then the validator quorum will do the slash manually.
-        // This is expexted to be a rare enough event.
-        // Unregister the miner
-        address miner = IDelegator(miningStake)
-            .getReverseDelegation(delegatedMiner)
-            .delegatee;
-        SlashHistory memory data = SlashHistory({
-            delegatedMiner: delegatedMiner,
-            miner: miner,
-            blockHash: blockHash,
-            beneficiary: beneficiary
-        });
-        slashes[blockHash] = data;
-        if (minerIdxsPlusOne[miner] != 0) {
-            _unregisterMiner(delegatedMiner);
-        }
     }
 }

@@ -38,9 +38,12 @@ contract QuantumPortalAuthorityMgr is
         );
 
     /**
-     @notice Validates an authority signature
-             TODO: Update to differentiate between finalize and slash. For example more
-             signers requred for slash
+     * @notice Validates the authority signature
+     * @param action The action
+     * @param msgHash The message hash (summary of the object to be validated)
+     * @param salt A unique salt
+     * @param expiry Signature expiry
+     * @param signature The signatrue
      */
     function validateAuthoritySignature(
         Action action,
@@ -71,8 +74,14 @@ contract QuantumPortalAuthorityMgr is
     }
 
     /**
-     @notice Validates an authority signature
-             Returns true if the signature is valid and 
+     * @notice Validates the authority signature for a single signer. 
+     *  This is to collect signatures one by one
+     *  TODO: Elminiate the need for this, and move the logic to the offchain worker
+     * @param action The action
+     * @param msgHash The message hash (summary of the object to be validated)
+     * @param salt A unique salt
+     * @param expiry Signature expiry
+     * @param signature The signatrue
      */
     function validateAuthoritySignatureSingleSigner(
         Action action,
@@ -161,6 +170,12 @@ contract QuantumPortalAuthorityMgr is
         }
     }
 
+    /**
+     * @notice Withdraw fees collected for the validator on the remote chain
+     * @param remoteChain The remote chain
+     * @param worker The worker
+     * @param fee The fee
+     */
     function withdraw(uint256 remoteChain, address worker, uint fee) external {
         withdraw(
             IQuantumPortalWorkPoolServer.withdrawVariableRemote.selector,
@@ -171,7 +186,7 @@ contract QuantumPortalAuthorityMgr is
     }
 
     /**
-     @notice Clears the currentMsgHash to unblock invalid states
+     * @notice Clears the currentMsgHash to unblock invalid states
      */
     function clearCurrentMsgHash() external {
         currentMsgHash = bytes32(0);

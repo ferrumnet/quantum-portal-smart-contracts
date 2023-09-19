@@ -10,6 +10,9 @@ import "foundry-contracts/contracts/math/FixedPoint128.sol";
 
 import "hardhat/console.sol";
 
+/**
+ * @notice An oracle for Uniswap V2 type AMMs
+ */
 contract UniswapOracle is IPriceOracle {
     uint256 constant Q112 = 2 ** 112;
     uint256 constant _1MIN = 60;
@@ -44,6 +47,11 @@ contract UniswapOracle is IPriceOracle {
         uniV2Factory = IUniswapV2Factory(factory);
     }
 
+    /**
+     * @notice Updates the price. Need to be called frequently.
+     *  Ideally before getting the price
+     * @param path The path as it will be used in the AMM
+     */
     function updatePrice(
         address[] calldata path
     ) external override returns (bool) {
@@ -58,6 +66,66 @@ contract UniswapOracle is IPriceOracle {
         return true;
     }
 
+    /**
+     * @notice Returns the recent price for a path
+     * @param path The path as it will be used in the AMM
+     */
+    function recentPriceX128(
+        address[] calldata path
+    ) external view override returns (uint256) {
+        return emaX128(path, EmaType(0));
+    }
+
+    /**
+     * @notice Returns the EMA key
+     * @param path0 Token 1
+     * @param path1 Token 2
+     */
+    function getEmaKey(
+        address path0,
+        address path1
+    ) external pure returns (bytes32) {
+        return emaKey(path0, path1);
+    }
+
+    /**
+     * @notice Calculates EMA for a path
+     * @param path The path as it will be used in the AMM
+     * @param emaType The EMA type
+     */
+    function emaX128(
+        address[] calldata path,
+        EmaType emaType
+    ) public view override returns (uint256) {
+        require(path.length > 1, "UO: path too short");
+        uint256 emaIdx = uint256(emaType);
+        uint256 latestPrice = FixedPoint128.Q128;
+        for (uint i = 0; i < path.length - 1; i++) {
+            bytes32 key = emaKey(path[i], path[i + 1]);
+            console.log("Querying price for ", path[i], path[i + 1]);
+            console.logBytes32(key);
+            uint256 recentPrice = emas[key][0];
+            uint256 emaPrice = emas[key][emaIdx];
+            console.log("EMA PRICE IS", emaPrice);
+            if (emaIdx != 0) {
+                recentPrice = calcEmaX128(emaIdx, emaPrice, recentPrice);
+                console.log("Recent price is", recentPrice);
+            }
+            latestPrice = FullMath.mulDiv(
+                latestPrice,
+                recentPrice,
+                FixedPoint128.Q128
+            );
+            console.log("lastest price is", latestPrice);
+        }
+        return latestPrice;
+    }
+
+    /**
+     * @notice Updates the price for a short path
+     * @param path0 Token1
+     * @param path1 Token2
+     */
     function updatePriceForPair(
         address path0,
         address path1
@@ -113,7 +181,7 @@ contract UniswapOracle is IPriceOracle {
         (
             uint256 cumuPriceX128,
             uint256 lastPriceFetchTime
-        ) = fetchCumuPriceX128(key, lastTime.lastCumuPriceFetch, path0, path1);
+        ) = fetchCumuPriceX128(path0, path1);
         console.log("Current price is", cumuPriceX128, lastPriceFetchTime);
         if (cumuPriceX128 == 0) {
             // Could not fetch the price...
@@ -170,32 +238,13 @@ contract UniswapOracle is IPriceOracle {
         return true;
     }
 
-    function updateEmas(
-        bytes32 key,
-        uint256 priceX128,
-        uint256[] memory diffs,
-        uint256[6] memory times
-    ) private {
-        bool hasOldPrice = emas[key].length != 0;
-        for (uint i = 0; i < 5; i++) {
-            if (diffs[i] != 0) {
-                // Update based on the new price
-                uint256 oldPrice = hasOldPrice ? emas[key][i] : 0;
-                uint256 newPrice = oldPrice == 0
-                    ? priceX128
-                    : calcEmaX128(i, oldPrice, priceX128);
-                times[i] += diffs[i];
-                if (hasOldPrice) {
-                    emas[key][i] = newPrice;
-                } else {
-                    emas[key].push(newPrice);
-                }
-            } else if (!hasOldPrice) {
-                emas[key].push(priceX128);
-            }
-        }
-    }
-
+    /**
+     * @notice Calculate the price using extrapolation.
+     * @param time1 Time 1
+     * @param cumuPrice1 Cumulative price 1
+     * @param time2 Time 2
+     * @param cumuPrice2 Cumulative price 2
+     */
     function calculatePriceX128(
         uint256 time1,
         uint256 cumuPrice1,
@@ -209,48 +258,12 @@ contract UniswapOracle is IPriceOracle {
         //     time2 - time1);
     }
 
-    function recentPriceX128(
-        address[] calldata path
-    ) external view override returns (uint256) {
-        return emaX128(path, EmaType(0));
-    }
-
-    function emaX128(
-        address[] calldata path,
-        EmaType emaType
-    ) public view override returns (uint256) {
-        require(path.length > 1, "UO: path too short");
-        uint256 emaIdx = uint256(emaType);
-        uint256 latestPrice = FixedPoint128.Q128;
-        for (uint i = 0; i < path.length - 1; i++) {
-            bytes32 key = emaKey(path[i], path[i + 1]);
-            console.log("Querying price for ", path[i], path[i + 1]);
-            console.logBytes32(key);
-            uint256 recentPrice = emas[key][0];
-            uint256 emaPrice = emas[key][emaIdx];
-            console.log("EMA PRICE IS", emaPrice);
-            if (emaIdx != 0) {
-                recentPrice = calcEmaX128(emaIdx, emaPrice, recentPrice);
-                console.log("Recent price is", recentPrice);
-            }
-            latestPrice = FullMath.mulDiv(
-                latestPrice,
-                recentPrice,
-                FixedPoint128.Q128
-            );
-            console.log("lastest price is", latestPrice);
-        }
-        return latestPrice;
-    }
-
     /**
      @notice Fetches the new cumulative price / time from uniswap. 
      @return New cumulative price or "0" if none
      @return New cumulative price timestamp
      */
     function fetchCumuPriceX128(
-        bytes32 key,
-        uint256 lastCumuPriceFetchTime,
         address path0,
         address path1
     ) internal view returns (uint256, uint256) {
@@ -315,13 +328,44 @@ contract UniswapOracle is IPriceOracle {
         revert("UO: emaKx128-Can't happen");
     }
 
-    function getEmaKey(
-        address path0,
-        address path1
-    ) external pure returns (bytes32) {
-        return emaKey(path0, path1);
+    /**
+     * @notice Update the EMAs
+     * @param key The pair key
+     * @param priceX128 Price
+     * @param diffs List of ema diffs
+     * @param times List of times
+     */
+    function updateEmas(
+        bytes32 key,
+        uint256 priceX128,
+        uint256[] memory diffs,
+        uint256[6] memory times
+    ) private {
+        bool hasOldPrice = emas[key].length != 0;
+        for (uint i = 0; i < 5; i++) {
+            if (diffs[i] != 0) {
+                // Update based on the new price
+                uint256 oldPrice = hasOldPrice ? emas[key][i] : 0;
+                uint256 newPrice = oldPrice == 0
+                    ? priceX128
+                    : calcEmaX128(i, oldPrice, priceX128);
+                times[i] += diffs[i];
+                if (hasOldPrice) {
+                    emas[key][i] = newPrice;
+                } else {
+                    emas[key].push(newPrice);
+                }
+            } else if (!hasOldPrice) {
+                emas[key].push(priceX128);
+            }
+        }
     }
 
+    /**
+     * @notice Returns the EMA key
+     * @param path0 Token 1
+     * @param path1 Token 2
+     */
     function emaKey(
         address path0,
         address path1
@@ -329,6 +373,12 @@ contract UniswapOracle is IPriceOracle {
         return keccak256(abi.encodePacked(path0, path1));
     }
 
+    /**
+     * @notice Returns the start of a new period
+     * @param old Old time
+     * @param newTime New time
+     * @param period Period number
+     */
     function newPeriod(
         uint256 old,
         uint256 newTime,

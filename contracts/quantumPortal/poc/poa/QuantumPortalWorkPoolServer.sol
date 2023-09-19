@@ -5,23 +5,9 @@ import "./IQuantumPortalWorkPoolServer.sol";
 import "foundry-contracts/contracts/math/FullMath.sol";
 import "foundry-contracts/contracts/math/FixedPoint128.sol";
 import "../../../staking/library/TokenReceivable.sol";
-import "foundry-contracts/contracts/common/WithAdmin.sol";
+import "./QuantumPortalWorkerBase.sol";
+
 import "hardhat/console.sol";
-
-abstract contract QuantumPortalWorkerBase is WithAdmin {
-    mapping(uint256 => address) public remotes;
-    IQuantumPortalPoc public portal;
-    address public mgr;
-
-    function setRemote(uint256 chainId, address remote) external onlyAdmin {
-        remotes[chainId] = remote;
-    }
-
-    modifier onlyMgr() {
-        require(msg.sender == mgr, "QPWPS:only QP mgr may call");
-        _;
-    }
-}
 
 /**
  * @notice Collect and distribute rewards
@@ -36,6 +22,12 @@ abstract contract QuantumPortalWorkPoolServer is
     mapping(uint256 => uint256) public collectedFixedFee;
     mapping(uint256 => uint256) public collectedVarFee;
 
+    /**
+     * @notice Restricted: Initialize the work pool server contract
+     * @param _portal The QP portal address
+     * @param _mgr The QP ledger manager address
+     * @param _baseToken The base token address
+     */
     function initServer(
         address _portal,
         address _mgr,
@@ -46,6 +38,9 @@ abstract contract QuantumPortalWorkPoolServer is
         baseToken = _baseToken;
     }
 
+    /**
+     * @inheritdoc IQuantumPortalWorkPoolServer
+     */
     function collectFee(
         uint256 targetChainId,
         uint256 localEpoch,
@@ -85,6 +80,9 @@ abstract contract QuantumPortalWorkPoolServer is
         sendToken(baseToken, worker, amount);
     }
 
+    /**
+     * @inheritdoc IQuantumPortalWorkPoolServer
+     */
     function withdrawVariableRemote(
         address worker,
         uint256 workRatioX128,
@@ -105,6 +103,12 @@ abstract contract QuantumPortalWorkPoolServer is
         sendToken(baseToken, worker, amount);
     }
 
+    /**
+     * @notice Withdraw rewards on the remote chain
+     * @param epoch The local epoch
+     * @return remote chain ID
+     * @return last local epoch
+     */
     function withdrawRemote(
         uint256 epoch
     ) internal view returns (uint256, uint256) {

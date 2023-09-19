@@ -11,12 +11,20 @@ contract Delegator is IDelegator {
     mapping(address => address) public delegation;
     mapping(address => IDelegator.ReverseDelegation) public reverseDelegation;
 
+    /**
+     * @notice Returns the reverse delegation for a delegatee
+     * @param key The key
+     */
     function getReverseDelegation(
         address key
     ) external view override returns (IDelegator.ReverseDelegation memory) {
         return reverseDelegation[key];
     }
 
+    /**
+     * @notice Delegates to the given address from the `msg.sender`. A delegatee can be used once
+     * @param to The delegatee
+     */
     function delegate(address to) external {
         address currentDelegation = delegation[msg.sender];
         if (to == address(0)) {

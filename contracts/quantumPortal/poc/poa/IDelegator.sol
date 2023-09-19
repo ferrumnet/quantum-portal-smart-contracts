@@ -7,6 +7,11 @@ interface IDelegator {
         uint8 deleted;
     }
 
+    /**
+     * @notice Returns the reverse delegation for a delegatee
+     * @param key The key
+     * @return The reverse delegation as `ReverseDelegation`
+     */
     function getReverseDelegation(
         address key
     ) external view returns (ReverseDelegation memory);

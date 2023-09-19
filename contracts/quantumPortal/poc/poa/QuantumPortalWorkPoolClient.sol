@@ -18,10 +18,17 @@ abstract contract QuantumPortalWorkPoolClient is
     mapping(uint256 => uint256) public totalWork; // Total work on remote chain
     mapping(uint256 => uint256) public remoteEpoch;
 
+    /**
+     * @notice Ristricted: update the manager
+     * @param _mgr The manager contract address
+     */
     function updateMgr(address _mgr) external onlyAdmin {
         mgr = _mgr;
     }
 
+    /**
+     * @inheritdoc IQuantumPortalWorkPoolClient
+     */
     function registerWork(
         uint256 remoteChain,
         address worker,
@@ -35,6 +42,13 @@ abstract contract QuantumPortalWorkPoolClient is
         remoteEpoch[remoteChain] = _remoteEpoch;
     }
 
+    /**
+     * @notice Withdraw the rewards on the remote chain
+     * @param selector The selector
+     * @param remoteChain The remote
+     * @param worker The worker
+     * @param fee The multi-chain transaction fee
+     */
     function withdraw(
         bytes4 selector,
         uint256 remoteChain,

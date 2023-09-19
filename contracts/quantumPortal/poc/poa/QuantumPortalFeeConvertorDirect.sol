@@ -6,6 +6,9 @@ import "foundry-contracts/contracts/common/WithAdmin.sol";
 
 import "hardhat/console.sol";
 
+/**
+ * @notice Direct fee convertor for QP. The fee should be update by a trusted third party regularly
+ */
 contract QuantumPortalFeeConverterDirect is
     IQuantumPortalFeeConvertor,
     WithAdmin
@@ -13,12 +16,23 @@ contract QuantumPortalFeeConverterDirect is
     address public override qpFeeToken;
     uint256 public feePerByte;
 
+    /**
+     * Restricted. Update the fee per byte number
+     * @param fpb The fee per byte
+     */
     function updateFeePerByte(uint256 fpb) external onlyAdmin {
         feePerByte = fpb;
     }
 
+    /**
+     * @notice Unused
+     */
     function updatePrice() external override {}
 
+    /**
+     * @notice Return the gas token (FRM) price for the local chain
+     * TODO: Implement
+     */
     function localChainGasTokenPriceX128()
         external
         pure
@@ -28,12 +42,21 @@ contract QuantumPortalFeeConverterDirect is
         return FixedPoint128.Q128;
     }
 
+    /**
+     * @notice Return the gas token (FRM) price for the target chain
+     * @param targetChainId The target chain ID
+     */
     function targetChainGasTokenPriceX128(
         uint256 targetChainId
     ) external view override returns (uint256) {
         return _targetChainGasTokenPriceX128(targetChainId);
     }
 
+    /**
+     * @notice Return the gas token (FRM) price for the target chain
+     *   TODO: Implement
+     * @param targetChainId The target chain ID
+     */
     function _targetChainGasTokenPriceX128(
         uint256 targetChainId
     ) internal view returns (uint256) {
@@ -41,6 +64,9 @@ contract QuantumPortalFeeConverterDirect is
         return FixedPoint128.Q128;
     }
 
+    /**
+     * @notice Get the fee for the target network
+     */
     function targetChainFixedFee(
         uint256 targetChainId,
         uint256 size

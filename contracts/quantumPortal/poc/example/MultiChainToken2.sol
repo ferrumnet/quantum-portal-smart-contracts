@@ -4,6 +4,9 @@ pragma solidity ^0.8.0;
 import "./MultiChainBase.sol";
 import "foundry-contracts/contracts/token/ERC20/ERC20.sol";
 
+/**
+ * @notice Example multi-chain token master contract
+ */
 contract MitlChainToken2Master is ERC20, MultiChainMasterBase {
     uint256 public TOTAL_SUPPLY = 100000 * 10 ** 18;
 
@@ -56,12 +59,20 @@ contract MitlChainToken2Master is ERC20, MultiChainMasterBase {
         }
     }
 
+    /**
+     * @notice Returns the rmote addres if configured or the same address otherwise.
+     * @param chainId The remote chain ID
+     */
     function remoteAddress(uint256 chainId) public view returns (address rv) {
         rv = remotes[chainId];
         rv = rv == address(0) ? address(this) : rv;
     }
 }
 
+
+/**
+ * @notice Example multi-chain token master contract
+ */
 contract MitlChainToken2Client is ERC20, MultiChainClientBase {
     /**
      @notice We make sure this is only calle as part of a quantum portal transaction.

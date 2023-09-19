@@ -44,6 +44,9 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
         auth = IQuantumPortalAuthorityMgr(authority);
     }
 
+    /**
+     * @inheritdoc IQuantumPortalStake 
+     */
     function delegatedStakeOf(
         address delegatee
     ) external view override returns (uint256) {
@@ -57,35 +60,6 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
         return state.stakes[STAKE_ID][staker];
     }
 
-    /**
-     @notice This will only move items to the withdraw queue.
-     */
-    function _withdraw(
-        address to,
-        address id,
-        address staker,
-        uint256 amount
-    ) internal override nonZeroAddress(staker) {
-        require(id == STAKE_ID, "QPS: bad id");
-        if (amount == 0) {
-            return;
-        }
-        // Below assumed
-        // StakingBasics.StakeInfo memory info = stakings[id];
-        // require(
-        //     info.stakeType == Staking.StakeType.OpenEnded,
-        //     "SO: Not open ended stake"
-        // );
-        _withdrawOnlyUpdateStateAndPayRewards(to, id, staker, amount);
-
-        // Lock balance
-        WithdrawItem memory wi = WithdrawItem({
-            opensAt: uint64(block.timestamp) + WITHDRAW_LOCK,
-            amount: uint128(amount),
-            to: to
-        });
-        pushToQueue(staker, wi);
-    }
 
     /**
      * @notice Only staker can release WI. This is to allow staker to be a smart contract
@@ -123,6 +97,11 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
     /**
      * @notice Slashes a user stake. First, all pending withdrawals are cancelled.
      * This is to ensure withdrawers are also penalized at the same rate.
+     * @param user The user to be slashed
+     * @param amount The amount of slash
+     * @param expiry Signature expiry
+     * @param salt A unique salt
+     * @param multiSignature The signatrue
      */
     function slashUser(
         address user,
@@ -143,6 +122,45 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
         return slashStake(user, amount);
     }
 
+    /**
+     * @notice This will only move items to the withdraw queue.
+     * @param to Receiver of the funds
+     * @param id The stake ID
+     * @param staker The staker
+     * @param amount The withdraw amount
+     */
+    function _withdraw(
+        address to,
+        address id,
+        address staker,
+        uint256 amount
+    ) internal override nonZeroAddress(staker) {
+        require(id == STAKE_ID, "QPS: bad id");
+        if (amount == 0) {
+            return;
+        }
+        // Below assumed
+        // StakingBasics.StakeInfo memory info = stakings[id];
+        // require(
+        //     info.stakeType == Staking.StakeType.OpenEnded,
+        //     "SO: Not open ended stake"
+        // );
+        _withdrawOnlyUpdateStateAndPayRewards(to, id, staker, amount);
+
+        // Lock balance
+        WithdrawItem memory wi = WithdrawItem({
+            opensAt: uint64(block.timestamp) + WITHDRAW_LOCK,
+            amount: uint128(amount),
+            to: to
+        });
+        pushToQueue(staker, wi);
+    }
+
+    /**
+     * @notice Slash user stakes
+     * @param staker The staker
+     * @param amount The amount to be slashed
+     */
     function slashStake(
         address staker,
         uint256 amount
@@ -178,17 +196,33 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
         delete withdrawItemsQueueParam[staker];
     }
 
+    /**
+     * @notice Pushes a withdraw item to the queue
+     * @param staker The staker
+     * @param wi The withdraw item
+     */
     function pushToQueue(address staker, WithdrawItem memory wi) private {
         uint end = withdrawItemsQueueParam[staker].end;
         withdrawItemsQueueParam[staker].end = uint64(end) + 1;
         withdrawItemsQueue[staker][end] = wi; // starts from 0, so end is empty by now
     }
 
+    /**
+     * @notice Pops a withdraw item from the queue
+     * @param staker The staker
+     * @param pair The withdraw item pair
+     */
     function popFromQueue(address staker, Pair memory pair) private {
         withdrawItemsQueueParam[staker].start = pair.start + 1;
         delete withdrawItemsQueue[staker][pair.start];
     }
 
+    /**
+     * @notice Pools the queue for the withdraw item
+     * @param staker The staker
+     * @return pair The current pair
+     * @return wi The current withdraw item
+     */
     function peekQueue(
         address staker
     ) private view returns (Pair memory pair, WithdrawItem memory wi) {

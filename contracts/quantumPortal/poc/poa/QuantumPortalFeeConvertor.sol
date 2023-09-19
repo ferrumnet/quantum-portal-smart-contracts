@@ -8,9 +8,12 @@ import "foundry-contracts/contracts/math/FixedPoint128.sol";
 
 import "hardhat/console.sol";
 
+/**
+ * @notice Fee convertor utility for QP. Used for gas calculations
+ */
 contract QuantumPortalFeeConverter is IQuantumPortalFeeConvertor, WithAdmin {
-    address public networkFeeWrappedToken;
     address public override qpFeeToken;
+    address public networkFeeWrappedToken;
     IPriceOracle oracle;
     mapping(uint256 => address) public targetNetworkFeeTokens;
     uint256 public feePerByte;
@@ -29,10 +32,17 @@ contract QuantumPortalFeeConverter is IQuantumPortalFeeConvertor, WithAdmin {
         oracle = IPriceOracle(_oracle);
     }
 
+    /**
+     * Restricted. Update the fee per byte number
+     * @param fpb The fee per byte
+     */
     function updateFeePerByte(uint256 fpb) external onlyAdmin {
         feePerByte = fpb;
     }
 
+    /**
+     * Fetch the price from the registered oracle
+     */
     function updatePrice() external override {
         address[] memory pairs = new address[](2);
         pairs[0] = networkFeeWrappedToken;
@@ -40,6 +50,9 @@ contract QuantumPortalFeeConverter is IQuantumPortalFeeConvertor, WithAdmin {
         oracle.updatePrice(pairs);
     }
 
+    /**
+     * @notice Return the gas token (FRM) price for the local chain
+     */
     function localChainGasTokenPriceX128()
         external
         view
@@ -53,12 +66,20 @@ contract QuantumPortalFeeConverter is IQuantumPortalFeeConvertor, WithAdmin {
         return oracle.recentPriceX128(pairs);
     }
 
+    /**
+     * @notice Return the gas token (FRM) price for the target chain
+     * @param targetChainId The target chain ID
+     */
     function targetChainGasTokenPriceX128(
         uint256 targetChainId
     ) external view override returns (uint256) {
         return _targetChainGasTokenPriceX128(targetChainId);
     }
 
+    /**
+     * @notice Return the gas token (FRM) price for the target chain
+     * @param targetChainId The target chain ID
+     */
     function _targetChainGasTokenPriceX128(
         uint256 targetChainId
     ) internal view returns (uint256) {
