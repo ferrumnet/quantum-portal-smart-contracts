@@ -94,7 +94,7 @@ contract QuantumPortalMinerMgr is
     }
 
     /**
-     * @inheritdoc IQuantumPortalMinerMembership 
+     * @inheritdoc IQuantumPortalMinerMgr
      */
     function verifyMinerSignature(
         bytes32 msgHash,
@@ -142,7 +142,11 @@ contract QuantumPortalMinerMgr is
         keccak256("MinerSignature(bytes32 msgHash,uint64 expiry,bytes32 salt)");
 
     /**
-     * @inheritdoc IQuantumPortalMinerMgr
+     * @notice Vrify miner signature
+     * @param msgHash The message hash
+     * @param expiry The expiry
+     * @param salt The salt
+     * @param multiSig The multi signature
      */
     function verifySignature(
         bytes32 msgHash,

@@ -45,7 +45,7 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
     }
 
     /**
-     * @inheritdoc IQuantumPortalStake 
+     * @inheritdoc IQuantumPortalStake
      */
     function delegatedStakeOf(
         address delegatee
