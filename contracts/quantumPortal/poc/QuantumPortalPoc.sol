@@ -7,24 +7,40 @@ import "../../staking/library/TokenReceivable.sol";
 import "./PortalLedger.sol";
 import "./QuantumPortalLib.sol";
 
+/**
+ * @notice The quantum portal main contract for multi-chain dApps
+ */
 abstract contract QuantumPortalPoc is
     TokenReceivable,
     PortalLedger,
     IQuantumPortalPoc,
     IVersioned
 {
+    event LocalTransfer(address token, address to, uint256 amount);
+
     string public constant override VERSION = "000.001";
     address public override feeTarget;
     address public override feeToken;
 
+    /**
+     * @notice Restricted: Set the fee target
+     * @param _feeTarget The fee target
+     */
     function setFeeTarget(address _feeTarget) external onlyAdmin {
         feeTarget = _feeTarget;
     }
 
+    /**
+     * @notice Ristricted: Sets the fee token
+     * @param _feeToken The fee token
+     */
     function setFeeToken(address _feeToken) external onlyAdmin {
         feeToken = _feeToken;
     }
 
+    /**
+     * @inheritdoc IQuantumPortalPoc
+     */
     function txContext()
         external
         view
@@ -35,7 +51,7 @@ abstract contract QuantumPortalPoc is
     }
 
     /**
-     @notice Registers a run in the local context. No value transfer
+     * @inheritdoc IQuantumPortalPoc
      */
     function run(
         uint64 remoteChainId,
@@ -57,7 +73,7 @@ abstract contract QuantumPortalPoc is
     }
 
     /**
-     @notice Runs a remote method and pays the token amount to the remote method.
+     * @inheritdoc IQuantumPortalPoc
      */
     function runWithValue(
         uint64 remoteChainId,
@@ -79,7 +95,7 @@ abstract contract QuantumPortalPoc is
     }
 
     /**
-     @notice Runs a remote withdraw. Mining this tx will update the balance for the user. User can then call a withdraw.
+     * @inheritdoc IQuantumPortalPoc
      */
     function runWithdraw(
         uint64 remoteChainId,
@@ -106,7 +122,7 @@ abstract contract QuantumPortalPoc is
     }
 
     /**
-     @notice Transfers the remote balance to another account
+     * @inheritdoc IQuantumPortalPoc
      */
     function remoteTransfer(
         uint256 chainId,
@@ -140,8 +156,11 @@ abstract contract QuantumPortalPoc is
         emit RemoteTransfer(chainId, token, msg.sender, to, amount);
     }
 
-    event LocalTransfer(address token, address to, uint256 amount);
-
+    /**
+     * @notice Withdraws the local balance
+     * @param token The token
+     * @param amount Amount to withdraw
+     */
     function withdraw(address token, uint256 amount) external {
         require(
             context.blockMetadata.chainId == 0,
@@ -155,7 +174,7 @@ abstract contract QuantumPortalPoc is
     }
 
     /**
-     @notice Returns the msgSender in the current context.
+     * @inheritdoc IQuantumPortalPoc
      */
     function msgSender()
         external

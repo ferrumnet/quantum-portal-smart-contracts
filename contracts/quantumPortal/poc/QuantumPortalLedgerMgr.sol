@@ -28,8 +28,55 @@ contract QuantumPortalLedgerMgr is
     IQuantumPortalLedgerMgr,
     IVersioned
 {
-    string public constant override VERSION = "000.001";
+    event RemoteTransactionRegistered(
+        uint64 timestamp,
+        address remoteContract,
+        address sourceMsgSender,
+        address sourceBeneficiary,
+        address token,
+        uint256 amount,
+        bytes method,
+        uint256 gas,
+        uint256 fixedFee
+    );
+
+    event LocalBlockCreated(
+        uint64 remoteChainId,
+        uint64 nonce,
+        uint64 timestamp
+    );
+
+    event MinedBlockCreated(
+        bytes32 blockHash,
+        address miner,
+        uint256 stake,
+        uint256 totalValue,
+        QuantumPortalLib.Block blockMetadata
+    );
+
+    event FinalizedBlock(
+        uint256 remoteChainId,
+        uint256 blockNonce,
+        uint256 timestamp
+    );
+    
+    event FinalizedInvalidBlock(
+        uint256 remoteChainId,
+        uint256 blockNonce,
+        uint256 timestamp
+    );
+
+    event FinalizedSnapshot(
+        uint256 remoteChainId,
+        uint256 startBlockNonce,
+        uint256 endBlockNonce,
+        address[] finalizers
+    );
+
+    uint256 constant FIX_TX_SIZE = 9 * 32;
+    uint256 constant FIXED_REJECT_SIZE = 9 * 32; // TODO: Calculate the right amount for rejectioin tasks
     uint256 constant BLOCK_PERIOD = 60 * 2; // One block per two minutes?
+    string public constant override VERSION = "000.001";
     uint256 immutable CHAIN_ID;
     uint256 public minerMinimumStake = 10 ** 18 * 1000000; // Minimum 1M tokens to become miner
     QuantumPortalState public override state;
@@ -41,31 +88,59 @@ contract QuantumPortalLedgerMgr is
     address public fixedFeeTarget;
     address public stakes;
 
+    /**
+     * @notice Can only be called by ledger 
+     */
     modifier onlyLedger() {
         require(msg.sender == ledger, "QPLM: Not allowed");
         _;
     }
 
+    /**
+     * @notice Restricted: Update the state contract
+     * @param _state The state contract
+     */
     function updateState(address _state) external onlyAdmin {
         state = QuantumPortalState(_state);
     }
 
+    /**
+     * @notice Restricted: Update ledger address
+     * @param _ledger The ledger address
+     */
     function updateLedger(address _ledger) external onlyAdmin {
         ledger = _ledger;
     }
 
+    /**
+     * @notice Restricted: update the authority manager
+     * @param _authorityMgr The autority manager
+     */
     function updateAuthorityMgr(address _authorityMgr) external onlyAdmin {
         authorityMgr = _authorityMgr;
     }
 
+    /**
+     * @notice Updates the miner manager
+     * @param _minerMgr The miner manager
+     */
     function updateMinerMgr(address _minerMgr) external onlyAdmin {
         minerMgr = _minerMgr;
     }
 
+    /**
+     * @notice Update the fee convertor
+     * @param _feeConvertor The fee convertor address
+     */
     function updateFeeConvertor(address _feeConvertor) external onlyAdmin {
         feeConvertor = _feeConvertor;
     }
 
+    /**
+     * @notice Restricted: Updates the fee target
+     * @param _varFeeTarget The variable fee target
+     * @param _fixedFeeTarget The fixed fee target
+     */
     function updateFeeTargets(
         address _varFeeTarget,
         address _fixedFeeTarget
@@ -74,6 +149,10 @@ contract QuantumPortalLedgerMgr is
         fixedFeeTarget = _fixedFeeTarget;
     }
 
+    /**
+     * @notice Restricted: Update the miner minimum stake
+     * @param amount The amount to mine
+     */
     function updateMinerMinimumStake(uint256 amount) external onlyAdmin {
         minerMinimumStake = amount;
     }
@@ -82,11 +161,10 @@ contract QuantumPortalLedgerMgr is
         CHAIN_ID = overrideChainId == 0 ? block.chainid : overrideChainId;
     }
 
-    uint256 constant FIX_TX_SIZE = 9 * 32;
-    uint256 constant FIXED_REJECT_SIZE = 9 * 32; // TODO: Calculate the right amount for rejectioin tasks
-
     /**
      * @notice Calculate the fixed fee.
+     * @param targetChainId The target chain ID
+     * @param varSize The variable size
      */
     function calculateFixedFee(
         uint256 targetChainId,
@@ -96,7 +174,9 @@ contract QuantumPortalLedgerMgr is
     }
 
     /**
-     * @notice Calculate the fixed fee.
+     * @notice Calculate the fixed fee
+     * @param targetChainId The target chainID
+     * @param varSize The variable size
      */
     function _calculateFixedFee(
         uint256 targetChainId,
@@ -110,8 +190,15 @@ contract QuantumPortalLedgerMgr is
     }
 
     /**
-     @notice Adds a tx to the pool. Moves the block nonce if new block
-     is warranted.
+     * @notice Register a remote transaction. Adds a tx to the pool. Moves the block nonce if new block
+     *     is warranted
+     * @param remoteChainId The remote chain ID
+     * @param remoteContract The remote contract
+     * @param msgSender The message sender
+     * @param beneficiary The beneficicary
+     * @param token The token
+     * @param amount The amount
+     * @param method The method
      */
     function registerTransaction(
         uint64 remoteChainId,
@@ -137,23 +224,17 @@ contract QuantumPortalLedgerMgr is
         );
     }
 
-    event RemoteTransactionRegistered(
-        uint64 timestamp,
-        address remoteContract,
-        address sourceMsgSender,
-        address sourceBeneficiary,
-        address token,
-        uint256 amount,
-        bytes method,
-        uint256 gas,
-        uint256 fixedFee
-    );
-    event LocalBlockCreated(
-        uint64 remoteChainId,
-        uint64 nonce,
-        uint64 timestamp
-    );
-
+    /**
+     * @notice Register a remote transaction. Adds a tx to the pool. Moves the block nonce if new block
+     *     is warranted
+     * @param remoteChainId The remote chain ID
+     * @param remoteContract The remote contract
+     * @param msgSender The message sender
+     * @param beneficiary The beneficicary
+     * @param token The token
+     * @param amount The amount
+     * @param method The method
+     */
     function _registerTransaction(
         uint64 remoteChainId,
         address remoteContract,
@@ -217,8 +298,17 @@ contract QuantumPortalLedgerMgr is
     }
 
     /**
-     * @notice Fraud proof consisted of a signed block, by a miner from a remote chain, that does not match a local
-     *         block.
+     * @notice Sumbits a fraud prood. Fraud proof consisted of a signed block,
+     *     by a miner from a remote chain, that does not match a local
+     *     block.
+     * @param minedOnChainId The chain that includes the fradulent block
+     * @param localBlockNonce The block nonce
+     * @param localBlockTimestamp The block timestamp
+     * @param transactions List of transactions in the block
+     * @param salt The salt used to sign the block
+     * @param expiry The expiry of the signer signature
+     * @param multiSignature The signature
+     * @param rewardReceiver Address to receive the rewards
      */
     function submitFraudProof(
         uint64 minedOnChainId,
@@ -295,12 +385,23 @@ contract QuantumPortalLedgerMgr is
         return _isLocalBlockReady(state.getLastLocalBlock(chainId));
     }
 
+    /**
+     * @notice Returns the last remote mined block
+     * @param chainId The chain ID
+     */
     function lastRemoteMinedBlock(
         uint64 chainId
     ) external view returns (QuantumPortalLib.Block memory _block) {
         _block = state.getLastMinedBlock(chainId);
     }
 
+    /**
+     * @notice Returns the minde block given nonce
+     * @param chainId The chain ID
+     * @param blockNonce The block nonce
+     * @return b The block
+     * @return txs List of transaction
+     */
     function minedBlockByNonce(
         uint64 chainId,
         uint64 blockNonce
@@ -317,6 +418,13 @@ contract QuantumPortalLedgerMgr is
         txs = state.getMinedBlockTransactions(key);
     }
 
+    /**
+     * @notice Return the local block given the nonce
+     * @param chainId The chain ID
+     * @param blockNonce The block nonce
+     * @return The local block
+     * @return List of transactions in the block
+     */
     function localBlockByNonce(
         uint64 chainId,
         uint64 blockNonce
@@ -335,19 +443,15 @@ contract QuantumPortalLedgerMgr is
         );
     }
 
+    /**
+     * @notice Registers self as a miner
+     */
     function registerMiner() external {
         uint256 stake = stakeOf(msg.sender);
         require(stake >= minerMinimumStake, "QPLM: not enough stake");
         IQuantumPortalMinerMembership(minerMgr).registerMiner(msg.sender);
     }
 
-    event MinedBlockCreated(
-        bytes32 blockHash,
-        address miner,
-        uint256 stake,
-        uint256 totalValue,
-        QuantumPortalLib.Block blockMetadata
-    );
     bytes32 constant MINE_REMOTE_BLOCK =
         keccak256(
             "MineRemoteBlock(uint64 remoteChainId,uint64 blockNonce,bytes32 transactions,bytes32 salt)"
@@ -362,6 +466,12 @@ contract QuantumPortalLedgerMgr is
         Necessary improvements:
         - Allow multiple blocks to be mined (per remote chain), and honest miners to follow the valid block
         - For now, we just assume all miners are honest.
+     * @param remoteChainId The remote chain ID
+     * @param blockNonce The block nonce
+     * @param transactions List of transactions
+     * @param salt The salt
+     * @param expiry Signature expiry
+     * @param multiSignature The signature
      */
     function mineRemoteBlock(
         uint64 remoteChainId,
@@ -494,9 +604,15 @@ contract QuantumPortalLedgerMgr is
         );
 
     /**
-     @notice Finalize unfinalized blocks
-     @param remoteChainId The remote chain ID. For chain that we need to finalized mined blocks
-     @param blockNonce The nonce for the last block to be finalized
+     * @notice Finalize unfinalized blocks
+     * @param remoteChainId The remote chain ID
+     * @param blockNonce The block nonce
+     * @param invalidBlockNonces List of invalid blocks
+     * @param finalizersHash The finalizers hash
+     * @param finalizers List of finalizers
+     * @param salt The salt
+     * @param expiry Signature expiry
+     * @param multiSignature The signature
      */
     function finalize(
         uint256 remoteChainId,
@@ -544,9 +660,15 @@ contract QuantumPortalLedgerMgr is
         );
 
     /**
-     @notice Will call doFinalize if the minimum number of signatures are received
-     @param remoteChainId The remote chain ID. For chain that we need to finalized mined blocks
-     @param blockNonce The nonce for the last block to be finalized
+     * @notice Will call doFinalize if the minimum number of signatures are received
+     * @param remoteChainId The remote chain ID
+     * @param blockNonce The block nonce
+     * @param invalidBlockNonces The list of invalid blocks
+     * @param finalizersHash The finalizers hash
+     * @param finalizers List of finalizers
+     * @param salt The salt
+     * @param expiry Signature expiry
+     * @param multiSignature The signature
      */
     function finalizeSingleSigner(
         uint256 remoteChainId,
@@ -596,23 +718,15 @@ contract QuantumPortalLedgerMgr is
         }
     }
 
-    event FinalizedBlock(
-        uint256 remoteChainId,
-        uint256 blockNonce,
-        uint256 timestamp
-    );
-    event FinalizedInvalidBlock(
-        uint256 remoteChainId,
-        uint256 blockNonce,
-        uint256 timestamp
-    );
-    event FinalizedSnapshot(
-        uint256 remoteChainId,
-        uint256 startBlockNonce,
-        uint256 endBlockNonce,
-        address[] finalizers
-    );
 
+    /**
+     * @notice Execute the finalization
+     * @param remoteChainId The remote chain ID
+     * @param blockNonce The block nonce
+     * @param invalidNoncesOrdered List of invalid blocks. Must be ordered
+     * @param finalizersHash Hash of finalizers
+     * @param finalizers List of finalizers
+     */
     function doFinalize(
         uint256 remoteChainId,
         uint256 blockNonce,
@@ -698,6 +812,17 @@ contract QuantumPortalLedgerMgr is
         );
     }
 
+    /**
+     * @notice Do the finalization in a loop
+     * @param remoteChainId The remote chain ID
+     * @param fromNonce The starting nonce
+     * @param toNonce The ending nonce
+     * @param invalids List of invalid blocks
+     * @param finalizersHash The finalizers hash
+     * @param finalizedKey The key of finalized block
+     * @return totalMinedWork Total mined work
+     * @return totalVarWork Total variable work
+     */
     function doFinalizeLoop(
         uint256 remoteChainId,
         uint256 fromNonce,
@@ -751,7 +876,9 @@ contract QuantumPortalLedgerMgr is
     }
 
     /**
-     @notice Returns the block idx
+     * @notice Gets the block index
+     * @param chainId The chain ID
+     * @param nonce The nonce
      */
     function getBlockIdx(
         uint64 chainId,
@@ -824,6 +951,10 @@ contract QuantumPortalLedgerMgr is
         qp.clearContext();
     }
 
+    /**
+     * @notice Rejects the block
+     * @param key Block key
+     */
     function rejectBlock(uint256 key) internal returns (uint256 totalMineWork) {
         state.setMinedBlockAsInvalid(key);
         IQuantumPortalLedgerMgr.MinedBlock memory b = state.getMinedBlock(key);
@@ -844,13 +975,18 @@ contract QuantumPortalLedgerMgr is
             console.log("Gas provided in eth: ", t.gas, txGas);
             txGas = txGas / tx.gasprice;
             console.log("Gas limit provided", txGas);
-            qp.rejectRemoteTransaction(b.blockMetadata.chainId, t, txGas);
+            qp.rejectRemoteTransaction(b.blockMetadata.chainId, t);
             // TODO: Refund extra gas based on the ratio of gas used vs gas provided.
             // Need to convert the base gas to FRM first, and reduce the base fee.
         }
         qp.clearContext();
     }
 
+    /**
+     * @notice Processes a fraud proof
+     * @param t The fraud proof transaction
+     * @param sourceChainId The source chain ID
+     */
     function processFraudProof(
         QuantumPortalLib.RemoteTransaction memory t,
         uint64 sourceChainId
@@ -887,7 +1023,9 @@ contract QuantumPortalLedgerMgr is
     }
 
     /**
-     @notice Save gas by packing a multidic key into one key
+     * @notice Save gas by packing a multidic key into one key
+     * @param chainId The chain ID
+     * @param nonce The nonce
      */
     function blockIdx(
         uint64 chainId,
@@ -919,7 +1057,8 @@ contract QuantumPortalLedgerMgr is
     }
 
     /**
-     @notice Identifies if we are ready for a new block
+     * @notice Identifies if we are ready for a new block
+     * @param b The block
      */
     function _isLocalBlockReady(
         QuantumPortalLib.Block memory b
@@ -928,7 +1067,10 @@ contract QuantumPortalLedgerMgr is
     }
 
     /**
-     @notice Returns a unique block hash.
+     * @notice Returns a unique block hash.
+     * @param remoteChainId The remote chain ID
+     * @param blockNonce The block nonce
+     * @param transactions List of transactions
      */
     function _calculateBlockHash(
         uint64 remoteChainId,
@@ -938,6 +1080,10 @@ contract QuantumPortalLedgerMgr is
         return keccak256(abi.encode(remoteChainId, blockNonce, transactions));
     }
 
+    /**
+     * @notice Calcualtes the transaction value
+     * @param transaction The transaction
+     */
     function _transactionValue(
         QuantumPortalLib.RemoteTransaction memory transaction
     ) private view returns (uint256 value) {

@@ -2,30 +2,40 @@
 pragma solidity ^0.8.0;
 
 import "./IQuantumPortalLedgerMgr.sol";
+import "./ICanEstimateGas.sol";
 import "foundry-contracts/contracts/common/WithAdmin.sol";
 import "./QuantumPortalLib.sol";
 import "./QuantumPortalState.sol";
 
 import "hardhat/console.sol";
 
-interface CanEstimateGas {
-    function executeTxAndRevertToEstimateGas(
-        address addr,
-        bytes memory method
-    ) external;
-}
+/**
+ * @notice Basis of the QP logic for interacting with multi-chain dApps
+ *     and providing relevant execution context to them
+ */
+contract PortalLedger is WithAdmin, ICanEstimateGas {
+    event RemoteTransfer(
+        uint256 chainId,
+        address token,
+        address from,
+        address to,
+        uint256 amount
+    );
 
-contract PortalLedger is WithAdmin {
     event ExecutionReverted(
         uint256 remoteChainId,
         address localContract,
         bytes32 revertReason
     );
+
     address public mgr;
     QuantumPortalState public state;
     QuantumPortalLib.Context public context;
     uint256 internal immutable CHAIN_ID; // To support override
 
+    /**
+     * @notice Can only be called by ledger manager
+     */
     modifier onlyMgr() {
         require(msg.sender == mgr, "PL: Not allowed");
         _;
@@ -35,18 +45,12 @@ contract PortalLedger is WithAdmin {
         CHAIN_ID = overrideChainId == 0 ? block.chainid : overrideChainId;
     }
 
-    event RemoteTransfer(
-        uint256 chainId,
-        address token,
-        address from,
-        address to,
-        uint256 amount
-    );
-
     /**
-     @notice Executes a transaction within a remote block context
-     @param blockIndex The block index
-     @param t The remote transaction
+     @notice Restricted: Executes a transaction within a remote block context
+     * @param blockIndex The index of tx in the block
+     * @param b The block
+     * @param t The transaction
+     * @param gas Gas left for execution
      */
     function executeRemoteTransaction(
         uint256 blockIndex,
@@ -99,7 +103,6 @@ contract PortalLedger is WithAdmin {
             bool success = callRemoteMethod(
                 b.chainId,
                 t.remoteContract,
-                t.remoteContract,
                 t.method,
                 gas
             );
@@ -137,16 +140,19 @@ contract PortalLedger is WithAdmin {
         console.log("gas used? ", postGas);
     }
 
+    /**
+     * @notice Restricted: Reject a remote tx and refunds the value
+     * @param sourceChainId The source chain ID
+     * @param t The remote transaction
+     */
     function rejectRemoteTransaction(
         uint256 sourceChainId,
-        QuantumPortalLib.RemoteTransaction memory t,
-        uint256 gas
+        QuantumPortalLib.RemoteTransaction memory t
     ) external onlyMgr returns (uint256 gasUsed) {
         uint preGas = gasleft();
         console.log("REJECTING...", preGas);
         console.log("AMOUNT", t.amount);
         console.log("REMOTE CONTRACT", t.remoteContract);
-        console.log("USING GAS", gas);
 
         //Refund the remote value to the beneficiary
         if (t.amount != 0) {
@@ -167,6 +173,17 @@ contract PortalLedger is WithAdmin {
         console.log("gas used? ", postGas);
     }
 
+    /**
+     * @notice Estimates gas for remote transaction by simulating then rejecting
+     *    a transaction
+     * @param remoteChainId The remote chain ID
+     * @param sourceMsgSender Source msg sender (source contract)
+     * @param remoteContract The contract address on remote chain (this chain)
+     * @param beneficiary The beneficiary of the transaction
+     * @param method Encoded abi encoded method and parameters to be executed
+     * @param token The token on the source chain for value
+     * @param amount The amount sent on the source chain
+     */
     function estimateGasForRemoteTransaction(
         uint256 remoteChainId,
         address sourceMsgSender,
@@ -208,7 +225,7 @@ contract PortalLedger is WithAdmin {
         // This call will revert after execution but the tx should go through, hence enabling gas estimation
         address(this).call(
             abi.encodeWithSelector(
-                CanEstimateGas.executeTxAndRevertToEstimateGas.selector,
+                ICanEstimateGas.executeTxAndRevertToEstimateGas.selector,
                 t.remoteContract,
                 t.method
             )
@@ -216,14 +233,13 @@ contract PortalLedger is WithAdmin {
         resetContext();
     }
 
-    function executeTxAndRevertToEstimateGas(
-        address addr,
-        bytes memory method
-    ) public {
-        addr.call(method);
-        revert();
-    }
-
+    /**
+     * @notice Returns the remote balance for an address
+     * @param chainId The chain ID
+     * @param token The remote token address
+     * @param addr The address under query
+     * @return The remote balance
+     */
     function remoteBalanceOf(
         uint256 chainId,
         address token,
@@ -236,17 +252,29 @@ contract PortalLedger is WithAdmin {
         return state.getRemoteBalances(chainId, token, addr);
     }
 
+    /**
+     * @notice Restricted: Resets the context
+     */
     function clearContext() external onlyMgr {
         delete context.blockMetadata;
         delete context.transaction;
         delete context;
     }
 
+    /**
+     * @notice Restricted: sets the manager
+     * @param _mgr The ledger manager
+     * @param _state The state contract
+     */
     function setManager(address _mgr, address _state) external onlyAdmin {
         mgr = _mgr;
         state = QuantumPortalState(_state);
     }
 
+    /**
+     * @notice Reverts remote balance to refund the value in case of a failure
+     * @param _context The context
+     */
     function revertRemoteBalance(
         QuantumPortalLib.Context memory _context
     ) internal {
@@ -263,32 +291,23 @@ contract PortalLedger is WithAdmin {
         );
     }
 
-    function callRemoteMethod(
-        uint256 remoteChainId,
-        address localContract,
+    /**
+     * @inheritdoc ICanEstimateGas
+     */
+    function executeTxAndRevertToEstimateGas(
         address addr,
-        bytes memory method,
-        uint256 gas
-    ) private returns (bool success) {
-        if (method.length == 0) {
-            return true;
-        }
-        // TODO: What happens if addr does not exist or is an address
-        // TODO: Include gas properly, and catch the proper error when there is not enough gas
-        bytes memory data;
-        console.log("CALLING ", addr);
-        (success, data) = addr.call{gas: gas}(method);
-        // (success, data) = addr.call(method);
-        if (!success) {
-            bytes32 revertReason = extractRevertReasonSingleBytes32(data);
-            console.log("CALL TO CONTRACT FAILED");
-            console.logBytes32(revertReason);
-            emit ExecutionReverted(remoteChainId, localContract, revertReason);
-        }
+        bytes memory method
+    ) public override {
+        addr.call(method);
+        revert();
     }
 
     /**
-     @notice extracts the revert reason. First bytes32
+     * @notice extracts the revert reason. First bytes32
+     * @param revertData The revert data. This will be hex encoded
+     *     Use this python code to parse it into human readable text:
+     *     `bytes.fromhex(hex_string).decode('utf-8')
+     * @return reason The frist 32 bytes of the hex-encoded error message
      */
     function extractRevertReasonSingleBytes32(
         bytes memory revertData
@@ -338,6 +357,39 @@ contract PortalLedger is WithAdmin {
         }
     }
 
+    /**
+     * @notice Call the remote method on this chain
+     * @param remoteChainId The remote chain ID
+     * @param localContract The local contract address
+     * @param method The abi-encoded method call
+     * @param gas The gas available for execution
+     */
+    function callRemoteMethod(
+        uint256 remoteChainId,
+        address localContract,
+        bytes memory method,
+        uint256 gas
+    ) private returns (bool success) {
+        if (method.length == 0) {
+            return true;
+        }
+        // TODO: What happens if addr does not exist or is an address
+        // TODO: Include gas properly, and catch the proper error when there is not enough gas
+        bytes memory data;
+        console.log("CALLING ", localContract);
+        (success, data) = localContract.call{gas: gas}(method);
+        // (success, data) = addr.call(method);
+        if (!success) {
+            bytes32 revertReason = extractRevertReasonSingleBytes32(data);
+            console.log("CALL TO CONTRACT FAILED");
+            console.logBytes32(revertReason);
+            emit ExecutionReverted(remoteChainId, localContract, revertReason);
+        }
+    }
+
+    /**
+     * @notice Resets a context
+     */
     function resetContext() private {
         delete context;
     }
