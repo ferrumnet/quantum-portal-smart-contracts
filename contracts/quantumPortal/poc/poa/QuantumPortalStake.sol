@@ -99,15 +99,15 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
      * This is to ensure withdrawers are also penalized at the same rate.
      * @param user The user to be slashed
      * @param amount The amount of slash
-     * @param expiry Signature expiry
      * @param salt A unique salt
+     * @param expiry Signature expiry
      * @param multiSignature The signatrue
      */
     function slashUser(
         address user,
         uint256 amount,
-        uint64 expiry,
         bytes32 salt,
+        uint64 expiry,
         bytes memory multiSignature
     ) external returns (uint256) {
         bytes32 message = keccak256(abi.encode(SLASH_STAKE, user, amount));

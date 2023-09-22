@@ -520,8 +520,8 @@ contract QuantumPortalLedgerMgr is
                 address miner
             ) = IQuantumPortalMinerMgr(minerMgr).verifyMinerSignature(
                     blockHash,
-                    expiry,
                     salt,
+                    expiry,
                     multiSignature,
                     totalValue,
                     minerMinimumStake
@@ -1006,7 +1006,7 @@ contract QuantumPortalLedgerMgr is
             // Block is indeed mined
             // First extract the miner address from the signature
             address fradulentMiner = IQuantumPortalMinerMgr(minerMgr)
-                .extractMinerAddress(b.blockHash, expiry, salt, multiSignature);
+                .extractMinerAddress(b.blockHash, salt, expiry, multiSignature);
 
             // TODO:
             // Slash fradulent miner's funds

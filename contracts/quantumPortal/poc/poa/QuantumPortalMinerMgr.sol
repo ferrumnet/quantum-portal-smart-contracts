@@ -86,11 +86,11 @@ contract QuantumPortalMinerMgr is
      */
     function extractMinerAddress(
         bytes32 msgHash,
-        uint64 expiry,
         bytes32 salt,
+        uint64 expiry,
         bytes memory multiSig
     ) external view override returns (address) {
-        return _extractMinerAddress(msgHash, expiry, salt, multiSig);
+        return _extractMinerAddress(msgHash, salt, expiry, multiSig);
     }
 
     /**
@@ -98,8 +98,8 @@ contract QuantumPortalMinerMgr is
      */
     function verifyMinerSignature(
         bytes32 msgHash,
-        uint64 expiry,
         bytes32 salt,
+        uint64 expiry,
         bytes memory multiSig,
         uint256 /*msgValue*/,
         uint256 minStakeAllowed
@@ -111,7 +111,7 @@ contract QuantumPortalMinerMgr is
         // add the value to miners validation history.
         // such that a miner has not limit-per-transaction
         // but limit per other things.
-        signer = verifySignature(msgHash, expiry, salt, multiSig);
+        signer = verifySignature(msgHash, salt, expiry, multiSig);
         require(signer != address(0), "QPMM: invalid signature");
         console.log("Signer is ?", signer);
         uint256 stake = IQuantumPortalStake(miningStake).delegatedStakeOf(
@@ -144,14 +144,14 @@ contract QuantumPortalMinerMgr is
     /**
      * @notice Vrify miner signature
      * @param msgHash The message hash
-     * @param expiry The expiry
      * @param salt The salt
+     * @param expiry The expiry
      * @param multiSig The multi signature
      */
     function verifySignature(
         bytes32 msgHash,
-        uint64 expiry,
         bytes32 salt,
+        uint64 expiry,
         bytes memory multiSig
     ) internal view returns (address) {
         console.log("EXPIRY IS", expiry);
@@ -160,7 +160,7 @@ contract QuantumPortalMinerMgr is
         require(block.timestamp < expiry, "CR: signature timed out");
         require(expiry < block.timestamp + WEEK, "CR: expiry too far");
         require(salt != 0, "MSC: salt required");
-        address _signer = _extractMinerAddress(msgHash, expiry, salt, multiSig);
+        address _signer = _extractMinerAddress(msgHash, salt, expiry, multiSig);
         require(_signer != address(0), "QPMM: wrong number of signatures");
         return _signer;
     }
@@ -194,14 +194,14 @@ contract QuantumPortalMinerMgr is
     /**
      * @notice Extract miner address from the signature
      * @param msgHash The block hash
-     * @param expiry The expiry
      * @param salt The salt
+     * @param expiry The expiry
      * @param multiSig The multi sig
      */
     function _extractMinerAddress(
         bytes32 msgHash,
-        uint64 expiry,
         bytes32 salt,
+        uint64 expiry,
         bytes memory multiSig
     ) internal view returns (address) {
         bytes32 message = keccak256(

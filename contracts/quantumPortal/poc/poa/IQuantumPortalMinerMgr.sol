@@ -16,23 +16,23 @@ interface IQuantumPortalMinerMgr {
     /**
      * @notice Extract the miner address from a block
      * @param msgHash The block hash
-     * @param expiry signature expiry
      * @param salt The unique salt
+     * @param expiry signature expiry
      * @param multiSig The multisig
      * @return Miner address or zero
      */
     function extractMinerAddress(
         bytes32 msgHash,
-        uint64 expiry,
         bytes32 salt,
+        uint64 expiry,
         bytes memory multiSig
     ) external view returns (address);
 
     /**
      * @notice Verify if the signature is valid and return miner address
      * @param msgHash The block hash
-     * @param expiry signature expiry
      * @param salt The unique salt
+     * @param expiry signature expiry
      * @param signature The multisig
      * @param msgValue The value included in the message
      * @param minStakeAllowed Allowed minimum stake
@@ -41,8 +41,8 @@ interface IQuantumPortalMinerMgr {
      */
     function verifyMinerSignature(
         bytes32 msgHash,
-        uint64 expiry,
         bytes32 salt,
+        uint64 expiry,
         bytes memory signature,
         uint256 msgValue,
         uint256 minStakeAllowed
