@@ -1,8 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+/**
+ * @notice Helper library for QP contracts
+ */
 library QuantumPortalLib {
     address constant FRAUD_PROOF = 0x00000000000000000000000000000000000f4a0D;
+
     struct RemoteBalance {
         uint64 remoteChainId;
         address remoteAddress;
@@ -35,8 +39,17 @@ library QuantumPortalLib {
         uint256 uncommitedBalance; // Balance for transaction.token
     }
 
-    function txEquals(RemoteTransaction memory t1, RemoteTransaction memory t2) internal pure returns (bool) {
-        return t1.timestamp == t2.timestamp &&
+    /**
+     * @notice Compares equality of two transactions
+     * @param t1 First transaction
+     * @param t2 Second transaction
+     */
+    function txEquals(
+        RemoteTransaction memory t1,
+        RemoteTransaction memory t2
+    ) internal pure returns (bool) {
+        return
+            t1.timestamp == t2.timestamp &&
             t1.remoteContract == t2.remoteContract &&
             t1.sourceMsgSender == t2.sourceMsgSender &&
             t1.sourceBeneficiary == t2.sourceBeneficiary &&
