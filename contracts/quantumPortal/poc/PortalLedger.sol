@@ -63,7 +63,7 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
         console.log("AMOUNT", t.amount);
         console.log("REMOTE CONTRACT", t.remoteContract);
         console.log("USING GAS", gas);
-        if (t.method.length == 0) {
+        if (t.methods.length == 0) {
             // This is a withdraw tx. There is no remote balance to be updated.
             // I.e. when the remote contract creates decides to pay out,
             // it reduces the remote balance for itself, and generates a withdraw tx
@@ -103,7 +103,7 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
             bool success = callRemoteMethod(
                 b.chainId,
                 t.remoteContract,
-                t.method,
+                t.methods[0], // methods[0] is the call method.
                 gas
             );
             if (success) {
@@ -193,6 +193,8 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
         address token,
         uint256 amount
     ) external {
+        bytes[] memory methods = new bytes[](1);
+        methods[0] = method;
         QuantumPortalLib.RemoteTransaction memory t = QuantumPortalLib
             .RemoteTransaction({
                 timestamp: uint64(block.timestamp),
@@ -201,7 +203,7 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
                 sourceBeneficiary: beneficiary,
                 token: token,
                 amount: amount,
-                method: method,
+                methods: method.length != 0 ? methods : new bytes[](0),
                 gas: 0,
                 fixedFee: 0
             });
@@ -227,7 +229,7 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
             abi.encodeWithSelector(
                 ICanEstimateGas.executeTxAndRevertToEstimateGas.selector,
                 t.remoteContract,
-                t.method
+                t.methods[0]
             )
         );
         resetContext();
