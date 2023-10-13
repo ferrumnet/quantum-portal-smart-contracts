@@ -1,11 +1,7 @@
 import { ethers } from "ethers";
 import { QuantumPortalLedgerMgr } from "../../../typechain/QuantumPortalLedgerMgr";
-import { QuantumPortalPoc } from "../../../typechain/QuantumPortalPoc";
-import { QuantumPortalPoc__factory } from '../../../typechain/factories/QuantumPortalPoc__factory';
 import { QuantumPortalLedgerMgr__factory } from '../../../typechain/factories/QuantumPortalLedgerMgr__factory';
 import { QuantumPortalUtils } from "../../../test/quantumPortal/poc/QuantumPortalUtils";
-import { ethers as hardhatEthers } from "hardhat";
-import { panick, sleep } from "../../../test/common/Utils";
 
 const getEnv = (env: string) => {
 	const value = process.env[env];
@@ -53,12 +49,16 @@ class PairMiner {
         const chain2 = this.provider2.network.chainId;
         console.log(`Mining from ${chain1} -> ${chain2}`);
         // Try to finalize if any
-        await QuantumPortalUtils.finalize(chain1, this.portal2.mgr as any);
+        let authorityMgr = "0xA8900b24cf4284d9017C9Ee976C294b623fB07c8";
+        let signer_addresses = [getEnv("OWNER")];
+        let signer_pk = getEnv("TEST_ACCOUNT_PRIVATE_KEY");
+        await QuantumPortalUtils.finalize(chain1, this.portal2.mgr as any, signer_pk);
         if (await QuantumPortalUtils.mine(
             chain1,
             chain2,
             this.portal1.mgr as any,
             this.portal2.mgr as any,
+            signer_pk,
         )) {
             console.log(`Mined!`)
         } else {
@@ -74,7 +74,7 @@ async function main() {
     // and 2 -> 1
     const chain1 = getEnv("BSC_TESTNET_LIVE_NETWORK");
     const frm = getEnv("POLYGON_TEST_NETWORK");
-    const mgr = '0xcfeAFD9Fa0D42114597Ca78C6943aE8fEC8ddD42';
+    const mgr = '0x7Ae040f581bAc2876A2D32Fa4b8f668F029e04CD';
     const pair1 = new PairMiner(frm, chain1, mgr, mgr);
     await pair1.init();
     console.log('FRM Poc -> Chain1');

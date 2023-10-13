@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 import "../IQuantumPortalPoc.sol";
-import "../IQuantumPortalFeeManager.sol";
 import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
 import "foundry-contracts/contracts/token/ERC20/ERC20.sol";
 import "foundry-contracts/contracts/common/SafeAmount.sol";
@@ -21,72 +20,116 @@ import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
  */
 contract MultiChainStakingMaster is MultiChainMasterBase {
     // Staking related state
-    mapping (uint256 => address) public baseTokens; // Token address for each chain
-    mapping (uint256 => mapping (address => uint256)) public stakes; // User address (chin+addr) => stake
     address rewardToken;
+    mapping(uint256 => address) public baseTokens; // Token address for each chain
+    mapping(uint256 => mapping(address => uint256)) public stakes; // User address (chin+addr) => stake
     uint256 public totalRewards; // Total rewards
     uint256 public totalStakes; // Total stakes
     bool public stakeClosed; // A flag to set when the staking is closed. Set this only on master chain
     bool public distributeRewards; // A flag to set when we are ready to distribute rewards. Only on master chain
 
+    /**
+     * @notice Owner can call to close the staking period
+     */
     function closeStakePeriod() external onlyOwner {
         stakeClosed = true;
     }
 
+    /**
+     * @notice Owner can call to enable reward distribution
+     */
     function enableRewardDistribution() external onlyOwner {
         distributeRewards = true;
     }
 
+    /**
+     * @notice Owner can call to set the reward token
+     * @param _rewardToken Ther reward token
+     */
     function setRewardToken(address _rewardToken) external onlyOwner {
         rewardToken = _rewardToken;
     }
 
+    /**
+     * @notice Owner can call to initialize the master contract
+     * @param remoteChainIds Remote chain IDs
+     * @param stakingContracts Remote staking contracts
+     * @param _baseTokens Remote base tokens
+     */
     function init(
         uint256[] calldata remoteChainIds,
         address[] calldata stakingContracts,
         address[] calldata _baseTokens
-    ) onlyOwner external{
-        for (uint i=0; i < remoteChainIds.length; i++) {
+    ) external onlyOwner {
+        for (uint i = 0; i < remoteChainIds.length; i++) {
             remotes[remoteChainIds[i]] = stakingContracts[i];
             baseTokens[remoteChainIds[i]] = _baseTokens[i];
         }
     }
 
     /**
-     @notice UI should check the master chain to make sure staking period is open. Otherwise the x-chain transaction will fail.
-     */
+    * @notice UI should check the master chain to make sure staking period is open.
+    *    Otherwise the x-chain transaction will fail. There is no remote staking here
+    *    because this method is on the master.
+    * @param amount The amount to stake.
+    */
     function stake(uint256 amount) external nonReentrant {
-        amount = SafeAmount.safeTransferFrom(baseTokens[CHAIN_ID], msg.sender, address(this), amount);
+        amount = SafeAmount.safeTransferFrom(
+            baseTokens[CHAIN_ID],
+            msg.sender,
+            address(this),
+            amount
+        );
         require(amount != 0, "No stake");
         doStake(CHAIN_ID, msg.sender, amount);
     }
 
     /**
-     @notice To be called by QP
+     * @notice This is our entry point for a multi-chain call. We limit execution of this method
+     * to only QP router, and validate that the caller is the expected trusted contract on the 
+     * remote chain.
      */
     function stakeRemote() external {
-        (uint netId, address sourceMsgSender, address beneficiary) = portal.msgSender();
-        require(sourceMsgSender == remotes[netId], "Not allowed");
-        QuantumPortalLib.RemoteTransaction memory _tx = portal.txContext().transaction;
+        (uint netId, address sourceMsgSender, address beneficiary) = portal
+            .msgSender();
+        require(sourceMsgSender == remotes[netId], "Not allowed"); // Caller must be a valid pre-configured remote.
+        QuantumPortalLib.RemoteTransaction memory _tx = portal
+            .txContext()
+            .transaction;
         require(_tx.token == baseTokens[netId], "Unexpected token");
         doStake(netId, beneficiary, _tx.amount);
     }
 
+    /**
+     * @notice Do the stake
+     * @param chainId The chain DI
+     * @param staker The staker
+     * @param amount The amount
+     */
     function doStake(uint256 chainId, address staker, uint256 amount) internal {
         require(!stakeClosed && !distributeRewards, "Stake closed");
         stakes[chainId][staker] += amount;
         totalStakes += amount;
     }
-    
+
+    /**
+     * @notice Add rewards
+     * @param amount The amount
+     */
     function addRewards(uint256 amount) external nonReentrant {
         require(!distributeRewards, "Already distributed/(ing) rewards");
-        amount = SafeAmount.safeTransferFrom(rewardToken, msg.sender, address(this), amount);
+        amount = SafeAmount.safeTransferFrom(
+            rewardToken,
+            msg.sender,
+            address(this),
+            amount
+        );
         require(amount != 0, "No rewards");
         totalRewards += amount;
     }
 
     /**
-     @notice For simplicity, we assume user has same address for all chains
+     * @notice Close the position. For simplicity, we assume user has same address for all chains
      */
     function closePosition(uint256 fee, uint256 chainId) external {
         require(distributeRewards, "Not ready to distribute rewards");
@@ -97,11 +140,18 @@ contract MultiChainStakingMaster is MultiChainMasterBase {
         }
     }
 
-    function remoteAddress(uint256 chainId) public view returns(address rv) {
+    /**
+     * @notice Get the remote address.
+     * @param chainId The chain ID
+     */
+    function remoteAddress(uint256 chainId) public view returns (address rv) {
         rv = remotes[chainId];
         rv = rv == address(0) ? address(this) : rv;
     }
 
+    /**
+     * @notice Close the position on the master chain
+     */
     function closePositionLocal() internal {
         uint256 staked = stakes[CHAIN_ID][msg.sender];
         uint256 reward = calcReward(staked);
@@ -110,8 +160,13 @@ contract MultiChainStakingMaster is MultiChainMasterBase {
         IERC20(baseTokens[CHAIN_ID]).transfer(msg.sender, staked);
         // Transfer rewards
         IERC20(rewardToken).transfer(msg.sender, reward);
-     }
+    }
 
+    /**
+     * @notice Closes the position on the remote chain. This is a mult-chain transaction
+     * @param fee The fee for x-chain tx
+     * @param chainId The remote chain ID
+     */
     function closePositionRemote(uint256 fee, uint256 chainId) internal {
         uint256 staked = stakes[chainId][msg.sender];
         uint256 reward = calcReward(staked);
@@ -120,9 +175,17 @@ contract MultiChainStakingMaster is MultiChainMasterBase {
         IERC20(rewardToken).transfer(msg.sender, reward);
         // This should initiate a withdaw on the remote side...
         portal.runWithdraw(
-            fee, uint64(chainId), msg.sender, baseTokens[chainId], staked);
+            uint64(chainId),
+            msg.sender,
+            baseTokens[chainId],
+            staked
+        );
     }
 
+    /**
+     * @notice Calculates the reward
+     * @param stakeAmount The stake amount
+     */
     function calcReward(uint256 stakeAmount) private view returns (uint256) {
         return FullMath.mulDiv(stakeAmount, totalRewards, totalStakes);
     }
@@ -133,9 +196,24 @@ contract MultiChainStakingClient is MultiChainClientBase {
      @notice It is up to UI to make sure the token is correct. Otherwise the tx will fail.
      */
     function stake(address token, uint256 amount, uint256 fee) external {
-        require(SafeAmount.safeTransferFrom(token, msg.sender, address(portal), amount) != 0, "Nothing transferred");
-        bytes memory method = abi.encodeWithSelector(MultiChainStakingMaster.stakeRemote.selector);
+        require(
+            SafeAmount.safeTransferFrom(
+                token,
+                msg.sender,
+                address(portal),
+                amount
+            ) != 0,
+            "Nothing transferred"
+        );
+        bytes memory method = abi.encodeWithSelector(
+            MultiChainStakingMaster.stakeRemote.selector
+        );
         portal.runWithValue(
-            fee, uint64(MASTER_CHAIN_ID), masterContract, msg.sender, token, method);
+            uint64(MASTER_CHAIN_ID),
+            masterContract,
+            msg.sender,
+            token,
+            method
+        );
     }
 }

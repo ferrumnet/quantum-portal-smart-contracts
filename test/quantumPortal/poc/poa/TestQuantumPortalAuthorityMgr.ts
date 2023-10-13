@@ -1,5 +1,5 @@
 import { ethers } from "hardhat";
-import { QuantumPortalAuthorityMgr } from "../../../../typechain/QuantumPortalAuthorityMgr";
+import { QuantumPortalAuthorityMgr } from "../../../../typechain-types/QuantumPortalAuthorityMgr";
 import { randomSalt, getBridgeMethodCall } from "foundry-contracts/dist/test/common/Eip712Utils";
 import { expiryInFuture, getCtx } from 'foundry-contracts/dist/test/common/Utils';
 import { TestContext } from "../../../common/Utils";

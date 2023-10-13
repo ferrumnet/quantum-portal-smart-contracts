@@ -1,9 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+
 import "../../staking/library/TokenReceivable.sol";
 
 contract QuantumPortalFeeManager is TokenReceivable {
-    
     /**
      @notice Makes sure the msg.sender is the portal
      */
@@ -21,14 +21,10 @@ contract QuantumPortalFeeManager is TokenReceivable {
     /**
      @notice Deposits fee for the caller
      */
-    function depositFee(address caller) external {
-
-    }
+    function depositFee(address caller) external {}
 
     /**
      @notice Takes back deposited fees
      */
-    function withdrawFees() external {
-
-    }
+    function withdrawFees() external {}
 }

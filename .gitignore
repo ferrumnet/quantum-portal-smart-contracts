@@ -112,3 +112,4 @@ typechain
 .openzeppelin
 .DS_Store
 typechain-types
+localConfig
