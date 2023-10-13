@@ -17,24 +17,24 @@ interface IQuantumPortalWorkPoolServer {
 
     /**
      * @notice Withdraw fixed fees from the remote chain
-     * @param worker The worker who needs to be paid
+     * @param to Address to receive the withdrew funds
      * @param workRatioX128 Ratio of the total work by the worker
      * @param epoch Last work epoch
      */
     function withdrawFixedRemote(
-        address worker,
+        address to,
         uint256 workRatioX128,
         uint256 epoch
     ) external;
 
     /**
      * @notice Withdraw variable fees from the remote chain
-     * @param worker The worker who needs to be paid
+     * @param to Address to receive the withdrew funds
      * @param workRatioX128 Ratio of the total work by the worker
      * @param epoch Last work epoch
      */
     function withdrawVariableRemote(
-        address worker,
+        address to,
         uint256 workRatioX128,
         uint256 epoch
     ) external;

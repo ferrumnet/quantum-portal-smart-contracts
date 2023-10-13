@@ -55,12 +55,15 @@ abstract contract QuantumPortalWorkPoolServer is
         collectedVarFee[targetChainId] += varFee;
     }
 
+    /**
+     * @inheritdoc IQuantumPortalWorkPoolServer
+     */
     function withdrawFixedRemote(
-        address worker,
+        address to,
         uint256 workRatioX128,
         uint256 epoch
     ) external override {
-        console.log("WITHDRAW_FIXED_REMOTE", worker);
+        console.log("WITHDRAW_FIXED_REMOTE", to);
         console.log("workRatio", workRatioX128);
         console.log("epoch", epoch);
         (uint256 remoteChainId, uint256 lastLocalEpoch) = withdrawRemote(epoch);
@@ -76,15 +79,15 @@ abstract contract QuantumPortalWorkPoolServer is
         );
         amount = amount;
         collectedFixedFee[remoteChainId] -= amount;
-        console.log("WITHDRAW CALLED HERE", worker, amount);
-        sendToken(baseToken, worker, amount);
+        console.log("WITHDRAW CALLED HERE", to, amount);
+        sendToken(baseToken, to, amount);
     }
 
     /**
      * @inheritdoc IQuantumPortalWorkPoolServer
      */
     function withdrawVariableRemote(
-        address worker,
+        address to,
         uint256 workRatioX128,
         uint256 epoch
     ) external override {
@@ -100,7 +103,7 @@ abstract contract QuantumPortalWorkPoolServer is
             FixedPoint128.Q128
         );
         collectedVarFee[remoteChainId] -= amount;
-        sendToken(baseToken, worker, amount);
+        sendToken(baseToken, to, amount);
     }
 
     /**

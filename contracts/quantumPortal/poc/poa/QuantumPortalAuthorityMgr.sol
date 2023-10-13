@@ -173,13 +173,15 @@ contract QuantumPortalAuthorityMgr is
     /**
      * @notice Withdraw fees collected for the validator on the remote chain
      * @param remoteChain The remote chain
+     * @param to The address to receive funds
      * @param worker The worker
      * @param fee The fee
      */
-    function withdraw(uint256 remoteChain, address worker, uint fee) external {
+    function withdraw(uint256 remoteChain, address to, address worker, uint fee) external {
         withdraw(
             IQuantumPortalWorkPoolServer.withdrawVariableRemote.selector,
             remoteChain,
+            to,
             worker,
             fee
         );

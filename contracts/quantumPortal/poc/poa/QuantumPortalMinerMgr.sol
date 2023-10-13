@@ -126,13 +126,15 @@ contract QuantumPortalMinerMgr is
     /**
      * @notice Withdraw miner rewards on the remote chain
      * @param remoteChain The remote chain ID
+     * @param to The address to receive funds
      * @param worker The miner address
      * @param fee The fee in FRM for the multi-chain transaction
      */
-    function withdraw(uint256 remoteChain, address worker, uint fee) external {
+    function withdraw(uint256 remoteChain, address to, address worker, uint fee) external {
         QuantumPortalWorkPoolClient.withdraw(
             IQuantumPortalWorkPoolServer.withdrawFixedRemote.selector,
             remoteChain,
+            to,
             worker,
             fee
         );

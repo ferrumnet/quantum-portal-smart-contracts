@@ -46,12 +46,14 @@ abstract contract QuantumPortalWorkPoolClient is
      * @notice Withdraw the rewards on the remote chain
      * @param selector The selector
      * @param remoteChain The remote
+     * @param to Send the rewards to
      * @param worker The worker
      * @param fee The multi-chain transaction fee
      */
     function withdraw(
         bytes4 selector,
         uint256 remoteChain,
+        address to,
         address worker,
         uint fee
     ) internal {
@@ -75,13 +77,13 @@ abstract contract QuantumPortalWorkPoolClient is
         uint256 epoch = remoteEpoch[remoteChain];
         bytes memory method = abi.encodeWithSelector(
             selector,
-            worker,
+            to,
             workRatioX128,
             epoch
         );
         address serverContract = remotes[remoteChain];
         console.log("ABOUT TO CALL REMOTE WITHDRAW", serverContract);
-        console.log("WORKER", worker);
+        console.log("WORKER", worker, to);
         console.log("WORKE RATIO", work, workRatioX128);
         console.log("EPOCH", epoch);
         portal.run(uint64(remoteChain), serverContract, msg.sender, method);
