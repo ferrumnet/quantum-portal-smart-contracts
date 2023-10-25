@@ -78,7 +78,7 @@ describe("Test qp", function () {
                     amount: tx.amount.toString(),
                     gas: tx.gas.toString(),
                     fixedFee: tx.fixedFee.toString(),
-                    method: tx.method.toString(),
+                    method: tx.methods[0].toString(),
                     remoteContract: tx.remoteContract.toString(),
                     sourceBeneficiary: tx.sourceBeneficiary.toString(),
                     sourceMsgSender: tx.sourceMsgSender.toString(),

@@ -252,6 +252,8 @@ contract QuantumPortalLedgerMgr is
         uint256 key = blockIdx(remoteChainId, b.nonce);
         uint256 fixedFee = _calculateFixedFee(remoteChainId, method.length);
         console.log("Fixed Fee is", fixedFee);
+        bytes[] memory methods = new bytes[](1);
+        methods[0] = method;
         QuantumPortalLib.RemoteTransaction memory remoteTx = QuantumPortalLib
             .RemoteTransaction({
                 timestamp: uint64(block.timestamp),
@@ -260,7 +262,7 @@ contract QuantumPortalLedgerMgr is
                 sourceBeneficiary: beneficiary,
                 token: token,
                 amount: amount,
-                method: method,
+                methods: method.length != 0 ? methods : new bytes[](0),
                 gas: 0,
                 fixedFee: fixedFee
             });
@@ -291,7 +293,7 @@ contract QuantumPortalLedgerMgr is
             remoteTx.sourceBeneficiary,
             remoteTx.token,
             remoteTx.amount,
-            remoteTx.method,
+            method,
             remoteTx.gas,
             remoteTx.fixedFee
         );
@@ -511,7 +513,9 @@ contract QuantumPortalLedgerMgr is
             uint256 totalSize = 0;
             for (uint i = 0; i < transactions.length; i++) {
                 totalValue += _transactionValue(transactions[i]);
-                totalSize += transactions[i].method.length;
+                for (uint j=0; j < transactions[i].methods.length; j++) {
+                    totalSize += transactions[i].methods[j].length;
+                }
             }
 
             // Validate miner
@@ -917,7 +921,10 @@ contract QuantumPortalLedgerMgr is
             .getMinedBlockTransactions(key);
         for (uint i = 0; i < transactions.length; i++) {
             QuantumPortalLib.RemoteTransaction memory t = transactions[i];
-            totalMineWork += FIX_TX_SIZE + t.method.length;
+            totalMineWork += FIX_TX_SIZE;
+            for (uint j=0; j<t.methods.length; j++) {
+                totalMineWork += t.methods[j].length;
+            }
             uint256 txGas = FullMath.mulDiv(
                 gasPrice,
                 t.gas,
@@ -965,7 +972,11 @@ contract QuantumPortalLedgerMgr is
             .getMinedBlockTransactions(key);
         for (uint i = 0; i < transactions.length; i++) {
             QuantumPortalLib.RemoteTransaction memory t = transactions[i];
-            totalMineWork += FIX_TX_SIZE + t.method.length + FIXED_REJECT_SIZE;
+            totalMineWork += FIX_TX_SIZE;
+            for (uint j=0; j < t.methods.length; j++) {
+                totalMineWork += t.methods[j].length;
+            }
+            totalMineWork += FIXED_REJECT_SIZE;
             uint256 txGas = FullMath.mulDiv(
                 gasPrice,
                 t.gas,
@@ -999,7 +1010,7 @@ contract QuantumPortalLedgerMgr is
             bytes32 salt,
             uint64 expiry,
             bytes memory multiSignature
-        ) = abi.decode(t.method, (bytes32, uint256, bytes32, uint64, bytes));
+        ) = abi.decode(t.methods[0], (bytes32, uint256, bytes32, uint64, bytes));
         uint256 key = blockIdx(sourceChainId, uint64(nonce));
         IQuantumPortalLedgerMgr.MinedBlock memory b = state.getMinedBlock(key);
         if (b.blockHash == blockHash) {
