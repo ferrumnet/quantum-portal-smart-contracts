@@ -44,10 +44,19 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool {
         address targetAddress,
         uint256 amount);
 
-    mapping(address => mapping(address => uint256)) private liquidities; // TODO: DATA_CHAIN only
+    enum withdrawItem {
+        uint32 sourceChainId
+        address token,
+        address payee,
+        uint256 amount,
+        address swapToToken,
+    }
+
+    mapping(address => WithdrawItem[]) public withdrawItems;
+    mapping(address => mapping(address => uint256)) public liquidities; // TODO: Move to DATA_CHAIN only, clients can request to change
     address public feeDistributor;
     address public router;
-    address public routingTable; // Locally managed. Move to centrally managed.
+    address public routingTable; 
 
     modifier onlyRouter() {
         require(msg.sender == router, "BP: Only router method");
@@ -89,7 +98,7 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool {
      */
 
     /**
-     @notice Generates a swap log
+     @notice Calls the swap method on the remote chain.
      @param to The receiver of the swap
      @param token The local token
      @param targetNetwork The target chain ID
@@ -119,10 +128,14 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool {
             );
     }
 
-    bytes32 constant WITHDRAW_SIGNED_METHOD =
-        keccak256(
-            "WithdrawSigned(address token,address payee,uint256 amount,address toToken,uint32 sourceChainId,bytes32 swapTxId)"
-        );
+    function withdraw(address payee) {
+        uint len = withdrawItems[payee].length;
+        for(uint i=len-1; i >= 0; i--) {
+            WithdrawItem memory item = withdrawItems[payee].pop();
+            _withdraw(item.token, payee, item.amount, item.swapToToken, item.sourceChainId);
+        }
+    }
+
     /**
      @notice Withdraw with signature
      @param token The token
@@ -133,33 +146,21 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool {
      @param swapTxId Te swap tx ID
      @param multiSignature The multisig validator signature
      */
-    function withdrawSigned(
+    function _withdraw(
         address token,
         address payee,
         uint256 amount,
         address swapToToken,
         uint32 sourceChainId,
-        bytes32 swapTxId,
-        bytes memory multiSignature
-    ) external override returns (uint256) {
+    ) internal returns (uint256) {
         require(token != address(0), "BP: bad token");
         require(payee != address(0), "BP: bad payee");
         require(amount != 0, "BP: bad amount");
-        require(swapTxId != 0, "BP: bad swapTxId");
         require(sourceChainId != 0, "BP: bad sourceChainId");
-        bytes32 message = withdrawSignedMessage(
-            token,
-            payee,
-            amount,
-            swapToToken,
-            sourceChainId,
-            swapTxId
-        );
         IBridgeRoutingTable.TokenWithdrawConfig
             memory conf = IBridgeRoutingTable(routingTable).withdrawConfig(
                 token
             );
-        verifyUniqueSalt(message, swapTxId, conf.groupId, multiSignature);
 
         uint256 fee = 0;
         address _feeDistributor = feeDistributor;
@@ -176,92 +177,6 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool {
         }
         sendToken(token, payee, amount);
         emit TransferBySignature(payee, token, amount, fee);
-        return amount;
-    }
-
-    /**
-     @notice Verify the withdraw signature
-     @param token The token
-     @param payee Receier of the payment
-     @param amount The amount
-     @param swapToToken The final target token
-     @param sourceChainId The source chain ID
-     @param swapTxId Te swap tx ID
-     @param multiSignature The multisig validator signature
-     */
-    function withdrawSignedVerify(
-        address token,
-        address payee,
-        uint256 amount,
-        address swapToToken,
-        uint32 sourceChainId,
-        bytes32 swapTxId,
-        bytes calldata multiSignature
-    ) external view returns (bytes32, bool) {
-        bytes32 message = withdrawSignedMessage(
-            token,
-            payee,
-            amount,
-            swapToToken,
-            sourceChainId,
-            swapTxId
-        );
-        IBridgeRoutingTable.TokenWithdrawConfig
-            memory conf = IBridgeRoutingTable(routingTable).withdrawConfig(
-                token
-            );
-        (bytes32 digest, bool result) = tryVerify(
-            message,
-            conf.groupId,
-            multiSignature
-        );
-        return (digest, result);
-    }
-
-    bytes32 constant REMOVE_LIQUIDITY_SIGNED_METHOD =
-        keccak256(
-            "RemoveLiquiditySigned(address token,address payee,uint256 amount,uint32 sourceChainId,bytes32 txId)"
-        );
-    /**
-     @notice Remove liquidity using signature
-     @param token The token
-     @param payee Receier of the payment
-     @param amount The amount
-     @param sourceChainId The source chain ID
-     @param txId Te swap tx ID
-     @param multiSignature The multisig validator signature
-     */
-    function removeLiquiditySigned(
-        address token,
-        address payee,
-        uint256 amount,
-        uint32 sourceChainId,
-        bytes32 txId,
-        bytes memory multiSignature
-    ) external override returns (uint256) {
-        require(token != address(0), "BP: Bad token");
-        require(payee != address(0), "BP: Bad payee");
-        require(amount != 0, "BP: Bad amount");
-        require(sourceChainId != 0, "BP: Bad sourceChainId");
-        require(txId != 0, "BP: Bad txId");
-        bytes32 message = keccak256(
-            abi.encode(
-                REMOVE_LIQUIDITY_SIGNED_METHOD,
-                token,
-                payee,
-                amount,
-                sourceChainId,
-                txId
-            )
-        );
-        IBridgeRoutingTable.TokenWithdrawConfig
-            memory conf = IBridgeRoutingTable(routingTable).withdrawConfig(
-                token
-            );
-        verifyUniqueSalt(message, txId, conf.groupId, multiSignature);
-
-        sendToken(token, payee, amount);
-        emit TransferBySignature(payee, token, amount, 0);
         return amount;
     }
 
@@ -410,6 +325,8 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool {
         require(token != address(0), "BP: bad token");
         require(targetToken != address(0), "BP: bad targetToken");
         require(targetNetwork != 0, "BP: targetNetwork is requried");
+        address targetNetworkBridgeContract = targetNetworkBridgeContracts[targetNetwork];
+        require(targetNetworkBridgeContract != address(0), "BP: target contract not set");
         IBridgeRoutingTable(routingTable).verifyRoute(
             token,
             targetNetwork,
@@ -417,6 +334,16 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool {
         );
         uint256 amount = sync(token);
         require(amount != 0, "BP: amount must be positive");
+        bytes memory method = abi.encodeWithSelector(
+            BridgePoolV12.swapRemote.selector
+        );
+        portal.runWithValue(
+            uint64(targetNetwork),
+            targetNetworkBridgeContract,
+            msg.sender,
+            token,
+            method
+        );
         emit BridgeSwap(
             from,
             originToken,
@@ -430,36 +357,27 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool {
         return amount;
     }
 
-    /**
-     @notice Creates a withdraw message hash
-     @param token The token
-     @param payee Receiver
-     @param amount The amount
-     @param swapToToken The final token to swap to
-     @param sourceChainId The source network ID
-     @param swapTxId The source swap tx id
-     @return The message hash
-     */
-    function withdrawSignedMessage(
+    function remoteSwap(
         address token,
         address payee,
         uint256 amount,
         address swapToToken,
-        uint32 sourceChainId,
-        bytes32 swapTxId
-    ) internal pure returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    WITHDRAW_SIGNED_METHOD,
-                    token,
-                    payee,
-                    amount,
-                    swapToToken,
-                    sourceChainId,
-                    swapTxId
-                )
-            );
+        uint32 sourceChainId
+    ) external {
+        (uint netId, address sourceMsgSender, address beneficiary) = portal
+            .msgSender();
+        address targetNetworkBridgeContract = targetNetworkBridgeContracts[targetNetwork];
+        require(targetNetworkBridgeContract != address(0), "BP: target contract not set");
+        require(sourceMsgSender == targetNetworkBridgeContract, "Not allowed"); // Caller must be a valid pre-configured remote.
+        require(sourceChainId == netId, "BP: Unexpected source");
+        // Adding to the swap list, so that it can be withdrawn.
+        WithdrawItem memory item = WithdrawItem {
+            sourceChainId: sourceChainId,
+            token: token,
+            amount: amount,
+            swapToToken: swapToToken
+        };
+        withdrawItems[payee].push(item);
+        // TODO: Emit event
     }
-
 }

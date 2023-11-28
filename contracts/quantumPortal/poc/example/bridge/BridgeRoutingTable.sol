@@ -8,6 +8,7 @@ import "../common/SafeAmount.sol";
 /**
  @notice This contract is a helper for bridge V12. Ported to the QPN.
  The data chain (FRM) can only manage the routing updates.
+ TODO: Make this a multi-chain contract.
 */
 contract BridgeRoutingTable is IBridgeRoutingTable {
     string public constant NAME = "BRIDGE_ROUTING_TABLE";
