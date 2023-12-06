@@ -6,6 +6,8 @@ import "./IBridgeRoutingTable.sol";
 import "foundry-contracts/contracts/taxing/IGeneralTaxDistributor.sol";
 import "foundry-contracts/contracts/common/SafeAmount.sol";
 import "../../../../staking/library/TokenReceivable.sol";
+import "../../utils/WithQp.sol";
+import "../../utils/WithRemotePeers.sol";
 
 /*
  * Bridge Pool Contract Version 1.2 - Ported to QP.
@@ -14,11 +16,11 @@ import "../../../../staking/library/TokenReceivable.sol";
  * assets.
  * This removes the nodes and signature requirements from the bridge.
  */
-contract BridgePoolV12 is TokenReceivable, IBridgePool {
+contract BridgePoolV12 is TokenReceivable, IBridgePool, WithQP, WithRemotePeers {
     uint64 public constant DEFAULT_FEE_X10000 = 50; // 0.5%
-    uint256 public DATA_CHAIN = 2600; // FRM Chain
+    uint256 public DATA_CHAIN = 2600; // TODO: FRM Chain
 
-    event TransferBySignature(
+    event Withdraw(
         address receiver,
         address token,
         uint256 amount,
@@ -44,12 +46,10 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool {
         address targetAddress,
         uint256 amount);
 
-    enum withdrawItem {
-        uint32 sourceChainId
-        address token,
-        address payee,
-        uint256 amount,
-        address swapToToken,
+    struct withdrawItem {
+        address token;
+        address payee;
+        uint256 amoun;
     }
 
     mapping(address => WithdrawItem[]) public withdrawItems;
@@ -63,7 +63,7 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool {
         _;
     }
 
-    constructor() EIP712(NAME, VERSION) {}
+    constructor() {}
 
     /*
      *************** Owner only operations ***************
@@ -103,7 +103,6 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool {
      @param token The local token
      @param targetNetwork The target chain ID
      @param targetToken The target token
-     @param swapTargetTokenTo The target token after swap
      @param targetAddress Address of the receiver
      @param originToken The origin token if it was swaped
      */
@@ -112,7 +111,6 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool {
         address token,
         uint256 targetNetwork,
         address targetToken,
-        address swapTargetTokenTo,
         address targetAddress,
         address originToken // Just for record
     ) external override returns (uint256) {
@@ -123,7 +121,6 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool {
                 token,
                 targetNetwork,
                 targetToken,
-                swapTargetTokenTo,
                 targetAddress
             );
     }
@@ -132,7 +129,7 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool {
         uint len = withdrawItems[payee].length;
         for(uint i=len-1; i >= 0; i--) {
             WithdrawItem memory item = withdrawItems[payee].pop();
-            _withdraw(item.token, payee, item.amount, item.swapToToken, item.sourceChainId);
+            _withdraw(item.token, payee, item.amount, item.swapToToken);
         }
     }
 
@@ -141,22 +138,15 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool {
      @param token The token
      @param payee Receier of the payment
      @param amount The amount
-     @param swapToToken The final target token
-     @param sourceChainId The source chain ID
-     @param swapTxId Te swap tx ID
-     @param multiSignature The multisig validator signature
      */
     function _withdraw(
         address token,
         address payee,
-        uint256 amount,
-        address swapToToken,
-        uint32 sourceChainId,
+        uint256 amount
     ) internal returns (uint256) {
         require(token != address(0), "BP: bad token");
         require(payee != address(0), "BP: bad payee");
         require(amount != 0, "BP: bad amount");
-        require(sourceChainId != 0, "BP: bad sourceChainId");
         IBridgeRoutingTable.TokenWithdrawConfig
             memory conf = IBridgeRoutingTable(routingTable).withdrawConfig(
                 token
@@ -176,7 +166,7 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool {
             }
         }
         sendToken(token, payee, amount);
-        emit TransferBySignature(payee, token, amount, fee);
+        emit Withdraw(payee, token, amount, fee);
         return amount;
     }
 
@@ -317,7 +307,6 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool {
         address token,
         uint256 targetNetwork,
         address targetToken,
-        address swapTargetTokenTo,
         address targetAddress
     ) internal returns (uint256) {
         require(from != address(0), "BP: bad from");
@@ -335,13 +324,16 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool {
         uint256 amount = sync(token);
         require(amount != 0, "BP: amount must be positive");
         bytes memory method = abi.encodeWithSelector(
-            BridgePoolV12.swapRemote.selector
+            BridgePoolV12.remoteSwap.selector,
+            targetToken,
+            targetAddress,
+            amount,
+            CHAIN_ID()
         );
-        portal.runWithValue(
+        portal.run(
             uint64(targetNetwork),
             targetNetworkBridgeContract,
             msg.sender,
-            token,
             method
         );
         emit BridgeSwap(
@@ -350,7 +342,6 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool {
             token,
             targetNetwork,
             targetToken,
-            swapTargetTokenTo,
             targetAddress,
             amount
         );
@@ -361,21 +352,19 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool {
         address token,
         address payee,
         uint256 amount,
-        address swapToToken,
         uint32 sourceChainId
     ) external {
-        (uint netId, address sourceMsgSender, address beneficiary) = portal
+        (uint netId, address sourceMsgSender,) = portal
             .msgSender();
-        address targetNetworkBridgeContract = targetNetworkBridgeContracts[targetNetwork];
+        address targetNetworkBridgeContract = remotePeers[targetNetwork];
         require(targetNetworkBridgeContract != address(0), "BP: target contract not set");
         require(sourceMsgSender == targetNetworkBridgeContract, "Not allowed"); // Caller must be a valid pre-configured remote.
         require(sourceChainId == netId, "BP: Unexpected source");
         // Adding to the swap list, so that it can be withdrawn.
         WithdrawItem memory item = WithdrawItem {
-            sourceChainId: sourceChainId,
             token: token,
-            amount: amount,
-            swapToToken: swapToToken
+            payee: payee,
+            amount: amount
         };
         withdrawItems[payee].push(item);
         // TODO: Emit event
