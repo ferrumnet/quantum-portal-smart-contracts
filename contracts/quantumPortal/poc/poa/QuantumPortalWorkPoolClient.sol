@@ -43,7 +43,9 @@ abstract contract QuantumPortalWorkPoolClient is
     }
 
     /**
-     * @notice Withdraw the rewards on the remote chain
+     * @notice Withdraw the rewards on the remote chain. Note: in case of
+     * tx failure the funds are gone. So make sure to provide enough fees to ensure the 
+     * tx does not fail because of gas.
      * @param selector The selector
      * @param remoteChain The remote
      * @param to Send the rewards to
@@ -87,6 +89,5 @@ abstract contract QuantumPortalWorkPoolClient is
         console.log("WORKE RATIO", work, workRatioX128);
         console.log("EPOCH", epoch);
         portal.run(uint64(remoteChain), serverContract, msg.sender, method);
-        // TODO: Challenge: What if the withdraw failed! Need a revert option
     }
 }

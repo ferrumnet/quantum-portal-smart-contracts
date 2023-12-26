@@ -39,7 +39,7 @@ library QuantumPortalLib {
     }
 
     struct Context {
-        uint64 index; // TODO: See what are the most used fields and move them in a substruct to reduce mem access
+        uint64 index;
         Block blockMetadata;
         RemoteTransaction transaction;
         uint256 uncommitedBalance; // Balance for transaction.token

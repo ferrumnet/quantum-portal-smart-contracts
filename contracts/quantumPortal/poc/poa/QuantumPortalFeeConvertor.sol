@@ -34,6 +34,7 @@ contract QuantumPortalFeeConverter is IQuantumPortalFeeConvertor, WithAdmin {
 
     /**
      * Restricted. Update the fee per byte number
+     * Note: When you are setting the fbp on the ETH network, remember FRM has only 6 decimals there
      * @param fpb The fee per byte
      */
     function updateFeePerByte(uint256 fpb) external onlyAdmin {
@@ -97,7 +98,6 @@ contract QuantumPortalFeeConverter is IQuantumPortalFeeConvertor, WithAdmin {
 
     /**
      * @notice Get the fee for the target network
-     * TODO: Consider the hack for FRM on ETH network, as it is just 6 digits of decimal
      */
     function targetChainFixedFee(
         uint256 targetChainId,

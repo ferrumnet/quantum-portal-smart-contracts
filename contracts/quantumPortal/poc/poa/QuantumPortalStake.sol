@@ -24,7 +24,7 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
         uint64 end;
     }
 
-    uint64 constant WITHDRAW_LOCK = 30 * 3600 * 24;
+    uint64 constant WITHDRAW_LOCK = 30 days;
     address public override STAKE_ID;
     address slashTarget;
     IQuantumPortalAuthorityMgr public auth;

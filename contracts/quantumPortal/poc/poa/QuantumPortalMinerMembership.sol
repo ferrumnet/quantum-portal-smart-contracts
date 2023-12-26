@@ -17,7 +17,7 @@ import "hardhat/console.sol";
 abstract contract QuantumPortalMinerMembership is
     IQuantumPortalMinerMembership
 {
-    uint256 public timeBlockSize = 60 * 3; // Three minutes for a miner to react
+    uint256 public timeBlockSize = 3 minutes; // Three minutes for a miner to react
     address[] public miners;
     mapping(address => uint256) public minerIdxsPlusOne; // Informational. Plus one so that we can have idx zero too
 

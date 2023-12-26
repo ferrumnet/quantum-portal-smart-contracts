@@ -74,11 +74,11 @@ contract QuantumPortalLedgerMgr is
     );
 
     uint256 constant FIX_TX_SIZE = 9 * 32;
-    uint256 constant FIXED_REJECT_SIZE = 9 * 32; // TODO: Calculate the right amount for rejectioin tasks
-    uint256 constant BLOCK_PERIOD = 60 * 2; // One block per two minutes?
+    uint256 constant FIXED_REJECT_SIZE = 9 * 32;
+    uint256 constant BLOCK_PERIOD = 2 minutes; // One block per two minutes?
     string public constant override VERSION = "000.001";
     uint256 immutable CHAIN_ID;
-    uint256 public minerMinimumStake = 10 ** 18 * 1000000; // Minimum 1M tokens to become miner
+    uint256 public minerMinimumStake = 1_000_000 ether; // Minimum 1M tokens to become miner
     QuantumPortalState public override state;
     address public ledger;
     address public minerMgr;
@@ -486,8 +486,6 @@ contract QuantumPortalLedgerMgr is
         require(remoteChainId != 0, "QPLM: remoteChainId required");
         {
             uint256 lastNonce = state.getLastMinedBlock(remoteChainId).nonce;
-            // TODO: allow branching in case of conflicting blocks. When branching happens
-            // it is guaranteed that one branch is invalid and miners need to punished.
             require(
                 blockNonce == lastNonce + 1,
                 "QPLM: cannot jump or retrace nonce"
@@ -531,9 +529,6 @@ contract QuantumPortalLedgerMgr is
                     minerMinimumStake
                 );
 
-            // TODO: We require the remote chain's and local chain's clocks to be reasonably sync.
-            // Consider replacing this relationship to a method that does not require the chains to
-            // have correct timestamps.
             {
                 uint256 remoteBlockTimestamp = transactions[
                     transactions.length - 1
@@ -841,7 +836,7 @@ contract QuantumPortalLedgerMgr is
         console.log("PRE-FIN BLOCKS", invalids.length);
         for (uint i = fromNonce; i <= toNonce; i++) {
             uint256 bkey = blockIdx(uint64(remoteChainId), uint64(i));
-            // TODO: Consider XOR ing the block hashes. AS the hashes are random, this will not be theoretically secure
+            // We are XOR ing the block hashes. AS the hashes are random, this will not be theoretically secure
             // but as we have a small finite list of items that can be played with, (e.g. block hashes form a range of epocs)
             // a simple xor is enough. The finHash is only used for sanity check offline, so it is not critical information
             finHash = finHash ^ state.getMinedBlock(bkey).blockHash;
@@ -952,8 +947,7 @@ contract QuantumPortalLedgerMgr is
             }
             totalVarWork += baseGasUsed;
             console.log("REMOTE TX EXECUTED vs used", t.gas, baseGasUsed);
-            // TODO: Refund extra gas based on the ratio of gas used vs gas provided.
-            // Need to convert the base gas to FRM first, and reduce the base fee.
+            // We are not refunding extra gas. Maybe in future.
         }
         qp.clearContext();
     }
@@ -987,8 +981,6 @@ contract QuantumPortalLedgerMgr is
             txGas = txGas / tx.gasprice;
             console.log("Gas limit provided", txGas);
             qp.rejectRemoteTransaction(b.blockMetadata.chainId, t);
-            // TODO: Refund extra gas based on the ratio of gas used vs gas provided.
-            // Need to convert the base gas to FRM first, and reduce the base fee.
         }
         qp.clearContext();
     }
@@ -1019,7 +1011,6 @@ contract QuantumPortalLedgerMgr is
             address fradulentMiner = IQuantumPortalMinerMgr(minerMgr)
                 .extractMinerAddress(b.blockHash, salt, expiry, multiSignature);
 
-            // TODO:
             // Slash fradulent miner's funds
             // And pay the reward to tx.benefciary
             IQuantumPortalMinerMgr(minerMgr).slashMinerForFraud(
@@ -1046,7 +1037,9 @@ contract QuantumPortalLedgerMgr is
     }
 
     /**
-     @notice Returns the token price vs FRM (fixed point 128). TODO: Implement
+     @notice Returns the token price vs FRM (fixed point 128).
+        Note: this feature is used to estimate the transaction value for value-contrained PoS.
+        Not implemented yet.
      @param token The token
      @return The price
      */

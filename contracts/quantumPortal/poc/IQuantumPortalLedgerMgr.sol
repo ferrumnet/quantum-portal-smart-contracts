@@ -18,7 +18,6 @@ interface IQuantumPortalLedgerMgr {
     }
 
     struct FinalizerStake {
-        // TODO: Compress
         address finalizer;
         uint256 staked;
     }
