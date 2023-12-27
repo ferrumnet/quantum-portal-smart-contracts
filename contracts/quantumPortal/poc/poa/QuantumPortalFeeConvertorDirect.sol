@@ -69,16 +69,6 @@ contract QuantumPortalFeeConverterDirect is
     }
 
     /**
-     * @notice Return the gas token (FRM) price for the target chain
-     * @param targetChainId The target chain ID
-     */
-    function _targetChainGasTokenPriceX128(
-        uint256 targetChainId
-    ) internal view returns (uint256) {
-        return feeTokenPriceList[targetChainId];
-    }
-
-    /**
      * @notice Get the fee for the target network
      */
     function targetChainFixedFee(
@@ -88,5 +78,15 @@ contract QuantumPortalFeeConverterDirect is
         uint256 price = _targetChainGasTokenPriceX128(targetChainId);
         console.log("CALCING FEE PER BYTE", price, targetChainId);
         return (price * size * feePerByte) / FixedPoint128.Q128;
+    }
+
+    /**
+     * @notice Return the gas token (FRM) price for the target chain
+     * @param targetChainId The target chain ID
+     */
+    function _targetChainGasTokenPriceX128(
+        uint256 targetChainId
+    ) internal view returns (uint256) {
+        return feeTokenPriceList[targetChainId];
     }
 }

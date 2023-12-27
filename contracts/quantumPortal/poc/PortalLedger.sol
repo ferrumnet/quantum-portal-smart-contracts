@@ -245,9 +245,7 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
      * @notice Restricted: Resets the context
      */
     function clearContext() external onlyMgr {
-        delete context.blockMetadata;
-        delete context.transaction;
-        delete context;
+        resetContext();
     }
 
     /**

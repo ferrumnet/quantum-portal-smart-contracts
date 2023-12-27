@@ -17,6 +17,10 @@ contract QuantumPortalAuthorityMgr is
 {
     string public constant NAME = "FERRUM_QUANTUM_PORTAL_AUTHORITY_MGR";
     string public constant VERSION = "000.010";
+    bytes32 constant VALIDATE_AUTHORITY_SIGNATURE =
+        keccak256(
+            "ValidateAuthoritySignature(uint256 action,bytes32 msgHash,bytes32 salt,uint64 expiry)"
+        );
 
     // signers that have signed a message
     address[] public completedSigners;
@@ -32,11 +36,6 @@ contract QuantumPortalAuthorityMgr is
 
     constructor() EIP712(NAME, VERSION) {}
 
-    bytes32 constant VALIDATE_AUTHORITY_SIGNATURE =
-        keccak256(
-            "ValidateAuthoritySignature(uint256 action,bytes32 msgHash,bytes32 salt,uint64 expiry)"
-        );
-
     /**
      * @notice Validates the authority signature
      * @param action The action
@@ -51,13 +50,12 @@ contract QuantumPortalAuthorityMgr is
         bytes32 salt,
         uint64 expiry,
         bytes memory signature
-    ) external override {
-        require(msg.sender == mgr, "QPAM: unauthorized");
+    ) external override onlyMgr {
         require(action != Action.NONE, "QPAM: action required");
         require(msgHash != bytes32(0), "QPAM: msgHash required");
-        require(expiry != 0, "QPAM: expiry required");
         require(salt != 0, "QPAM: salt required");
-        require(expiry > block.timestamp, "QPAM: signature expired");
+        require(expiry > block.timestamp, "QPAM: already expired");
+        require(signature.length != 0, "QPAM: signature required");
         bytes32 message = keccak256(
             abi.encode(
                 VALIDATE_AUTHORITY_SIGNATURE,
@@ -91,9 +89,9 @@ contract QuantumPortalAuthorityMgr is
     )
         external
         override
+        onlyMgr
         returns (address[] memory signers, bool quorumComplete)
     {
-        require(msg.sender == mgr, "QPAM: unauthorized");
         // ensure that the current msgHash matches the one in process or msgHash is empty
         if (currentMsgHash != bytes32(0)) {
             require(
@@ -104,9 +102,9 @@ contract QuantumPortalAuthorityMgr is
 
         require(action != Action.NONE, "QPAM: action required");
         require(msgHash != bytes32(0), "QPAM: msgHash required");
-        require(expiry != 0, "QPAM: expiry required");
         require(salt != 0, "QPAM: salt required");
-        require(expiry > block.timestamp, "QPAM: signature expired");
+        require(expiry > block.timestamp, "QPAM: already expired");
+        require(signature.length != 0, "QPAM: signature required");
         bytes32 message = keccak256(
             abi.encode(
                 VALIDATE_AUTHORITY_SIGNATURE,
@@ -144,7 +142,7 @@ contract QuantumPortalAuthorityMgr is
             );
 
             // ensure not a duplicate signer
-            require(!alreadySigned[signer], "QPAM: Already Signed!");
+            require(!alreadySigned[signer], "QPAM: already Signed!");
         }
 
         // insert signer to the signers list
@@ -190,6 +188,6 @@ contract QuantumPortalAuthorityMgr is
      * @notice Clears the currentMsgHash to unblock invalid states
      */
     function clearCurrentMsgHash() external {
-        currentMsgHash = bytes32(0);
+        delete currentMsgHash;
     }
 }

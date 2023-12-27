@@ -10,7 +10,6 @@ import "./QuantumPortalWorkPoolClient.sol";
 import "./QuantumPortalWorkPoolServer.sol";
 import "./QuantumPortalMinerMembership.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 import "hardhat/console.sol";
 
@@ -29,6 +28,12 @@ contract QuantumPortalMinerMgr is
     QuantumPortalWorkPoolClient,
     QuantumPortalMinerMembership
 {
+    uint32 constant WEEK = 7 days;
+    string public constant NAME = "FERRUM_QUANTUM_PORTAL_MINER_MGR";
+    string public constant VERSION = "000.010";
+    bytes32 public constant MINER_SIGNATURE =
+        keccak256("MinerSignature(bytes32 msgHash,uint64 expiry,bytes32 salt)");
+
     event MinerSlashed (
         address delegatedMiner,
         address indexed miner,
@@ -42,14 +47,10 @@ contract QuantumPortalMinerMgr is
         bytes32 blockHash;
         address beneficiary;
     }
+    event SlashRequested(SlashHistory data);
 
-    uint32 constant WEEK = 7 days;
-    string public constant NAME = "FERRUM_QUANTUM_PORTAL_MINER_MGR";
-    string public constant VERSION = "000.010";
     address public override miningStake;
     mapping(bytes32 => SlashHistory) slashes;
-
-    event SlashRequested(SlashHistory data);
 
     constructor() EIP712(NAME, VERSION) {
         bytes memory _data = IFerrumDeployer(msg.sender).initData();
@@ -143,33 +144,6 @@ contract QuantumPortalMinerMgr is
         );
     }
 
-    bytes32 public constant MINER_SIGNATURE =
-        keccak256("MinerSignature(bytes32 msgHash,uint64 expiry,bytes32 salt)");
-
-    /**
-     * @notice Vrify miner signature
-     * @param msgHash The message hash
-     * @param salt The salt
-     * @param expiry The expiry
-     * @param multiSig The multi signature
-     */
-    function verifySignature(
-        bytes32 msgHash,
-        bytes32 salt,
-        uint64 expiry,
-        bytes memory multiSig
-    ) internal view returns (address) {
-        console.log("EXPIRY IS", expiry);
-        console.log("MSG HASH");
-        console.logBytes32(msgHash);
-        require(block.timestamp < expiry, "CR: signature timed out");
-        require(expiry < block.timestamp + WEEK, "CR: expiry too far");
-        require(salt != 0, "MSC: salt required");
-        address _signer = _extractMinerAddress(msgHash, salt, expiry, multiSig);
-        require(_signer != address(0), "QPMM: wrong number of signatures");
-        return _signer;
-    }
-
     /**
      * @inheritdoc IQuantumPortalMinerMgr
      */
@@ -195,6 +169,30 @@ contract QuantumPortalMinerMgr is
             _unregisterMiner(delegatedMiner);
         }
         emit MinerSlashed (delegatedMiner, miner, blockHash, beneficiary);
+    }
+
+    /**
+     * @notice Vrify miner signature
+     * @param msgHash The message hash
+     * @param salt The salt
+     * @param expiry The expiry
+     * @param multiSig The multi signature
+     */
+    function verifySignature(
+        bytes32 msgHash,
+        bytes32 salt,
+        uint64 expiry,
+        bytes memory multiSig
+    ) internal view returns (address) {
+        console.log("EXPIRY IS", expiry);
+        console.log("MSG HASH");
+        console.logBytes32(msgHash);
+        require(block.timestamp < expiry, "CR: signature timed out");
+        require(expiry < block.timestamp + WEEK, "CR: expiry too far");
+        require(salt != 0, "MSC: salt required");
+        address _signer = _extractMinerAddress(msgHash, salt, expiry, multiSig);
+        require(_signer != address(0), "QPMM: wrong number of signatures");
+        return _signer;
     }
 
     /**

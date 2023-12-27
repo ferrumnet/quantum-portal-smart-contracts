@@ -65,16 +65,28 @@ library QuantumPortalLib {
         } else {
             return false;
         }
-        return
-            t1.timestamp == t2.timestamp &&
-            t1.remoteContract == t2.remoteContract &&
-            t1.sourceMsgSender == t2.sourceMsgSender &&
-            t1.sourceBeneficiary == t2.sourceBeneficiary &&
-            t1.token == t2.token &&
-            t1.amount == t2.amount &&
-            methodsMatch &&
-            t1.methods.length == t2.methods.length &&
-            t1.gas == t2.gas &&
-            t1.fixedFee == t2.fixedFee;
+        bytes32 t1packed = keccak256(abi.encodePacked(
+            t1.timestamp,
+            t1.remoteContract,
+            t1.sourceMsgSender,
+            t1.sourceBeneficiary,
+            t1.token,
+            t1.amount,
+            t1.methods.length,
+            t1.gas,
+            t1.fixedFee
+        ));
+        bytes32 t2packed = keccak256(abi.encodePacked(
+            t2.timestamp,
+            t2.remoteContract,
+            t2.sourceMsgSender,
+            t2.sourceBeneficiary,
+            t2.token,
+            t2.amount,
+            t2.methods.length,
+            t2.gas,
+            t2.fixedFee
+        ));
+        return methodsMatch && t1packed == t2packed;
     }
 }

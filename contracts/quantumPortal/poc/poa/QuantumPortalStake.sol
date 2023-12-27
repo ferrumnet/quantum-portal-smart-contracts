@@ -14,6 +14,10 @@ import "hardhat/console.sol";
     2 - Authorities can slash
  */
 contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
+    uint64 constant WITHDRAW_LOCK = 30 days;
+    bytes32 constant SLASH_STAKE =
+        keccak256("SlashStake(address user,uint256 amount, bytes32 salt, uint64 expiry)");
+
     struct WithdrawItem {
         uint64 opensAt;
         uint128 amount;
@@ -24,7 +28,6 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
         uint64 end;
     }
 
-    uint64 constant WITHDRAW_LOCK = 30 days;
     address public override STAKE_ID;
     address slashTarget;
     IQuantumPortalAuthorityMgr public auth;
@@ -91,8 +94,6 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
         }
     }
 
-    bytes32 constant SLASH_STAKE =
-        keccak256("SlashStake(address user,uint256 amount)");
 
     /**
      * @notice Slashes a user stake. First, all pending withdrawals are cancelled.
@@ -110,7 +111,7 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
         uint64 expiry,
         bytes memory multiSignature
     ) external returns (uint256) {
-        bytes32 message = keccak256(abi.encode(SLASH_STAKE, user, amount));
+        bytes32 message = keccak256(abi.encode(SLASH_STAKE, user, amount, salt, expiry));
         auth.validateAuthoritySignature(
             IQuantumPortalAuthorityMgr.Action.SLASH,
             message,
@@ -165,14 +166,14 @@ contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
         address staker,
         uint256 amount
     ) internal returns (uint256 remaining) {
-        uint stake = state.stakes[STAKE_ID][staker];
-        stake = amount < stake ? amount : stake;
-        remaining = amount - stake;
+        uint stakeAmount = state.stakes[STAKE_ID][staker];
+        stakeAmount = amount < stakeAmount ? amount : stakeAmount;
+        remaining = amount - stakeAmount;
         _withdrawOnlyUpdateStateAndPayRewards(
             slashTarget,
             STAKE_ID,
             staker,
-            stake
+            stakeAmount
         );
         address token = baseInfo.baseToken[STAKE_ID];
         sendToken(token, slashTarget, amount);

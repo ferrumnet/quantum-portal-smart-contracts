@@ -35,6 +35,28 @@ abstract contract QuantumPortalMinerMembership is
     }
 
     /**
+     * @notice Finds miner for a specific time (on the local chain)
+     *  To be used by client to verify if they are the miner or not
+     * @param blockHash The block hash
+     * @param blockTimestamp The block timestamp
+     * @param chainTimestamp The chain timestamp
+     */
+    function findMinerAtTime(
+        bytes32 blockHash,
+        uint256 blockTimestamp,
+        uint256 chainTimestamp
+    ) public view override returns (address) {
+        uint256 offset = (chainTimestamp - blockTimestamp) %
+            (timeBlockSize * 2);
+        uint256 registeredMinerIdx = minerIdx(
+            blockHash,
+            blockTimestamp,
+            offset
+        );
+        return miners[registeredMinerIdx];
+    }
+
+    /**
      * @notice Select the miner.
      *    Overwride and make sure this can only be called by the mgr
      * @param requestedMiner The requested miner
@@ -72,28 +94,6 @@ abstract contract QuantumPortalMinerMembership is
             }
         }
         return true;
-    }
-
-    /**
-     * @notice Finds miner for a specific time (on the local chain)
-     *  To be used by client to verify if they are the miner or not
-     * @param blockHash The block hash
-     * @param blockTimestamp The block timestamp
-     * @param chainTimestamp The chain timestamp
-     */
-    function findMinerAtTime(
-        bytes32 blockHash,
-        uint256 blockTimestamp,
-        uint256 chainTimestamp
-    ) public view override returns (address) {
-        uint256 offset = (chainTimestamp - blockTimestamp) %
-            (timeBlockSize * 2);
-        uint256 registeredMinerIdx = minerIdx(
-            blockHash,
-            blockTimestamp,
-            offset
-        );
-        return miners[registeredMinerIdx];
     }
 
     /**

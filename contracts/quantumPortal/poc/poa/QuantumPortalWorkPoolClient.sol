@@ -19,14 +19,6 @@ abstract contract QuantumPortalWorkPoolClient is
     mapping(uint256 => uint256) public remoteEpoch;
 
     /**
-     * @notice Ristricted: update the manager
-     * @param _mgr The manager contract address
-     */
-    function updateMgr(address _mgr) external onlyAdmin {
-        mgr = _mgr;
-    }
-
-    /**
      * @inheritdoc IQuantumPortalWorkPoolClient
      */
     function registerWork(
@@ -34,8 +26,7 @@ abstract contract QuantumPortalWorkPoolClient is
         address worker,
         uint256 work,
         uint256 _remoteEpoch
-    ) external override {
-        require(msg.sender == mgr, "QPWPC: caller not allowed");
+    ) external override onlyMgr {
         works[remoteChain][worker] += work;
         console.log("REGISTERING WORK", worker, work);
         totalWork[remoteChain] += work;
@@ -60,7 +51,7 @@ abstract contract QuantumPortalWorkPoolClient is
         uint fee
     ) internal {
         uint256 work = works[remoteChain][worker];
-        works[remoteChain][worker] = 0;
+        delete works[remoteChain][worker];
         // Send the fee
         require(
             SafeAmount.safeTransferFrom(

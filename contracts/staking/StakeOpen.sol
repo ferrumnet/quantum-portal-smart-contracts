@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 import "./interfaces/IStakeV2.sol";
 import "./interfaces/IRewardPool.sol";
 import "foundry-contracts/contracts/common/Sweepable.sol";
-import "@openzeppelin/contracts/utils/math/Math.sol";
 import "./BaseStakingV2.sol";
 
 /**
@@ -14,7 +13,6 @@ import "./BaseStakingV2.sol";
  * Cannot be tokenizable.
  */
 contract StakeOpen is Sweepable, BaseStakingV2, IRewardPool {
-    using SafeMath for uint256;
     using StakeFlags for uint16;
     mapping(address => mapping(address => uint256)) internal stakeTimes;
 
@@ -36,16 +34,8 @@ contract StakeOpen is Sweepable, BaseStakingV2, IRewardPool {
         setAllowedRewardTokens(token, rewardTokens);
     }
 
-    function init(address token, string memory name, address[] calldata rewardTokens) external nonZeroAddress(token) onlyOwner {
-        StakingBasics.StakeInfo storage info = stakings[token];
-        require(
-            stakings[token].stakeType == Staking.StakeType.None,
-            "SO: Already exists"
-        );
-        info.stakeType = Staking.StakeType.OpenEnded;
-        baseInfo.baseToken[token] = token;
-        baseInfo.name[token] = name;
-        setAllowedRewardTokens(token, rewardTokens);
+    function init(address token, string memory _name, address[] calldata rewardTokens) external nonZeroAddress(token) onlyOwner {
+        _init(token, _name, rewardTokens);
     }
 
     function stakeWithAllocation(
@@ -91,7 +81,7 @@ contract StakeOpen is Sweepable, BaseStakingV2, IRewardPool {
         return _stake(to, id, 0);
     }
 
-    function _init(address token, string memory name, address[] memory rewardTokens
+    function _init(address token, string memory _name, address[] memory rewardTokens
     ) internal {
         StakingBasics.StakeInfo storage info = stakings[token];
         require(
@@ -100,7 +90,7 @@ contract StakeOpen is Sweepable, BaseStakingV2, IRewardPool {
         );
         info.stakeType = Staking.StakeType.OpenEnded;
         baseInfo.baseToken[token] = token;
-        baseInfo.name[token] = name;
+        baseInfo.name[token] = _name;
         setAllowedRewardTokens(token, rewardTokens);
     }
 
@@ -168,9 +158,9 @@ contract StakeOpen is Sweepable, BaseStakingV2, IRewardPool {
         } // No need to fail the transaction
 
         reward.rewardsTotal[id][rewardToken] = reward
-        .rewardsTotal[id][rewardToken].add(rewardAmount);
+        .rewardsTotal[id][rewardToken] + rewardAmount;
         reward.fakeRewardsTotal[id][rewardToken] = reward
-        .fakeRewardsTotal[id][rewardToken].add(rewardAmount);
+        .fakeRewardsTotal[id][rewardToken] + rewardAmount;
         emit RewardAdded(id, rewardToken, rewardAmount);
         return rewardAmount;
     }
@@ -259,34 +249,30 @@ contract StakeOpen is Sweepable, BaseStakingV2, IRewardPool {
             info.stakeType == Staking.StakeType.OpenEnded,
             "SO: Not open ended stake"
         );
-        uint256 stakedBalance = state.stakedBalance[id];
+        uint256 _stakedBalance = state.stakedBalance[id];
         address[] memory rewardTokens = extraInfo.allowedRewardTokenList[id];
 
         for (uint256 i = 0; i < rewardTokens.length; i++) {
             address rewardToken = rewardTokens[i];
             uint256 fakeTotal = reward.fakeRewardsTotal[id][rewardToken];
-            uint256 curRew = stakedBalance != 0
-                ? amount.mul(fakeTotal).div(stakedBalance)
+            uint256 curRew = _stakedBalance != 0
+                ? amount * fakeTotal / _stakedBalance
                 : fakeTotal;
 
             reward.fakeRewards[id][staker][rewardToken] = reward
-            .fakeRewards[id][staker][rewardToken].add(curRew);
+            .fakeRewards[id][staker][rewardToken] + curRew;
 
-            if (stakedBalance != 0) {
-                reward.fakeRewardsTotal[id][rewardToken] = fakeTotal.add(
-                    curRew
-                );
+            if (_stakedBalance != 0) {
+                reward.fakeRewardsTotal[id][rewardToken] = fakeTotal + curRew;
             }
         }
 
-        state.stakedBalance[id] = stakedBalance.add(amount);
+        state.stakedBalance[id] = _stakedBalance + amount;
 
-        uint256 newStake = state.stakes[id][staker].add(amount);
+        uint256 newStake = state.stakes[id][staker] + amount;
         uint256 lastStakeTime = stakeTimes[id][staker];
         if (lastStakeTime != 0) {
-            uint256 timeDrift = amount.mul(block.timestamp - lastStakeTime).div(
-                newStake
-            );
+            uint256 timeDrift = amount * (block.timestamp - lastStakeTime) / newStake;
             stakeTimes[id][staker] = lastStakeTime + timeDrift;
         } else {
             stakeTimes[id][staker] = block.timestamp;
@@ -336,10 +322,10 @@ contract StakeOpen is Sweepable, BaseStakingV2, IRewardPool {
         uint256 userStake = state.stakes[id][staker];
         require(amount <= userStake, "SO: Not enough balance");
         address[] memory rewardTokens = extraInfo.allowedRewardTokenList[id];
-        uint256 stakedBalance = state.stakedBalance[id];
+        uint256 _stakedBalance = state.stakedBalance[id];
         uint256 poolShareX128 = VestingLibrary.calculatePoolShare(
             amount,
-            stakedBalance
+            _stakedBalance
         );
 
         for (uint256 i = 0; i < rewardTokens.length; i++) {
@@ -352,8 +338,8 @@ contract StakeOpen is Sweepable, BaseStakingV2, IRewardPool {
             );
         }
 
-        state.stakes[id][staker] = userStake.sub(amount);
-        state.stakedBalance[id] = stakedBalance.sub(amount);
+        state.stakes[id][staker] = userStake - amount;
+        state.stakedBalance[id] = _stakedBalance - amount;
         return amount;
     }
 
@@ -376,13 +362,10 @@ contract StakeOpen is Sweepable, BaseStakingV2, IRewardPool {
             // We have some rew to return. But we don't so add it back
 
             userFake = 0;
-            reward.fakeRewardsTotal[id][rewardToken] = fakeTotal
-                .sub(fakeRewAmount);
+            reward.fakeRewardsTotal[id][rewardToken] = fakeTotal - fakeRewAmount;
         } else {
-            userFake = userFake.sub(fakeRewAmount);
-            reward.fakeRewardsTotal[id][rewardToken] = fakeTotal.sub(
-                fakeRewAmount
-            );
+            userFake = userFake - fakeRewAmount;
+            reward.fakeRewardsTotal[id][rewardToken] = fakeTotal - fakeRewAmount;
         }
         reward.fakeRewards[id][staker][rewardToken] = userFake;
         if (actualPay != 0) {
@@ -412,10 +395,8 @@ contract StakeOpen is Sweepable, BaseStakingV2, IRewardPool {
             );
 
             reward.rewardsTotal[id][rewardToken] = reward
-            .rewardsTotal[id][rewardToken].sub(actualPay);
-            reward.fakeRewards[id][staker][rewardToken] = userFake.add(
-                actualPay
-            );
+            .rewardsTotal[id][rewardToken] - actualPay;
+            reward.fakeRewards[id][staker][rewardToken] = userFake + actualPay;
             if (actualPay != 0) {
                 sendToken(rewardToken, to, actualPay);
             }
@@ -425,16 +406,16 @@ contract StakeOpen is Sweepable, BaseStakingV2, IRewardPool {
 
     function _calcSingleRewardOf(
         uint256 poolShareX128,
-        uint256 fakeRewardsTotal,
+        uint256 _fakeRewardsTotal,
         uint256 userFake
     ) internal pure returns (uint256, uint256) {
         if (poolShareX128 == 0) {
             return (0, 0);
         }
         uint256 rew = VestingLibrary.calculateFakeRewardForWithdraw(
-            fakeRewardsTotal,
+            _fakeRewardsTotal,
             poolShareX128
         );
-        return (rew > userFake ? rew.sub(userFake) : 0, rew); // Ignoring the overflow problem
+        return (rew > userFake ? rew - userFake : 0, rew); // Ignoring the overflow problem
     }
 }

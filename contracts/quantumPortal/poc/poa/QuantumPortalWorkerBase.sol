@@ -9,13 +9,21 @@ abstract contract QuantumPortalWorkerBase is WithAdmin {
      * @notice Limit access to only mgr
      */
     modifier onlyMgr() {
-        require(msg.sender == mgr, "QPWPS:only QP mgr may call");
+        require(msg.sender == mgr, "QPWB:only QP mgr may call");
         _;
     }
 
     mapping(uint256 => address) public remotes;
     IQuantumPortalPoc public portal;
     address public mgr;
+
+    /**
+     * @notice Ristricted: update the manager
+     * @param _mgr The manager contract address
+     */
+    function updateMgr(address _mgr) external onlyAdmin {
+        mgr = _mgr;
+    }
 
     /**
      * @notice Restricted: Sets the remote address
