@@ -5,27 +5,44 @@ import "../../../fee/IPriceOracle.sol";
 import "foundry-contracts/contracts/common/WithAdmin.sol";
 import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
 import "foundry-contracts/contracts/math/FixedPoint128.sol";
+
 import "hardhat/console.sol";
 
+/**
+ * @notice Fee convertor utility for QP. Used for gas calculations
+ */
 contract QuantumPortalFeeConverter is IQuantumPortalFeeConvertor, WithAdmin {
-    address public networkFeeWrappedToken;
     address public override qpFeeToken;
+    address public networkFeeWrappedToken;
     IPriceOracle oracle;
     mapping(uint256 => address) public targetNetworkFeeTokens;
     uint256 public feePerByte;
-    
+
     constructor() {
-		(address _networkFeeWrappedToken, address _qpFeeToken, address _oracle) = abi.decode(
-            IFerrumDeployer(msg.sender).initData(), (address, address, address));
+        (
+            address _networkFeeWrappedToken,
+            address _qpFeeToken,
+            address _oracle
+        ) = abi.decode(
+                IFerrumDeployer(msg.sender).initData(),
+                (address, address, address)
+            );
         networkFeeWrappedToken = _networkFeeWrappedToken;
         qpFeeToken = _qpFeeToken;
         oracle = IPriceOracle(_oracle);
     }
 
+    /**
+     * Restricted. Update the fee per byte number
+     * @param fpb The fee per byte
+     */
     function updateFeePerByte(uint256 fpb) external onlyAdmin {
         feePerByte = fpb;
     }
 
+    /**
+     * Fetch the price from the registered oracle
+     */
     function updatePrice() external override {
         address[] memory pairs = new address[](2);
         pairs[0] = networkFeeWrappedToken;
@@ -33,7 +50,15 @@ contract QuantumPortalFeeConverter is IQuantumPortalFeeConvertor, WithAdmin {
         oracle.updatePrice(pairs);
     }
 
-    function localChainGasTokenPriceX128() external view override returns (uint256) {
+    /**
+     * @notice Return the gas token (FRM) price for the local chain
+     */
+    function localChainGasTokenPriceX128()
+        external
+        view
+        override
+        returns (uint256)
+    {
         address[] memory pairs = new address[](2);
         pairs[0] = networkFeeWrappedToken;
         pairs[1] = qpFeeToken;
@@ -41,13 +66,28 @@ contract QuantumPortalFeeConverter is IQuantumPortalFeeConvertor, WithAdmin {
         return oracle.recentPriceX128(pairs);
     }
 
-    function targetChainGasTokenPriceX128(uint256 targetChainId) external view override returns (uint256) {
+    /**
+     * @notice Return the gas token (FRM) price for the target chain
+     * @param targetChainId The target chain ID
+     */
+    function targetChainGasTokenPriceX128(
+        uint256 targetChainId
+    ) external view override returns (uint256) {
         return _targetChainGasTokenPriceX128(targetChainId);
     }
 
-    function _targetChainGasTokenPriceX128(uint256 targetChainId) internal view returns (uint256) {
+    /**
+     * @notice Return the gas token (FRM) price for the target chain
+     * @param targetChainId The target chain ID
+     */
+    function _targetChainGasTokenPriceX128(
+        uint256 targetChainId
+    ) internal view returns (uint256) {
         address targetNetworkFeeToken = targetNetworkFeeTokens[targetChainId];
-        require(targetNetworkFeeToken != address(0), "QPFC: No target chain token");
+        require(
+            targetNetworkFeeToken != address(0),
+            "QPFC: No target chain token"
+        );
         address[] memory pairs = new address[](2);
         pairs[0] = targetNetworkFeeToken;
         pairs[1] = qpFeeToken;
@@ -59,8 +99,11 @@ contract QuantumPortalFeeConverter is IQuantumPortalFeeConvertor, WithAdmin {
      * @notice Get the fee for the target network
      * TODO: Consider the hack for FRM on ETH network, as it is just 6 digits of decimal
      */
-    function targetChainFixedFee(uint256 targetChainId, uint256 size) external override view returns (uint256) {
+    function targetChainFixedFee(
+        uint256 targetChainId,
+        uint256 size
+    ) external view override returns (uint256) {
         uint256 price = _targetChainGasTokenPriceX128(targetChainId);
-        return price * size * feePerByte / FixedPoint128.Q128;
+        return (price * size * feePerByte) / FixedPoint128.Q128;
     }
 }

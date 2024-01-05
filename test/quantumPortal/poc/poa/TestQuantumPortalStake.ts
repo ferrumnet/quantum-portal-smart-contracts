@@ -70,7 +70,7 @@ describe("Test qp stake", function () {
         await hardhatAdvanceTimeAndBlock(timeToPass, 1);
         const newTime = await hardhatGetTime();
         console.log('Time increaed from ', currentTime, 'to', newTime);
-        expect(newTime).to.be.greaterThanOrEqual(wis[0].opensAt, 'Time travel didnt work')
+        expect(newTime).to.be.greaterThanOrEqual(wis[0].opensAt, 'Time travel didnt work');
 
         await stk.releaseWithdrawItems(ctx.owner, ctx.owner, 0);
         console.log('Withdraw items shoulg have been released');
