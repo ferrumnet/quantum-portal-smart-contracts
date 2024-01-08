@@ -304,7 +304,7 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
         } else {
             bytes4 errorSelector;
             assembly {
-                errorSelector := mload(add(returnedData, 0x20))
+                errorSelector := mload(add(revertData, 0x20))
             }
             if (
                 errorSelector ==
