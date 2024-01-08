@@ -10,11 +10,7 @@ import "foundry-contracts/contracts/common/SafeAmount.sol";
  TODO: Make this a multi-chain contract.
 */
 contract BridgeRoutingTable is IBridgeRoutingTable {
-    string public constant NAME = "BRIDGE_ROUTING_TABLE";
-    string public constant VERSION = "001.000";
     uint256 constant MAX_FEE_X10k = 0.8 * 10000;
-    bytes32 public constant CONTRACT_SALT =
-        keccak256(abi.encode(NAME, VERSION));
 
     /*
 		routingTable:
@@ -26,7 +22,7 @@ contract BridgeRoutingTable is IBridgeRoutingTable {
     mapping(address => uint256[]) public configuredChainIds;
     mapping(address => address) public routingIds;
 
-    constructor() EIP712(NAME, VERSION) {}
+    constructor() {}
 
     /**
      @notice return routing table for a token
@@ -138,19 +134,19 @@ contract BridgeRoutingTable is IBridgeRoutingTable {
         require(salt != 0, "BRT: salt required");
         require(block.timestamp < timeout, "BRT: expired");
         require(multiSignature.length != 0, "BRT: multiSignature required");
-        bytes32 digest = keccak256(
-            abi.encode(
-                CONTRACT_SALT,
-                keccak256("UpdateFees"),
-                id,
-                chainIds,
-                fees,
-                noFees,
-                salt,
-                timeout
-            )
-        );
-        verifySalt(digest, salt, expectedGroupId, multiSignature);
+        // bytes32 digest = keccak256(
+        //     abi.encode(
+        //         CONTRACT_SALT,
+        //         keccak256("UpdateFees"),
+        //         id,
+        //         chainIds,
+        //         fees,
+        //         noFees,
+        //         salt,
+        //         timeout
+        //     )
+        // );
+        // verifySalt(digest, salt, expectedGroupId, multiSignature);
         for (uint256 i = 0; i < chainIds.length; i++) {
             require(routingTable[id][chainIds[i]].targetToken != address(0), "BRT: token or chain not configured");
             require(fees[i] <= MAX_FEE_X10k, "BRT: fee too large");
@@ -186,18 +182,18 @@ contract BridgeRoutingTable is IBridgeRoutingTable {
         require(salt != 0, "BRT: salt required");
         require(block.timestamp < timeout, "BRT: expired");
         require(multiSignature.length != 0, "BRT: multiSignature required");
-        bytes32 digest = keccak256(
-            abi.encode(
-                CONTRACT_SALT,
-                keccak256("AddRoutes"),
-                id,
-                chainIds,
-                configs,
-                salt,
-                timeout
-            )
-        );
-        verifySalt(digest, salt, expectedGroupId, multiSignature);
+        // bytes32 digest = keccak256(
+        //     abi.encode(
+        //         CONTRACT_SALT,
+        //         keccak256("AddRoutes"),
+        //         id,
+        //         chainIds,
+        //         configs,
+        //         salt,
+        //         timeout
+        //     )
+        // );
+        // verifySalt(digest, salt, expectedGroupId, multiSignature);
         address current = address(0);
         for (uint256 i = 0; i < chainIds.length; i++) {
             require(routingTable[id][chainIds[i]].targetToken == address(0), "BRT: cannot update table. Try deleting first.");
@@ -238,17 +234,17 @@ contract BridgeRoutingTable is IBridgeRoutingTable {
         uint64 expectedGroupId,
         bytes memory multiSignature
     ) external {
-        bytes32 digest = keccak256(
-            abi.encode(
-                CONTRACT_SALT,
-                keccak256("RemoveRoute"),
-                id,
-                chainIds,
-                salt,
-                timeout
-            )
-        );
-        verifySalt(digest, salt, expectedGroupId, multiSignature);
+        // bytes32 digest = keccak256(
+        //     abi.encode(
+        //         CONTRACT_SALT,
+        //         keccak256("RemoveRoute"),
+        //         id,
+        //         chainIds,
+        //         salt,
+        //         timeout
+        //     )
+        // );
+        // verifySalt(digest, salt, expectedGroupId, multiSignature);
         for (uint256 i = 0; i < chainIds.length; i++) {
             if (routingTable[id][chainIds[i]].targetToken != address(0)) {
                 // console.log("DELETING A ROUTE", chainIds[i]);
@@ -257,22 +253,22 @@ contract BridgeRoutingTable is IBridgeRoutingTable {
         }
     }
 
-    /**
-     @notice Verifies the salt is unique
-     @param digest The digest
-     @param salt The salt
-     @param expectedGroupId The expected group ID. Provide Zero to ignore
-     @param multiSignature The signature
-     */
-    function verifySalt(bytes32 digest, bytes32 salt, uint64 expectedGroupId, bytes memory multiSignature 
-    ) private {
-        require(!usedHashes[salt], "BRT: salt already used");
-        require(
-            tryVerifyDigest(digest, expectedGroupId, multiSignature),
-            "BRT: Invalid signature"
-        );
-        usedHashes[salt] = true;
-    }
+    // /**
+    //  @notice Verifies the salt is unique
+    //  @param digest The digest
+    //  @param salt The salt
+    //  @param expectedGroupId The expected group ID. Provide Zero to ignore
+    //  @param multiSignature The signature
+    //  */
+    // function verifySalt(bytes32 digest, bytes32 salt, uint64 expectedGroupId, bytes memory multiSignature 
+    // ) private {
+    //     require(!usedHashes[salt], "BRT: salt already used");
+    //     require(
+    //         tryVerifyDigest(digest, expectedGroupId, multiSignature),
+    //         "BRT: Invalid signature"
+    //     );
+    //     usedHashes[salt] = true;
+    // }
 
     /**
      @notice Deletes a route

@@ -6,12 +6,13 @@ import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "../../utils/WithQp.sol";
 import "foundry-contracts/contracts/common/SafeAmount.sol";
 
 /**
  @notice The router for bridge
  */
-contract BridgeRouterV12 is Ownable, ReentrancyGuard {
+contract BridgeRouterV12 is Ownable, ReentrancyGuard, WithQp {
     using SafeERC20 for IERC20;
     address public pool;
     address public stake;
@@ -38,7 +39,6 @@ contract BridgeRouterV12 is Ownable, ReentrancyGuard {
      @param amount The source amount
      @param targetNetwork The chain ID for the target network
      @param targetToken The target token address
-     @param swapTargetTokenTo Swap the target token to a new token
      @param targetAddress Final destination on target
      */
     function swap(
@@ -77,7 +77,7 @@ contract BridgeRouterV12 is Ownable, ReentrancyGuard {
     ) external {
         IERC20(token).safeTransferFrom(msg.sender, pool, amount);
         IBridgePool(pool).addLiquidity(to, token);
-        IRemoteStake(stake).syncStake(to, token);
+        // IRemoteStake(stake).syncStake(to, token);
     }
 
     /**
@@ -109,7 +109,7 @@ contract BridgeRouterV12 is Ownable, ReentrancyGuard {
         require(amount != 0, "BR: amount required");
         require(targetNetwork != 0, "BR: targetNetwork required");
         require(targetToken != address(0), "BR: targetToken required");
-        IRemoteStake(stake).withdrawRewardsFor(msg.sender, token);
+        // IRemoteStake(stake).withdrawRewardsFor(msg.sender, token);
         IBridgePool(pool).removeLiquidity(
             msg.sender,
             token,
@@ -117,7 +117,7 @@ contract BridgeRouterV12 is Ownable, ReentrancyGuard {
             targetNetwork,
             targetToken
         );
-        IRemoteStake(stake).syncStake(msg.sender, token); 
+        // IRemoteStake(stake).syncStake(msg.sender, token); 
     }
 
     /**
@@ -128,8 +128,8 @@ contract BridgeRouterV12 is Ownable, ReentrancyGuard {
     function removeLiquidityIfPossible(address token, uint256 amount) external {
         require(token != address(0), "BR: token required");
         require(amount != 0, "BR: amount required");
-        IRemoteStake(stake).withdrawRewardsFor(msg.sender, token);
+        // IRemoteStake(stake).withdrawRewardsFor(msg.sender, token);
         IBridgePool(pool).removeLiquidityIfPossible(msg.sender, token, amount);
-        IRemoteStake(stake).syncStake(msg.sender, token);
+        // IRemoteStake(stake).syncStake(msg.sender, token);
     }
 }

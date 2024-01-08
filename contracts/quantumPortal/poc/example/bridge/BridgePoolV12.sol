@@ -4,7 +4,6 @@ pragma solidity 0.8.2;
 import "./IBridgePool.sol";
 import "./IBridgeRoutingTable.sol";
 import "foundry-contracts/contracts/taxing/IGeneralTaxDistributor.sol";
-import "foundry-contracts/contracts/common/SafeAmount.sol";
 import "../../../../staking/library/TokenReceivable.sol";
 import "../../utils/WithQp.sol";
 import "../../utils/WithRemotePeers.sol";
@@ -16,9 +15,15 @@ import "../../utils/WithRemotePeers.sol";
  * assets.
  * This removes the nodes and signature requirements from the bridge.
  */
-contract BridgePoolV12 is TokenReceivable, IBridgePool, WithQP, WithRemotePeers {
+contract BridgePoolV12 is TokenReceivable, IBridgePool, WithQp, WithRemotePeers {
     uint64 public constant DEFAULT_FEE_X10000 = 50; // 0.5%
     uint256 public DATA_CHAIN = 2600; // TODO: FRM Chain
+
+    struct WithdrawItem {
+        address token;
+        address payee;
+        uint256 amount;
+    }
 
     event Withdraw(
         address receiver,
@@ -42,15 +47,8 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool, WithQP, WithRemotePeers 
         address token,
         uint256 targetNetwork,
         address targetToken,
-        address swapTargetTokenTo,
         address targetAddress,
         uint256 amount);
-
-    struct withdrawItem {
-        address token;
-        address payee;
-        uint256 amoun;
-    }
 
     mapping(address => WithdrawItem[]) public withdrawItems;
     mapping(address => mapping(address => uint256)) public liquidities; // TODO: Move to DATA_CHAIN only, clients can request to change
@@ -125,11 +123,12 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool, WithQP, WithRemotePeers 
             );
     }
 
-    function withdraw(address payee) {
+    function withdraw(address payee) external override returns (uint256) {
         uint len = withdrawItems[payee].length;
         for(uint i=len-1; i >= 0; i--) {
-            WithdrawItem memory item = withdrawItems[payee].pop();
-            _withdraw(item.token, payee, item.amount, item.swapToToken);
+            WithdrawItem memory item = withdrawItems[payee][withdrawItems[payee].length - 1];
+            withdrawItems[payee].pop();
+            _withdraw(item.token, payee, item.amount);
         }
     }
 
@@ -297,7 +296,6 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool, WithQP, WithRemotePeers 
      @param token The token
      @param targetNetwork The target chain ID
      @param targetToken the target token
-     @param swapTargetTokenTo The target token info
      @param targetAddress The target address
      @return The amount swapped
      */
@@ -314,7 +312,7 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool, WithQP, WithRemotePeers 
         require(token != address(0), "BP: bad token");
         require(targetToken != address(0), "BP: bad targetToken");
         require(targetNetwork != 0, "BP: targetNetwork is requried");
-        address targetNetworkBridgeContract = targetNetworkBridgeContracts[targetNetwork];
+        address targetNetworkBridgeContract = remotePeers[targetNetwork];
         require(targetNetworkBridgeContract != address(0), "BP: target contract not set");
         IBridgeRoutingTable(routingTable).verifyRoute(
             token,
@@ -328,7 +326,7 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool, WithQP, WithRemotePeers 
             targetToken,
             targetAddress,
             amount,
-            CHAIN_ID()
+            block.chainid
         );
         portal.run(
             uint64(targetNetwork),
@@ -356,16 +354,16 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool, WithQP, WithRemotePeers 
     ) external {
         (uint netId, address sourceMsgSender,) = portal
             .msgSender();
-        address targetNetworkBridgeContract = remotePeers[targetNetwork];
+        address targetNetworkBridgeContract = remotePeers[sourceChainId];
         require(targetNetworkBridgeContract != address(0), "BP: target contract not set");
         require(sourceMsgSender == targetNetworkBridgeContract, "Not allowed"); // Caller must be a valid pre-configured remote.
         require(sourceChainId == netId, "BP: Unexpected source");
         // Adding to the swap list, so that it can be withdrawn.
-        WithdrawItem memory item = WithdrawItem {
+        WithdrawItem memory item = WithdrawItem({
             token: token,
             payee: payee,
             amount: amount
-        };
+        });
         withdrawItems[payee].push(item);
         // TODO: Emit event
     }
