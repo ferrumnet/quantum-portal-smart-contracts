@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-import "../IQuantumPortalPoc.sol";
+
 import "./IQuantumPortalWorkPoolServer.sol";
 import "foundry-contracts/contracts/math/FullMath.sol";
 import "foundry-contracts/contracts/math/FixedPoint128.sol";
+import "foundry-contracts/contracts/common/WithAdmin.sol";
 import "../../../staking/library/TokenReceivable.sol";
-import "./QuantumPortalWorkerBase.sol";
+import "../utils/WithLedgerMgr.sol";
+import "../utils/WithQp.sol";
+import "../utils/WithRemotePeers.sol";
 
 import "hardhat/console.sol";
 
@@ -15,7 +18,10 @@ import "hardhat/console.sol";
 abstract contract QuantumPortalWorkPoolServer is
     IQuantumPortalWorkPoolServer,
     TokenReceivable,
-    QuantumPortalWorkerBase
+    WithAdmin,
+    WithQp,
+    WithLedgerMgr,
+    WithRemotePeers
 {
     address public baseToken;
     mapping(uint256 => uint256) public lastEpoch;
@@ -23,18 +29,12 @@ abstract contract QuantumPortalWorkPoolServer is
     mapping(uint256 => uint256) public collectedVarFee;
 
     /**
-     * @notice Restricted: Initialize the work pool server contract
-     * @param _portal The QP portal address
-     * @param _mgr The QP ledger manager address
+     * @notice Restricted: Update the base token
      * @param _baseToken The base token address
      */
-    function initServer(
-        address _portal,
-        address _mgr,
+    function updateBaseToken(
         address _baseToken
-    ) external onlyAdmin {
-        portal = IQuantumPortalPoc(_portal);
-        mgr = _mgr;
+    ) external onlyOwner {
         baseToken = _baseToken;
     }
 
@@ -121,7 +121,7 @@ abstract contract QuantumPortalWorkPoolServer is
 
         ) = portal.msgSender();
         // Caller must be a valid pre-configured remote.
-        require(sourceMsgSender == remotes[remoteChainId], "Not allowed");
+        require(sourceMsgSender == remotePeers[remoteChainId], "Not allowed");
         // Worker gets the same ratio of fees compared to the collected fees.
         uint lastLocalEpoch = lastEpoch[remoteChainId]; // Note: This can NOT be zero
         console.log(
@@ -134,5 +134,15 @@ abstract contract QuantumPortalWorkPoolServer is
             "QPWPS:expected epoch<=lastLocalEpoch"
         );
         return (remoteChainId, lastLocalEpoch);
+    }
+
+    /**
+     * @notice Restricted: Update the base token
+     * @param _baseToken The base token address
+     */
+    function _updateBaseToken(
+        address _baseToken
+    ) internal {
+        baseToken = _baseToken;
     }
 }

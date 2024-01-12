@@ -2,7 +2,8 @@
 pragma solidity ^0.8.0;
 
 import "./IQuantumPortalAuthorityMgr.sol";
-import "./IQuantumPortalWorkPoolServer.sol";
+import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
+import "./QuantumPortalWorkPoolServer.sol";
 import "./QuantumPortalWorkPoolClient.sol";
 import "foundry-contracts/contracts/signature/MultiSigCheckable.sol";
 
@@ -13,6 +14,7 @@ import "foundry-contracts/contracts/signature/MultiSigCheckable.sol";
 contract QuantumPortalAuthorityMgr is
     IQuantumPortalAuthorityMgr,
     QuantumPortalWorkPoolClient,
+    QuantumPortalWorkPoolServer,
     MultiSigCheckable
 {
     string public constant NAME = "FERRUM_QUANTUM_PORTAL_AUTHORITY_MGR";
@@ -34,7 +36,12 @@ contract QuantumPortalAuthorityMgr is
     // the current quorumId we are checking
     address public currentQuorumId;
 
-    constructor() EIP712(NAME, VERSION) {}
+    constructor() EIP712(NAME, VERSION) {
+        bytes memory _data = IFerrumDeployer(msg.sender).initData();
+        (address _portal, address _mgr) = abi.decode(_data, (address, address));
+        WithQp._initializeWithQp(_portal);
+        WithLedgerMgr._initializeWithLedgerMgr(_mgr);
+    }
 
     /**
      * @notice Validates the authority signature

@@ -54,7 +54,10 @@ contract QuantumPortalMinerMgr is
 
     constructor() EIP712(NAME, VERSION) {
         bytes memory _data = IFerrumDeployer(msg.sender).initData();
-        (miningStake) = abi.decode(_data, (address));
+        (address _miningStake, address _portal, address _mgr) = abi.decode(_data, (address, address, address));
+        miningStake = _miningStake;
+        WithQp._initializeWithQp(_portal);
+        WithLedgerMgr._initializeWithLedgerMgr(_mgr);
     }
 
     /**

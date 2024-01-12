@@ -1,18 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+
 import "./IQuantumPortalWorkPoolClient.sol";
 import "foundry-contracts/contracts/math/FullMath.sol";
 import "foundry-contracts/contracts/common/SafeAmount.sol";
-import "./QuantumPortalWorkPoolServer.sol";
+import "foundry-contracts/contracts/math/FixedPoint128.sol";
+import "../utils/WithQp.sol";
+import "../utils/WithRemotePeers.sol";
+import "../utils/WithLedgerMgr.sol";
 
 import "hardhat/console.sol";
 
 /**
- * @notice Record amount of work done, and distribute rewards accordingly
+ * @notice Record amount of work done, and distribute rewards accordingly.
  */
 abstract contract QuantumPortalWorkPoolClient is
-    IQuantumPortalWorkPoolClient,
-    QuantumPortalWorkerBase
+    IQuantumPortalWorkPoolClient, WithQp, WithLedgerMgr, WithRemotePeers
 {
     mapping(uint256 => mapping(address => uint256)) public works; // Work done on remote chain
     mapping(uint256 => uint256) public totalWork; // Total work on remote chain
@@ -74,7 +77,7 @@ abstract contract QuantumPortalWorkPoolClient is
             workRatioX128,
             epoch
         );
-        address serverContract = remotes[remoteChain];
+        address serverContract = remotePeers[remoteChain];
         console.log("ABOUT TO CALL REMOTE WITHDRAW", serverContract);
         console.log("WORKER", worker, to);
         console.log("WORKE RATIO", work, workRatioX128);
