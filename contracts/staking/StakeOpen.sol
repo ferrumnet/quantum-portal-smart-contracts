@@ -109,6 +109,7 @@ contract StakeOpen is Sweepable, BaseStakingV2, IRewardPool {
                 allocation != 0,
             "SO: No allocation"
         ); // Break early to save gas for allocatable stakes
+        require(to != address(0), "SO: stake to zero");
         address token = baseInfo.baseToken[id];
         uint256 amount = sync(token);
         require(amount != 0, "SO: amount is required");

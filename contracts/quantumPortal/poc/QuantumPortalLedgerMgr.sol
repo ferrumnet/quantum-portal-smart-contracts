@@ -28,6 +28,24 @@ contract QuantumPortalLedgerMgr is
     IQuantumPortalLedgerMgr,
     IVersioned
 {
+    uint256 constant FIX_TX_SIZE = 9 * 32;
+    uint256 constant FIXED_REJECT_SIZE = 9 * 32;
+    uint256 constant BLOCK_PERIOD = 2 minutes; // One block per two minutes?
+    uint256 constant MAX_TXS_PER_BLOCK = 100; // Arbitraty number to prevent reaching the block gas limit 
+    uint256 constant MAX_BLOCK_SIZE = 30_000_000 / 100; // Arbitrary number for max block size
+    uint256 constant MAX_BLOCK_FOR_FINALIZATION = 10; // Maximum number of blocks for fin
+    string public constant override VERSION = "000.001";
+    uint256 immutable CHAIN_ID;
+    uint256 public minerMinimumStake = 1_000_000 ether; // Minimum 1M tokens to become miner
+    QuantumPortalState public override state;
+    address public ledger;
+    address public minerMgr;
+    address public authorityMgr;
+    address public feeConvertor;
+    address public varFeeTarget;
+    address public fixedFeeTarget;
+    address public stakes;
+
     event RemoteTransactionRegistered(
         uint64 timestamp,
         address remoteContract,
@@ -72,21 +90,6 @@ contract QuantumPortalLedgerMgr is
         uint256 endBlockNonce,
         address[] finalizers
     );
-
-    uint256 constant FIX_TX_SIZE = 9 * 32;
-    uint256 constant FIXED_REJECT_SIZE = 9 * 32;
-    uint256 constant BLOCK_PERIOD = 2 minutes; // One block per two minutes?
-    string public constant override VERSION = "000.001";
-    uint256 immutable CHAIN_ID;
-    uint256 public minerMinimumStake = 1_000_000 ether; // Minimum 1M tokens to become miner
-    QuantumPortalState public override state;
-    address public ledger;
-    address public minerMgr;
-    address public authorityMgr;
-    address public feeConvertor;
-    address public varFeeTarget;
-    address public fixedFeeTarget;
-    address public stakes;
 
     /**
      * @notice Can only be called by ledger 
@@ -416,6 +419,7 @@ contract QuantumPortalLedgerMgr is
                 "QPLM: cannot jump or retrace nonce"
             );
         }
+        require(transactions.length <= MAX_TXS_PER_BLOCK, "QPLM: too many txs");
 
         IQuantumPortalLedgerMgr.MinedBlock memory mb;
 
@@ -440,6 +444,8 @@ contract QuantumPortalLedgerMgr is
                     totalSize += transactions[i].methods[j].length;
                 }
             }
+
+            require(totalSize <= MAX_BLOCK_SIZE, "QPLM: block too large");
 
             // Validate miner
             (
@@ -775,7 +781,9 @@ contract QuantumPortalLedgerMgr is
             "QPLM: already finalized"
         );
         uint256 finalizeFrom = lastFinB.chainId == 0 ? 0 : lastFinB.nonce + 1;
-
+        uint256 blockCount = blockNonce - finalizeFrom;
+        require(blockCount <= MAX_BLOCK_FOR_FINALIZATION, "QPLM: too many blocks");
+        require(invalidNoncesOrdered.length <= blockCount, "QPLM: invalid nonces too large");
         if (invalidNoncesOrdered.length > 1) {
             for (uint i = 1; i < invalidNoncesOrdered.length; i++) {
                 require(

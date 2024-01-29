@@ -28,11 +28,20 @@ contract QuantumPortalMinerMgr is
     QuantumPortalWorkPoolClient,
     QuantumPortalMinerMembership
 {
+    struct SlashHistory {
+        address delegatedMiner;
+        address miner;
+        bytes32 blockHash;
+        address beneficiary;
+    }
+
     uint32 constant WEEK = 7 days;
     string public constant NAME = "FERRUM_QUANTUM_PORTAL_MINER_MGR";
     string public constant VERSION = "000.010";
     bytes32 public constant MINER_SIGNATURE =
         keccak256("MinerSignature(bytes32 msgHash,uint64 expiry,bytes32 salt)");
+    address public override miningStake;
+    mapping(bytes32 => SlashHistory) slashes;
 
     event MinerSlashed (
         address delegatedMiner,
@@ -41,16 +50,7 @@ contract QuantumPortalMinerMgr is
         address beneficiary
     );
 
-    struct SlashHistory {
-        address delegatedMiner;
-        address miner;
-        bytes32 blockHash;
-        address beneficiary;
-    }
     event SlashRequested(SlashHistory data);
-
-    address public override miningStake;
-    mapping(bytes32 => SlashHistory) slashes;
 
     constructor() EIP712(NAME, VERSION) {
         bytes memory _data = IFerrumDeployer(msg.sender).initData();

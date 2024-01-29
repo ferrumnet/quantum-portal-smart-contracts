@@ -7,9 +7,9 @@ import "./IDelegator.sol";
  * @notice A delegator allows delegation.
  */
 contract Delegator is IDelegator {
-    event Delegated(address delator, address delegatee);
     mapping(address => address) public delegation;
     mapping(address => IDelegator.ReverseDelegation) public reverseDelegation;
+    event Delegated(address delator, address delegatee);
 
     /**
      * @notice Returns the reverse delegation for a delegatee

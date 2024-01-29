@@ -14,6 +14,11 @@ import "hardhat/console.sol";
  *     and providing relevant execution context to them
  */
 contract PortalLedger is WithAdmin, ICanEstimateGas {
+    address public mgr;
+    QuantumPortalState public state;
+    QuantumPortalLib.Context public context;
+    uint256 internal immutable CHAIN_ID; // To support override
+
     event RemoteTransfer(
         uint256 chainId,
         address token,
@@ -27,11 +32,6 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
         address localContract,
         bytes32 revertReason
     );
-
-    address public mgr;
-    QuantumPortalState public state;
-    QuantumPortalLib.Context public context;
-    uint256 internal immutable CHAIN_ID; // To support override
 
     /**
      * @notice Can only be called by ledger manager

@@ -30,4 +30,3 @@ abstract contract WithLedgerMgr is WithAdmin {
         qpLedgerMgr = mgr;
     }
 }
-

@@ -5,22 +5,6 @@ import "./QuantumPortalLib.sol";
 import "foundry-contracts/contracts/common/WithAdmin.sol";
 
 contract QuantumPortalState is WithAdmin {
-    /**
-     * @notice Only allow the QP ledger manager to call
-     */
-    modifier onlyMgr() {
-        require(msg.sender == mgr, "QPS: Not allowed");
-        _;
-    }
-
-    /**
-     * @notice Only allow QP ledger to call
-     */
-    modifier onlyLedger() {
-        require(msg.sender == ledger, "QPS: Not allowed");
-        _;
-    }
-
     mapping(uint256 => IQuantumPortalLedgerMgr.LocalBlock) private localBlocks;
     mapping(uint256 => QuantumPortalLib.RemoteTransaction[])
         private localBlockTransactions;
@@ -39,6 +23,22 @@ contract QuantumPortalState is WithAdmin {
 
     address public mgr;
     address public ledger;
+
+    /**
+     * @notice Only allow the QP ledger manager to call
+     */
+    modifier onlyMgr() {
+        require(msg.sender == mgr, "QPS: Not allowed");
+        _;
+    }
+
+    /**
+     * @notice Only allow QP ledger to call
+     */
+    modifier onlyLedger() {
+        require(msg.sender == ledger, "QPS: Not allowed");
+        _;
+    }
 
     /**
      * @notice Get the local block

@@ -14,20 +14,20 @@ import "hardhat/console.sol";
     2 - Authorities can slash
  */
 contract QuantumPortalStake is StakeOpen, Delegator, IQuantumPortalStake {
-    uint64 constant WITHDRAW_LOCK = 30 days;
-    bytes32 constant SLASH_STAKE =
-        keccak256("SlashStake(address user,uint256 amount, bytes32 salt, uint64 expiry)");
-
     struct WithdrawItem {
         uint64 opensAt;
         uint128 amount;
         address to;
     }
+
     struct Pair {
         uint64 start;
         uint64 end;
     }
 
+    uint64 constant WITHDRAW_LOCK = 30 days;
+    bytes32 constant SLASH_STAKE =
+        keccak256("SlashStake(address user,uint256 amount, bytes32 salt, uint64 expiry)");
     address public override STAKE_ID;
     address slashTarget;
     IQuantumPortalAuthorityMgr public auth;
