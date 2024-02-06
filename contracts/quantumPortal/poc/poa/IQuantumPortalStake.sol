@@ -4,10 +4,10 @@ pragma solidity ^0.8.0;
 interface IQuantumPortalStake {
     /**
      * @notice Return stake for a delegatee
-     * @param delegatee The delegatee
+     * @param actor The actor id. Miner / validator
      */
     function delegatedStakeOf(
-        address delegatee
+        address actor
     ) external view returns (uint256);
 
     /**

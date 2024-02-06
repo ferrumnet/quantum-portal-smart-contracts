@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./IQuantumPortalPoc.sol";
 import "./IQuantumPortalLedgerMgr.sol";
-import "./poa/IQuantumPortalStake.sol";
+import "./poa/stake/IQuantumPortalStakeWithDelegate.sol";
 import "../../staking/interfaces/IStakeV2.sol";
 import "../../uniswap/IWETH.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -20,7 +20,7 @@ contract QuantumPortalGateway is WithAdmin, IQuantumPortalPoc {
     string public constant VERSION = "000.010";
     IQuantumPortalPoc public quantumPortalPoc;
     IQuantumPortalLedgerMgr public quantumPortalLedgerMgr;
-    IQuantumPortalStake public quantumPortalStake;
+    IQuantumPortalStakeWithDelegate public quantumPortalStake;
     address public immutable WFRM;
 
     constructor() {
@@ -67,6 +67,16 @@ contract QuantumPortalGateway is WithAdmin, IQuantumPortalPoc {
      */
     function state() external returns (address) {
         return address(quantumPortalLedgerMgr.state());
+    }
+
+    /**
+     * @notice Stake for miner.
+     * @param amount The amount to stake. 0 if staking on the FRM chain.
+     * @param investor The miner/validator to delegate the stake for.
+     */
+    function stakeToInvestor(uint256 amount, address investor) external payable {
+        quantumPortalStake.setInvestorDelegations(investor, msg.sender);
+        _stake(msg.sender, amount);
     }
 
     /**

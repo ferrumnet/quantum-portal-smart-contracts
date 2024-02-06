@@ -98,7 +98,7 @@ contract StakeOpen is Sweepable, BaseStakingV2, IRewardPool {
         address to,
         address id,
         uint256 allocation
-    ) internal returns (uint256) {
+    ) internal virtual returns (uint256) {
         StakingBasics.StakeInfo memory info = stakings[id];
         require(
             info.stakeType == Staking.StakeType.OpenEnded,
