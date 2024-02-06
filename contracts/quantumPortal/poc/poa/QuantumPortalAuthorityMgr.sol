@@ -3,6 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./IQuantumPortalAuthorityMgr.sol";
 import "./IQuantumPortalWorkPoolServer.sol";
+import "./IQuantumPortalFinalizerPrecompile.sol";
 import "./QuantumPortalWorkPoolClient.sol";
 import "foundry-contracts/contracts/signature/MultiSigCheckable.sol";
 
@@ -29,6 +30,8 @@ contract QuantumPortalAuthorityMgr is
 
     // the current quorumId we are checking
     address public currentQuorumId;
+
+    uint256 chainId = block.chainid;
 
     constructor() EIP712(NAME, VERSION) {}
 
@@ -192,5 +195,28 @@ contract QuantumPortalAuthorityMgr is
      */
     function clearCurrentMsgHash() external {
         currentMsgHash = bytes32(0);
+    }
+
+    /**
+     @notice Wrapper function for MultiSigCheckable.initialize, performs an additional precompile call to register finalizers
+     if on QPN chain.
+     */
+    function initializeQuoromAndRegisterFinalizer(
+        address quorumId,
+        uint64 groupId,
+        uint16 minSignatures,
+        uint8 ownerGroupId,
+        address[] calldata addresses
+    ) external {
+        
+        // first initialize the quorom
+        initialize(quorumId, groupId, minSignatures, ownerGroupId, addresses);
+
+        // if QPN testnet or mainnet, ensure the precompile is called
+        if (chainId == 26100 || chainId == 26000) {
+            for (uint i=0; i<addresses.length; i++) {
+                QuantumPortalFinalizerPrecompile(QUANTUM_PORTAL_PRECOMPILE).registerFinalizer(chainId, addresses[i]);
+            }
+        }
     }
 }
