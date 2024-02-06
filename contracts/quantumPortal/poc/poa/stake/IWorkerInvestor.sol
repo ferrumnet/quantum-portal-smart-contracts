@@ -9,10 +9,10 @@ interface IWorkerInvestor {
 
     /**
      * @notice Returns the worker for an investor
-     * @param worker The worker
+     * @param workerAddress The worker
      * @return The investor `Relationship`
      */
-    function getInvstor(
-        address worker
+    function getInvestor(
+        address workerAddress
     ) external view returns (Relationship memory);
 }

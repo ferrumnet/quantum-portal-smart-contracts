@@ -59,7 +59,7 @@ contract QuantumPortalGateway is WithAdmin, IQuantumPortalPoc {
     ) external onlyAdmin {
         quantumPortalPoc = IQuantumPortalPoc(poc);
         quantumPortalLedgerMgr = IQuantumPortalLedgerMgr(ledgerMgr);
-        quantumPortalStake = IQuantumPortalStake(qpStake);
+        quantumPortalStake = IQuantumPortalStakeWithDelegate(qpStake);
     }
 
     /**

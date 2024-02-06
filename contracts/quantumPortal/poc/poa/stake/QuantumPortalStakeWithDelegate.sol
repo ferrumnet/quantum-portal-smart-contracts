@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "./IQuantumPortalStakeWithDelegate.sol";
 import "../QuantumPortalAuthorityMgr.sol";
 import "../Delegator.sol";
+import "./WorkerInvestor.sol";
 import "../../../../staking/StakeOpen.sol";
 
 import "hardhat/console.sol";
@@ -48,7 +49,7 @@ contract QuantumPortalStakeWithDelegate is StakeOpen, WorkerInvestor, IQuantumPo
         bytes memory _data = IFerrumDeployer(msg.sender).initData();
         (address token, address authority, address _gateway) = abi.decode(
             _data,
-            (address, address)
+            (address, address, address)
         );
         address[] memory tokens = new address[](1);
         tokens[0] = token;
@@ -59,7 +60,7 @@ contract QuantumPortalStakeWithDelegate is StakeOpen, WorkerInvestor, IQuantumPo
     }
 
     /**
-     * @inheritdoc IQuantumPortalStake
+     * @inheritdoc IQuantumPortalStakeWithDelegate
      */
     function stakeOfInvestor(
         address worker
@@ -140,7 +141,7 @@ contract QuantumPortalStakeWithDelegate is StakeOpen, WorkerInvestor, IQuantumPo
     /**
      * @notice Slashes a user stake. First, all pending withdrawals are cancelled.
      * This is to ensure withdrawers are also penalized at the same rate.
-     * @param user The user to be slashed
+     * @param investor The investor to be slashed
      * @param amount The amount of slash
      * @param salt A unique salt
      * @param expiry Signature expiry
@@ -153,7 +154,7 @@ contract QuantumPortalStakeWithDelegate is StakeOpen, WorkerInvestor, IQuantumPo
         uint64 expiry,
         bytes memory multiSignature
     ) external returns (uint256) {
-        bytes32 message = keccak256(abi.encode(SLASH_STAKE, user, amount, salt, expiry));
+        bytes32 message = keccak256(abi.encode(SLASH_STAKE, investor, amount, salt, expiry));
         auth.validateAuthoritySignature(
             IQuantumPortalAuthorityMgr.Action.SLASH,
             message,
@@ -173,12 +174,13 @@ contract QuantumPortalStakeWithDelegate is StakeOpen, WorkerInvestor, IQuantumPo
     function stakeToInvestor(address to, address investor
     ) external {
         address currentInvstor = investorDelegations[to];
-        if (currentInvstor == address[0]) {
-            currentInvstor = to;
+        if (currentInvstor == address(0)) {
+            investorDelegations[to] = investor;
+        } else {
+            require(currentInvstor == investor, "QPS: invalid investor");
         }
-        require(currentInvstor == to, "QPS: invalid investor");
 
-        _stake(to, STAKE_ID, allocation);
+        _stake(to, STAKE_ID, 0);
     }
 
     function _stake(
@@ -191,6 +193,7 @@ contract QuantumPortalStakeWithDelegate is StakeOpen, WorkerInvestor, IQuantumPo
         require(investorSlash[investor] == 0, "QPS: investor is slashed");
         uint256 amount = StakeOpen._stake(to, id, allocation);
         investorStake[investor] = investorStake[investor] + amount;
+        return amount;
     }
 
     /**

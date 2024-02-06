@@ -9,16 +9,16 @@ import "./IWorkerInvestor.sol";
  */
 contract WorkerInvestor is IWorkerInvestor {
     mapping(address => address) public worker;
-    mapping(address => IWorkerInvestor.ReverseDelegation) public investorLookup;
-    event WorkerInvestor(address investor, address worker);
+    mapping(address => IWorkerInvestor.Relationship) public investorLookup;
+    event WorkerInvestorAssigned(address investor, address worker);
 
     /**
      * @inheritdoc IWorkerInvestor
      */
     function getInvestor(
-        address worker
+        address workerAddress
     ) external view override returns (IWorkerInvestor.Relationship memory) {
-        return investorLookup[worker];
+        return investorLookup[workerAddress];
     }
 
     /**
@@ -31,11 +31,11 @@ contract WorkerInvestor is IWorkerInvestor {
             require(currentWorker != address(0), "D: nothing to delete");
             delete worker[msg.sender];
             investorLookup[currentWorker].deleted = uint8(1);
-            emit WorkerInvestor(msg.sender, address(0));
+            emit WorkerInvestorAssigned(msg.sender, address(0));
             return;
         }
         require(
-            investorLookup[to].worker == address(0),
+            investorLookup[to].investor == address(0),
             "D: to is already in investor"
         );
         require(worker[to] == address(0), "D: to is an investor");
@@ -43,6 +43,6 @@ contract WorkerInvestor is IWorkerInvestor {
         worker[msg.sender] = to;
         investorLookup[currentWorker].deleted = uint8(1);
         investorLookup[to].investor = msg.sender;
-        emit WorkerInvestor(msg.sender, to);
+        emit WorkerInvestorAssigned(msg.sender, to);
     }
 }
