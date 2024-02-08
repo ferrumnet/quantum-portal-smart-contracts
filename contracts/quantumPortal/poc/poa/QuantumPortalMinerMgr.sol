@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./IQuantumPortalMinerMgr.sol";
-import "./IQuantumPortalStake.sol";
+import "./stake/IQuantumPortalStakeWithDelegate.sol";
 import "./IDelegator.sol";
 import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
 import "foundry-contracts/contracts/signature/MultiSigLib.sol";
@@ -121,7 +121,7 @@ contract QuantumPortalMinerMgr is
         signer = verifySignature(msgHash, salt, expiry, multiSig);
         require(signer != address(0), "QPMM: invalid signature");
         console.log("Signer is ?", signer);
-        uint256 stake = IQuantumPortalStake(miningStake).delegatedStakeOf(
+        uint256 stake = IQuantumPortalStakeWithDelegate(miningStake).stakeOfInvestor(
             signer
         );
         require(stake != 0, "QPMM: Not a valid miner");

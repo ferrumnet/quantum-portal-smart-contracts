@@ -6,7 +6,7 @@ import "./poa/IQuantumPortalMinerMgr.sol";
 import "./poa/IQuantumPortalAuthorityMgr.sol";
 import "./poa/IQuantumPortalFeeConvertor.sol";
 import "./poa/IQuantumPortalMinerMembership.sol";
-import "./poa/IQuantumPortalStake.sol";
+import "./poa/stake/IQuantumPortalStakeWithDelegate.sol";
 import "foundry-contracts/contracts/common/IVersioned.sol";
 import "foundry-contracts/contracts/common/WithAdmin.sol";
 import "foundry-contracts/contracts/math/FullMath.sol";
@@ -1046,13 +1046,13 @@ contract QuantumPortalLedgerMgr is
 
     /**
      @notice Returns available stake of the staker.
-     @param staker The staker address
+     @param worker The worker address
      @return The available staked amount
      */
-    function stakeOf(address staker) internal virtual returns (uint256) {
+    function stakeOf(address worker) internal virtual returns (uint256) {
         address _stake = IQuantumPortalMinerMgr(minerMgr).miningStake();
-        console.log("Checking stake for ", staker);
-        return IQuantumPortalStake(_stake).delegatedStakeOf(staker);
+        console.log("Checking stake for ", worker);
+        return IQuantumPortalStakeWithDelegate(_stake).stakeOfInvestor(worker);
     }
 
     /**
