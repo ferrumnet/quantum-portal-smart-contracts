@@ -16,11 +16,11 @@ abstract contract QuantumPortalPoc is
     IQuantumPortalPoc,
     IVersioned
 {
-    event LocalTransfer(address token, address to, uint256 amount);
-
     string public constant override VERSION = "000.001";
     address public override feeTarget;
     address public override feeToken;
+
+    event LocalTransfer(address token, address to, uint256 amount);
 
     /**
      * @notice Restricted: Set the fee target

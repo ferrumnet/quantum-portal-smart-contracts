@@ -4,7 +4,7 @@ import { panick, _WETH, deployUsingDeployer, contractExists, isAllZero, distribu
 import { QuantumPortalPoc } from "../../../typechain/QuantumPortalPoc";
 import { QuantumPortalLedgerMgr } from "../../../typechain/QuantumPortalLedgerMgr";
 import { QuantumPortalAuthorityMgr } from "../../../typechain/QuantumPortalAuthorityMgr";
-import { QuantumPortalStake } from "../../../typechain/QuantumPortalStake";
+import { QuantumPortalStake } from "../../../typechain/QuantumPortalStakeWithDelegate";
 import { QuantumPortalMinerMgr } from "../../../typechain/QuantumPortalMinerMgr";
 import { QuantumPortalGateway } from "../../../typechain/QuantumPortalGateway";
 import { UniswapOracle } from "../../../typechain/UniswapOracle";
@@ -129,8 +129,8 @@ async function prep(conf: QpDeployConfig) {
     }
 
     let stakeToken = conf.FRM[chainId] || panick(`No stake token address for chain ${chainId}`);
-    const stakeInitData = abi.encode(['address', 'address'], [stakeToken, ctx.auth.address]);
-    [ctx.stake, newStake] = await deployOrAttach(conf, conf.QuantumPortalStake, 'QuantumPortalStake', conf.Owner, stakeInitData, qpWallet,);
+    const stakeInitData = abi.encode(['address', 'address', 'address'], [stakeToken, ctx.auth.address, ctx.gateway.address]);
+    [ctx.stake, newStake] = await deployOrAttach(conf, conf.QuantumPortalStake, 'QuantumPortalStakeWithDelegate', conf.Owner, stakeInitData, qpWallet,);
     if (newStake) {
         console.log('New stake. Clearing the miner mgr');
         conf.QuantumPortalMinerMgr = undefined;

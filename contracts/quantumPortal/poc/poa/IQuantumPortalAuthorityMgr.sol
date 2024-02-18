@@ -8,7 +8,8 @@ interface IQuantumPortalAuthorityMgr {
     enum Action {
         NONE,
         FINALIZE,
-        SLASH
+        SLASH,
+        ALLOW_ACTION
     }
 
     /**
@@ -30,7 +31,6 @@ interface IQuantumPortalAuthorityMgr {
     /**
      * @notice Validates the authority signature for a single signer. 
      *  This is to collect signatures one by one
-     *  TODO: Elminiate the need for this, and move the logic to the offchain worker
      * @param action The action
      * @param msgHash The message hash (summary of the object to be validated)
      * @param salt A unique salt

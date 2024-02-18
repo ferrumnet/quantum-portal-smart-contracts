@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./IQuantumPortalMinerMgr.sol";
-import "./IQuantumPortalStake.sol";
+import "./stake/IQuantumPortalStakeWithDelegate.sol";
 import "./IDelegator.sol";
 import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
 import "foundry-contracts/contracts/signature/MultiSigLib.sol";
@@ -10,7 +10,6 @@ import "./QuantumPortalWorkPoolClient.sol";
 import "./QuantumPortalWorkPoolServer.sol";
 import "./QuantumPortalMinerMembership.sol";
 import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 import "hardhat/console.sol";
 
@@ -36,17 +35,29 @@ contract QuantumPortalMinerMgr is
         address beneficiary;
     }
 
-    uint32 constant WEEK = 3600 * 24 * 7;
+    uint32 constant WEEK = 7 days;
     string public constant NAME = "FERRUM_QUANTUM_PORTAL_MINER_MGR";
     string public constant VERSION = "000.010";
+    bytes32 public constant MINER_SIGNATURE =
+        keccak256("MinerSignature(bytes32 msgHash,uint64 expiry,bytes32 salt)");
     address public override miningStake;
     mapping(bytes32 => SlashHistory) slashes;
+
+    event MinerSlashed (
+        address delegatedMiner,
+        address indexed miner,
+        bytes32 blockHash,
+        address beneficiary
+    );
 
     event SlashRequested(SlashHistory data);
 
     constructor() EIP712(NAME, VERSION) {
         bytes memory _data = IFerrumDeployer(msg.sender).initData();
-        (miningStake) = abi.decode(_data, (address));
+        (address _miningStake, address _portal, address _mgr) = abi.decode(_data, (address, address, address));
+        miningStake = _miningStake;
+        WithQp._initializeWithQp(_portal);
+        WithLedgerMgr._initializeWithLedgerMgr(_mgr);
     }
 
     /**
@@ -107,14 +118,10 @@ contract QuantumPortalMinerMgr is
         // Validate miner signature
         // Get its stake
         // Validate miner has stake
-        // TODO: Lmit who can call this function and then
-        // add the value to miners validation history.
-        // such that a miner has not limit-per-transaction
-        // but limit per other things.
         signer = verifySignature(msgHash, salt, expiry, multiSig);
         require(signer != address(0), "QPMM: invalid signature");
         console.log("Signer is ?", signer);
-        uint256 stake = IQuantumPortalStake(miningStake).delegatedStakeOf(
+        uint256 stake = IQuantumPortalStakeWithDelegate(miningStake).stakeOfDelegate(
             signer
         );
         require(stake != 0, "QPMM: Not a valid miner");
@@ -140,8 +147,32 @@ contract QuantumPortalMinerMgr is
         );
     }
 
-    bytes32 public constant MINER_SIGNATURE =
-        keccak256("MinerSignature(bytes32 msgHash,uint64 expiry,bytes32 salt)");
+    /**
+     * @inheritdoc IQuantumPortalMinerMgr
+     */
+    function slashMinerForFraud(
+        address delegatedMiner,
+        bytes32 blockHash,
+        address beneficiary
+    ) external override onlyMgr {
+        // Note: For this version, we just record the slash, then the validator quorum will do the slash manually.
+        // This is expected to be a rare enough event.
+        // Unregister the miner
+        address miner = IDelegator(miningStake)
+            .getReverseDelegation(delegatedMiner)
+            .delegatee;
+        SlashHistory memory data = SlashHistory({
+            delegatedMiner: delegatedMiner,
+            miner: miner,
+            blockHash: blockHash,
+            beneficiary: beneficiary
+        });
+        slashes[blockHash] = data;
+        if (minerIdxsPlusOne[miner] != 0) {
+            _unregisterMiner(delegatedMiner);
+        }
+        emit MinerSlashed (delegatedMiner, miner, blockHash, beneficiary);
+    }
 
     /**
      * @notice Vrify miner signature
@@ -165,32 +196,6 @@ contract QuantumPortalMinerMgr is
         address _signer = _extractMinerAddress(msgHash, salt, expiry, multiSig);
         require(_signer != address(0), "QPMM: wrong number of signatures");
         return _signer;
-    }
-
-    /**
-     * @inheritdoc IQuantumPortalMinerMgr
-     */
-    function slashMinerForFraud(
-        address delegatedMiner,
-        bytes32 blockHash,
-        address beneficiary
-    ) external override onlyMgr {
-        // TODO: For this version, we just record the slash, then the validator quorum will do the slash manually.
-        // This is expexted to be a rare enough event.
-        // Unregister the miner
-        address miner = IDelegator(miningStake)
-            .getReverseDelegation(delegatedMiner)
-            .delegatee;
-        SlashHistory memory data = SlashHistory({
-            delegatedMiner: delegatedMiner,
-            miner: miner,
-            blockHash: blockHash,
-            beneficiary: beneficiary
-        });
-        slashes[blockHash] = data;
-        if (minerIdxsPlusOne[miner] != 0) {
-            _unregisterMiner(delegatedMiner);
-        }
     }
 
     /**

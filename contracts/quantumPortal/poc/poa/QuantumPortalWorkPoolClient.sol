@@ -1,30 +1,25 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+
 import "./IQuantumPortalWorkPoolClient.sol";
 import "foundry-contracts/contracts/math/FullMath.sol";
 import "foundry-contracts/contracts/common/SafeAmount.sol";
-import "./QuantumPortalWorkPoolServer.sol";
+import "foundry-contracts/contracts/math/FixedPoint128.sol";
+import "../utils/WithQp.sol";
+import "../utils/WithRemotePeers.sol";
+import "../utils/WithLedgerMgr.sol";
 
 import "hardhat/console.sol";
 
 /**
- * @notice Record amount of work done, and distribute rewards accordingly
+ * @notice Record amount of work done, and distribute rewards accordingly.
  */
 abstract contract QuantumPortalWorkPoolClient is
-    IQuantumPortalWorkPoolClient,
-    QuantumPortalWorkerBase
+    IQuantumPortalWorkPoolClient, WithQp, WithLedgerMgr, WithRemotePeers
 {
     mapping(uint256 => mapping(address => uint256)) public works; // Work done on remote chain
     mapping(uint256 => uint256) public totalWork; // Total work on remote chain
     mapping(uint256 => uint256) public remoteEpoch;
-
-    /**
-     * @notice Ristricted: update the manager
-     * @param _mgr The manager contract address
-     */
-    function updateMgr(address _mgr) external onlyAdmin {
-        mgr = _mgr;
-    }
 
     /**
      * @inheritdoc IQuantumPortalWorkPoolClient
@@ -34,8 +29,7 @@ abstract contract QuantumPortalWorkPoolClient is
         address worker,
         uint256 work,
         uint256 _remoteEpoch
-    ) external override {
-        require(msg.sender == mgr, "QPWPC: caller not allowed");
+    ) external override onlyMgr {
         works[remoteChain][worker] += work;
         console.log("REGISTERING WORK", worker, work);
         totalWork[remoteChain] += work;
@@ -43,7 +37,9 @@ abstract contract QuantumPortalWorkPoolClient is
     }
 
     /**
-     * @notice Withdraw the rewards on the remote chain
+     * @notice Withdraw the rewards on the remote chain. Note: in case of
+     * tx failure the funds are gone. So make sure to provide enough fees to ensure the 
+     * tx does not fail because of gas.
      * @param selector The selector
      * @param remoteChain The remote
      * @param to Send the rewards to
@@ -58,7 +54,7 @@ abstract contract QuantumPortalWorkPoolClient is
         uint fee
     ) internal {
         uint256 work = works[remoteChain][worker];
-        works[remoteChain][worker] = 0;
+        delete works[remoteChain][worker];
         // Send the fee
         require(
             SafeAmount.safeTransferFrom(
@@ -81,12 +77,11 @@ abstract contract QuantumPortalWorkPoolClient is
             workRatioX128,
             epoch
         );
-        address serverContract = remotes[remoteChain];
+        address serverContract = remotePeers[remoteChain];
         console.log("ABOUT TO CALL REMOTE WITHDRAW", serverContract);
         console.log("WORKER", worker, to);
         console.log("WORKE RATIO", work, workRatioX128);
         console.log("EPOCH", epoch);
         portal.run(uint64(remoteChain), serverContract, msg.sender, method);
-        // TODO: Challenge: What if the withdraw failed! Need a revert option
     }
 }

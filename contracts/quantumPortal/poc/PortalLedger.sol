@@ -14,6 +14,11 @@ import "hardhat/console.sol";
  *     and providing relevant execution context to them
  */
 contract PortalLedger is WithAdmin, ICanEstimateGas {
+    address public mgr;
+    QuantumPortalState public state;
+    QuantumPortalLib.Context public context;
+    uint256 internal immutable CHAIN_ID; // To support override
+
     event RemoteTransfer(
         uint256 chainId,
         address token,
@@ -27,11 +32,6 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
         address localContract,
         bytes32 revertReason
     );
-
-    address public mgr;
-    QuantumPortalState public state;
-    QuantumPortalLib.Context public context;
-    uint256 internal immutable CHAIN_ID; // To support override
 
     /**
      * @notice Can only be called by ledger manager
@@ -129,9 +129,7 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
                     );
                 }
             } else {
-                // We cannot revert because we don't know where to get the fee from.
-                // TODO:
-                // revertRemoteBalance(_context);
+                _rejectRemoteTransaction(b.chainId, t);
             }
             resetContext();
         }
@@ -154,19 +152,8 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
         console.log("AMOUNT", t.amount);
         console.log("REMOTE CONTRACT", t.remoteContract);
 
-        //Refund the remote value to the beneficiary
-        if (t.amount != 0) {
-            state.setRemoteBalances(
-                sourceChainId,
-                t.token,
-                t.sourceBeneficiary,
-                state.getRemoteBalances(
-                    sourceChainId,
-                    t.token,
-                    t.sourceBeneficiary
-                ) + t.amount
-            );
-        }
+        _rejectRemoteTransaction(
+            sourceChainId, t);
 
         uint postGas = gasleft();
         gasUsed = preGas - postGas;
@@ -225,13 +212,14 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
 
         context = _context;
         // This call will revert after execution but the tx should go through, hence enabling gas estimation
-        address(this).call(
+        (bool result,) = address(this).call(
             abi.encodeWithSelector(
                 ICanEstimateGas.executeTxAndRevertToEstimateGas.selector,
                 t.remoteContract,
                 t.methods[0]
             )
         );
+        require(!result);
         resetContext();
     }
 
@@ -258,9 +246,7 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
      * @notice Restricted: Resets the context
      */
     function clearContext() external onlyMgr {
-        delete context.blockMetadata;
-        delete context.transaction;
-        delete context;
+        resetContext();
     }
 
     /**
@@ -274,34 +260,34 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
     }
 
     /**
-     * @notice Reverts remote balance to refund the value in case of a failure
-     * @param _context The context
-     */
-    function revertRemoteBalance(
-        QuantumPortalLib.Context memory _context
-    ) internal {
-        // Register a revert transaction to be mined
-        // TODO: Where does the gas come from?
-        IQuantumPortalLedgerMgr(mgr).registerTransaction(
-            _context.blockMetadata.chainId,
-            _context.transaction.sourceBeneficiary,
-            address(0),
-            address(0),
-            _context.transaction.token,
-            _context.transaction.amount,
-            ""
-        );
-    }
-
-    /**
      * @inheritdoc ICanEstimateGas
      */
     function executeTxAndRevertToEstimateGas(
         address addr,
         bytes memory method
     ) public override {
-        addr.call(method);
+        require(msg.sender == address(this)); // Prevent remote calls
+        (bool result,) = addr.call(method);
         revert();
+    }
+
+    function _rejectRemoteTransaction(
+        uint256 sourceChainId,
+        QuantumPortalLib.RemoteTransaction memory t
+    ) internal {
+        //Refund the remote value to the beneficiary
+        if (t.amount != 0) {
+            state.setRemoteBalances(
+                sourceChainId,
+                t.token,
+                t.sourceBeneficiary,
+                state.getRemoteBalances(
+                    sourceChainId,
+                    t.token,
+                    t.sourceBeneficiary
+                ) + t.amount
+            );
+        }
     }
 
     /**
@@ -319,6 +305,9 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
             return "No revert message";
         } else {
             bytes4 errorSelector;
+            assembly {
+                errorSelector := mload(add(revertData, 0x20))
+            }
             if (
                 errorSelector ==
                 bytes4(0x4e487b71) /* `seth sig "Panic(uint256)"` */
@@ -375,8 +364,6 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
         if (method.length == 0) {
             return true;
         }
-        // TODO: What happens if addr does not exist or is an address
-        // TODO: Include gas properly, and catch the proper error when there is not enough gas
         bytes memory data;
         console.log("CALLING ", localContract);
         (success, data) = localContract.call{gas: gas}(method);

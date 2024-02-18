@@ -34,6 +34,7 @@ contract QuantumPortalFeeConverter is IQuantumPortalFeeConvertor, WithAdmin {
 
     /**
      * Restricted. Update the fee per byte number
+     * Note: When you are setting the fbp on the ETH network, remember FRM has only 6 decimals there
      * @param fpb The fee per byte
      */
     function updateFeePerByte(uint256 fpb) external onlyAdmin {
@@ -77,6 +78,17 @@ contract QuantumPortalFeeConverter is IQuantumPortalFeeConvertor, WithAdmin {
     }
 
     /**
+     * @notice Get the fee for the target network
+     */
+    function targetChainFixedFee(
+        uint256 targetChainId,
+        uint256 size
+    ) external view override returns (uint256) {
+        uint256 price = _targetChainGasTokenPriceX128(targetChainId);
+        return (price * size * feePerByte) / FixedPoint128.Q128;
+    }
+
+    /**
      * @notice Return the gas token (FRM) price for the target chain
      * @param targetChainId The target chain ID
      */
@@ -93,17 +105,5 @@ contract QuantumPortalFeeConverter is IQuantumPortalFeeConvertor, WithAdmin {
         pairs[1] = qpFeeToken;
         console.log("PAIR", pairs[0], pairs[1]);
         return oracle.recentPriceX128(pairs);
-    }
-
-    /**
-     * @notice Get the fee for the target network
-     * TODO: Consider the hack for FRM on ETH network, as it is just 6 digits of decimal
-     */
-    function targetChainFixedFee(
-        uint256 targetChainId,
-        uint256 size
-    ) external view override returns (uint256) {
-        uint256 price = _targetChainGasTokenPriceX128(targetChainId);
-        return (price * size * feePerByte) / FixedPoint128.Q128;
     }
 }
