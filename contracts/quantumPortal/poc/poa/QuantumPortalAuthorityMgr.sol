@@ -42,7 +42,7 @@ contract QuantumPortalAuthorityMgr is
         WithQp._initializeWithQp(_portal);
         WithLedgerMgr._initializeWithLedgerMgr(_mgr);
     }
-
+    
     /**
      * @notice Validates the authority signature
      * @param action The action
@@ -196,5 +196,28 @@ contract QuantumPortalAuthorityMgr is
      */
     function clearCurrentMsgHash() external {
         delete currentMsgHash;
+    }
+
+    /**
+     @notice Wrapper function for MultiSigCheckable.initialize, performs an additional precompile call to register finalizers
+     if on QPN chain.
+     */
+    function initializeQuoromAndRegisterFinalizer(
+        address quorumId,
+        uint64 groupId,
+        uint16 minSignatures,
+        uint8 ownerGroupId,
+        address[] calldata addresses
+    ) external {
+        
+        // first initialize the quorom
+        initialize(quorumId, groupId, minSignatures, ownerGroupId, addresses);
+
+        // if QPN testnet or mainnet, ensure the precompile is called
+        if (chainId == 26100 || chainId == 26000) {
+            for (uint i=0; i<addresses.length; i++) {
+                QuantumPortalFinalizerPrecompile(QUANTUM_PORTAL_PRECOMPILE).registerFinalizer(chainId, addresses[i]);
+            }
+        }
     }
 }

@@ -67,7 +67,7 @@ const config: HardhatUserConfig = {
     },
     ferrum_testnet: {
       chainId: 26100,
-      url: "http://testnet.dev.svcs.ferrumnetwork.io:8545",
+      url: "http://127.0.0.1:9944",
       accounts: [getEnv("TEST_ACCOUNT_PRIVATE_KEY")],
       allowUnlimitedContractSize: true,
       gas: 10000000, // this override is required for Substrate based evm chains
