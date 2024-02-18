@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "./IQuantumPortalStakeWithDelegate.sol";
 import "../QuantumPortalAuthorityMgr.sol";
 import "../Delegator.sol";
-import "./WorkerInvestor.sol";
+import "./OperatorRelation.sol";
 import "../../../../staking/StakeOpen.sol";
 
 import "hardhat/console.sol";
@@ -18,7 +18,7 @@ import "hardhat/console.sol";
     3 - Slash will be applied to a whole group of stakers that delegated to an address.
     4 - Once someone is slashed, the group cannot stake any more.
  */
-contract QuantumPortalStakeWithDelegate is StakeOpen, WorkerInvestor, IQuantumPortalStakeWithDelegate {
+contract QuantumPortalStakeWithDelegate is StakeOpen, OperatorRelation, IQuantumPortalStakeWithDelegate {
     struct WithdrawItem {
         uint64 opensAt;
         uint128 amount;
@@ -33,23 +33,26 @@ contract QuantumPortalStakeWithDelegate is StakeOpen, WorkerInvestor, IQuantumPo
     uint64 constant WITHDRAW_LOCK = 30 days;
     bytes32 constant SLASH_STAKE =
         keccak256("SlashStake(address user,uint256 amount, bytes32 salt, uint64 expiry)");
+    bytes32 constant ALLOW_STAKE =
+        keccak256("AllowStake(address to,address delegate,uint256 allocation, bytes32 salt, uint64 expiry)");
     address public override STAKE_ID;
     address public gateway;
     address public slashTarget;
     IQuantumPortalAuthorityMgr public auth;
+    IQuantumPortalAuthorityMgr public stakeVerifyer;
     mapping(address => Pair) public withdrawItemsQueueParam;
     mapping(address => mapping(uint => WithdrawItem)) public withdrawItemsQueue;
-    mapping(address => uint256) public investorStake; // Total stake accumulated for an investor, INCLUDING the withdraw queue
-    mapping(address => uint256) public investorSlash; // Total slash for an investor
-    // Delegations of stakers to an investor. We limit user to delegate to only one investor from one address
-    // to delegate to a different investor, stakers will need to use a different address
-    mapping(address => address) public override investorDelegations; 
+    mapping(address => uint256) public delegateStake; // Total stake accumulated for an delegate, INCLUDING the withdraw queue
+    mapping(address => uint256) public delegateSlash; // Total slash for an delegate
+    // Delegations of stakers to an delegate. We limit user to delegate to only one delegate from one address
+    // to delegate to a different delegate, stakers will need to use a different address
+    mapping(address => address) public override delegations; 
 
     constructor() {
         bytes memory _data = IFerrumDeployer(msg.sender).initData();
-        (address token, address authority, address _gateway) = abi.decode(
+        (address token, address authority, address _stakeVerifyer, address _gateway) = abi.decode(
             _data,
-            (address, address, address)
+            (address, address, address, address)
         );
         address[] memory tokens = new address[](1);
         tokens[0] = token;
@@ -57,47 +60,50 @@ contract QuantumPortalStakeWithDelegate is StakeOpen, WorkerInvestor, IQuantumPo
         STAKE_ID = token;
         auth = IQuantumPortalAuthorityMgr(authority);
         gateway = _gateway;
+        stakeVerifyer = IQuantumPortalAuthorityMgr(_stakeVerifyer);
+    }
+
+    /**
+     * @notice Updatesth te stake verifyer
+     * @param newStakeVerifyer The new stake verifyer
+     */
+    function updateStakeVerifyer(address newStakeVerifyer
+    ) external onlyOwner {
+        stakeVerifyer = IQuantumPortalAuthorityMgr(newStakeVerifyer);
     }
 
     /**
      * @inheritdoc IQuantumPortalStakeWithDelegate
      */
-    function stakeOfInvestor(
-        address worker
+    function stakeOfDelegate(
+        address operator
     ) external view override returns (uint256) {
-        require(worker != address(0), "QPS: worker required");
-        IWorkerInvestor.Relationship memory rd = investorLookup[worker];
+        require(operator != address(0), "QPS: operator required");
+        IOperatorRelation.Relationship memory rd = delegateLookup[operator];
         if (rd.deleted == 1) {
             return 0;
         }
-        address investor = rd.investor;
-        require(investor != address(0), "QPS: investor not valid");
-        return investorStake[investor]; // Total amount staked for an investor from delegators
+        address delegate = rd.delegate;
+        require(delegate != address(0), "QPS: delegate not valid");
+        return delegateStake[delegate]; // Total amount staked for a delegate
     }
 
     /**
      * @inheritdoc IQuantumPortalStakeWithDelegate
      */
-    function setInvestorDelegations(
-        address investor,
-        address staker
+    function setDelegation(
+        address delegate,
+        address delegator
     ) external override {
         // Can only be called by the staker or the gateway. Gateway in part ensures being called by the staker
-        require(msg.sender == staker || msg.sender == gateway, "QPS: unauthorized");
-        address currentDelegation = investorDelegations[staker];
-        if (currentDelegation == address(0)) {
-            investorDelegations[staker] = investor;
-        } else {
-            require(currentDelegation == investor, "QPS: delegation not allowed");
-        }
+        require(msg.sender == delegator || msg.sender == gateway, "QPS: unauthorized");
+        _setDelegation(delegate, delegator);
     }
 
     /**
      * @notice Only staker can release WI. This is to allow staker to be a smart contract
      * and manage state when withdraw happens.
      * @param staker The staker.
-     * @return paidTo Returns the list of payments.
-     * @return amounts Returns the list of payments.
      */
     function releaseWithdrawItems(
         address staker
@@ -112,9 +118,9 @@ contract QuantumPortalStakeWithDelegate is StakeOpen, WorkerInvestor, IQuantumPo
         uint i = 0;
 
         // Identify slash ratio
-        address investor = investorDelegations[staker];
-        uint256 slashAmount = investorSlash[investor];
-        uint256 slashRatio = FullMath.mulDiv(slashAmount, FixedPoint128.Q128, investorStake[investor]);
+        address delegate = delegations[staker];
+        uint256 slashAmount = delegateSlash[delegate];
+        uint256 slashRatio = FullMath.mulDiv(slashAmount, FixedPoint128.Q128, delegateStake[delegate]);
 
         while (wi.opensAt != 0 && wi.opensAt < block.timestamp) {
             popFromQueue(staker, pair);
@@ -125,8 +131,8 @@ contract QuantumPortalStakeWithDelegate is StakeOpen, WorkerInvestor, IQuantumPo
                 FullMath.mulDiv(slashRatio, wi.amount, FixedPoint128.Q128);
             console.log("Sending tokens slash", slashed, wi.amount);
             uint256 payAmount = wi.amount > slashed ? wi.amount - slashed : 0;
-            investorSlash[investor] = investorSlash[investor] - slashed;
-            investorStake[investor] = investorStake[investor] - wi.amount;
+            delegateSlash[delegate] = delegateSlash[delegate] - slashed;
+            delegateSlash[delegate] = delegateSlash[delegate] - wi.amount;
             paidTo[i] = wi.to;
             amounts[i] = payAmount;
             i++;
@@ -141,20 +147,20 @@ contract QuantumPortalStakeWithDelegate is StakeOpen, WorkerInvestor, IQuantumPo
     /**
      * @notice Slashes a user stake. First, all pending withdrawals are cancelled.
      * This is to ensure withdrawers are also penalized at the same rate.
-     * @param investor The investor to be slashed
+     * @param delegate The delegate to be slashed
      * @param amount The amount of slash
      * @param salt A unique salt
      * @param expiry Signature expiry
      * @param multiSignature The signatrue
      */
-    function slashInvestor(
-        address investor,
+    function slashDelegate(
+        address delegate,
         uint256 amount,
         bytes32 salt,
         uint64 expiry,
         bytes memory multiSignature
     ) external returns (uint256) {
-        bytes32 message = keccak256(abi.encode(SLASH_STAKE, investor, amount, salt, expiry));
+        bytes32 message = keccak256(abi.encode(SLASH_STAKE, delegate, amount, salt, expiry));
         auth.validateAuthoritySignature(
             IQuantumPortalAuthorityMgr.Action.SLASH,
             message,
@@ -162,22 +168,49 @@ contract QuantumPortalStakeWithDelegate is StakeOpen, WorkerInvestor, IQuantumPo
             expiry,
             multiSignature
         );
-        uint256 totalSlash = investorSlash[investor] + amount;
-        require(totalSlash <= investorStake[investor], "QPSWD: not enough stake");
-        investorSlash[investor] = totalSlash;
+        uint256 totalSlash = delegateSlash[delegate] + amount;
+        require(totalSlash <= delegateSlash[delegate], "QPSWD: not enough stake");
+        delegateSlash[delegate] = totalSlash;
         // Transfer the funds already slashed
         address token = baseInfo.baseToken[STAKE_ID];
         sendToken(token, slashTarget, amount);
         return totalSlash;
     }
 
-    function stakeToInvestor(address to, address investor
-    ) external {
-        address currentInvstor = investorDelegations[to];
-        if (currentInvstor == address(0)) {
-            investorDelegations[to] = investor;
+    function stakeToDelegateWithAllocation(
+        address to,
+        address delegate,
+        uint256 allocation,
+        bytes32 salt,
+        uint64 expiry,
+        bytes memory multiSignature
+    ) external override {
+        require(address(stakeVerifyer) != address(0), "PQS: verifyer not set");
+        bytes32 message = keccak256(abi.encode(ALLOW_STAKE, to, delegate, allocation, salt, expiry));
+        stakeVerifyer.validateAuthoritySignature(
+            IQuantumPortalAuthorityMgr.Action.ALLOW_ACTION,
+            message,
+            salt,
+            expiry,
+            multiSignature
+        );
+        address currentDelegate = delegations[to];
+        if (currentDelegate == address(0)) {
+            delegations[to] = delegate;
         } else {
-            require(currentInvstor == investor, "QPS: invalid investor");
+            require(currentDelegate == delegate, "QPS: invalid delegate");
+        }
+
+        _stake(to, STAKE_ID, allocation);
+    }
+
+    function stakeToDelegate(address to, address delegate
+    ) external {
+        address currentDelegate = delegations[to];
+        if (currentDelegate == address(0)) {
+            delegations[to] = delegate;
+        } else {
+            require(currentDelegate == delegate, "QPS: invalid delegate");
         }
 
         _stake(to, STAKE_ID, 0);
@@ -188,11 +221,13 @@ contract QuantumPortalStakeWithDelegate is StakeOpen, WorkerInvestor, IQuantumPo
         address id,
         uint256 allocation
     ) internal override returns (uint256) {
-        address investor = investorDelegations[to];
-        require(investor != address(0), "QPS: no investor assigned");
-        require(investorSlash[investor] == 0, "QPS: investor is slashed");
-        uint256 amount = StakeOpen._stake(to, id, allocation);
-        investorStake[investor] = investorStake[investor] + amount;
+        // If admin is set, we need signed allocation amount
+        address delegate = delegations[to];
+        require(delegate != address(0), "QPS: no delegate assigned");
+        require(delegateSlash[delegate] == 0, "QPS: delegate is slashed");
+        uint256 amount = StakeOpen._stake(to, id, 0);
+        require(address(stakeVerifyer) != address(0) || allocation >= amount, "QPS: not enough allocation");
+        delegateStake[delegate] = delegateStake[delegate] + amount;
         return amount;
     }
 
@@ -233,6 +268,21 @@ contract QuantumPortalStakeWithDelegate is StakeOpen, WorkerInvestor, IQuantumPo
     }
 
     /**
+     * @notice Sets the delegation
+     */
+    function _setDelegation(
+        address delegate,
+        address delegator
+    ) private {
+        address currentDelegate = delegations[delegator];
+        if (currentDelegate == address(0)) {
+            delegations[delegator] = delegate;
+        } else {
+            require(currentDelegate == delegate, "QPS:re-del not allowed");
+        }
+    }
+
+    /**
      * @notice Pushes a withdraw item to the queue
      * @param staker The staker
      * @param wi The withdraw item
@@ -266,4 +316,3 @@ contract QuantumPortalStakeWithDelegate is StakeOpen, WorkerInvestor, IQuantumPo
         wi = withdrawItemsQueue[staker][pair.start];
     }
 }
-

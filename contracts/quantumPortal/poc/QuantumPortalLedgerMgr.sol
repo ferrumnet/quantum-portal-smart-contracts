@@ -1052,7 +1052,7 @@ contract QuantumPortalLedgerMgr is
     function stakeOf(address worker) internal virtual returns (uint256) {
         address _stake = IQuantumPortalMinerMgr(minerMgr).miningStake();
         console.log("Checking stake for ", worker);
-        return IQuantumPortalStakeWithDelegate(_stake).stakeOfInvestor(worker);
+        return IQuantumPortalStakeWithDelegate(_stake).stakeOfDelegate(worker);
     }
 
     /**

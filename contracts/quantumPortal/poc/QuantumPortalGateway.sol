@@ -71,11 +71,36 @@ contract QuantumPortalGateway is WithAdmin, IQuantumPortalPoc {
 
     /**
      * @notice Stake for miner.
-     * @param amount The amount to stake. 0 if staking on the FRM chain.
-     * @param investor The miner/validator to delegate the stake for.
+     * @param to The staker address
+     * @param delegate The miner/validator to delegate the stake for.
+     * @param allocation The signed allocation
+     * @param salt The signature salt
+     * @param expiry The signature expiry
+     * @param signature The signature
      */
-    function stakeToInvestor(uint256 amount, address investor) external payable {
-        quantumPortalStake.setInvestorDelegations(investor, msg.sender);
+    function stakeToDelegateWithAllocation(
+        address to,
+        address delegate,
+        uint256 allocation,
+        bytes32 salt,
+        uint64 expiry,
+        bytes memory signature
+        ) external payable {
+        quantumPortalStake.setDelegation(delegate, msg.sender);
+        address baseToken = quantumPortalStake.STAKE_ID(); // Base token is the same as ID
+        handleFRM(to, allocation, baseToken);
+        quantumPortalStake.stakeToDelegateWithAllocation(
+            to, delegate, allocation, salt, expiry, signature
+        );
+    }
+
+    /**
+     * @notice Stake for miner.
+     * @param amount The amount to stake. 0 if staking on the FRM chain.
+     * @param delegate The miner/validator to delegate the stake for.
+     */
+    function stakeToDelegate(uint256 amount, address delegate) external payable {
+        quantumPortalStake.setDelegation(delegate, msg.sender);
         _stake(msg.sender, amount);
     }
 
@@ -221,8 +246,13 @@ contract QuantumPortalGateway is WithAdmin, IQuantumPortalPoc {
      * @param amount The stake amount
      */
     function _stake(address to, uint256 amount) private {
-        require(to != address(0), "'to' is required");
         address baseToken = quantumPortalStake.STAKE_ID(); // Base token is the same as ID
+        handleFRM(to, amount, baseToken);
+        IStakeV2(address(quantumPortalStake)).stake(to, baseToken);
+    }
+
+    function handleFRM(address to, uint256 amount, address baseToken) private {
+        require(to != address(0), "'to' is required");
         if (baseToken == WFRM) {
             uint256 frmAmount = msg.value;
             require(frmAmount != 0, "Value required");
@@ -232,8 +262,6 @@ contract QuantumPortalGateway is WithAdmin, IQuantumPortalPoc {
                 "Value not deposited"
             );
             IWETH(WFRM).transfer(address(quantumPortalStake), frmAmount);
-            require(frmAmount != 0, "QPG: amount is required");
-            IStakeV2(address(quantumPortalStake)).stake(to, baseToken);
         } else {
             amount = SafeAmount.safeTransferFrom(
                 baseToken,
@@ -242,7 +270,6 @@ contract QuantumPortalGateway is WithAdmin, IQuantumPortalPoc {
                 amount
             );
             require(amount != 0, "QPG: amount is required");
-            IStakeV2(address(quantumPortalStake)).stake(to, baseToken);
         }
     }
 }

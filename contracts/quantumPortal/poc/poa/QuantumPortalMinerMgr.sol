@@ -121,7 +121,7 @@ contract QuantumPortalMinerMgr is
         signer = verifySignature(msgHash, salt, expiry, multiSig);
         require(signer != address(0), "QPMM: invalid signature");
         console.log("Signer is ?", signer);
-        uint256 stake = IQuantumPortalStakeWithDelegate(miningStake).stakeOfInvestor(
+        uint256 stake = IQuantumPortalStakeWithDelegate(miningStake).stakeOfDelegate(
             signer
         );
         require(stake != 0, "QPMM: Not a valid miner");

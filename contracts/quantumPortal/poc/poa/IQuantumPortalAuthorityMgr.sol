@@ -8,7 +8,8 @@ interface IQuantumPortalAuthorityMgr {
     enum Action {
         NONE,
         FINALIZE,
-        SLASH
+        SLASH,
+        ALLOW_ACTION
     }
 
     /**

@@ -212,13 +212,14 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
 
         context = _context;
         // This call will revert after execution but the tx should go through, hence enabling gas estimation
-        address(this).call(
+        (bool result,) = address(this).call(
             abi.encodeWithSelector(
                 ICanEstimateGas.executeTxAndRevertToEstimateGas.selector,
                 t.remoteContract,
                 t.methods[0]
             )
         );
+        require(!result);
         resetContext();
     }
 
@@ -265,7 +266,8 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
         address addr,
         bytes memory method
     ) public override {
-        addr.call(method);
+        require(msg.sender == address(this)); // Prevent remote calls
+        (bool result,) = addr.call(method);
         revert();
     }
 

@@ -4,17 +4,17 @@ pragma solidity ^0.8.0;
 interface IQuantumPortalStakeWithDelegate {
     /**
      * @notice Return stake for an investor given the worker
-     * @param worker The actor id. Miner / validator
+     * @param operator The actor id. Miner / validator
      */
-    function stakeOfInvestor(
-        address worker
+    function stakeOfDelegate(
+        address operator
     ) external view returns (uint256);
 
     /**
-     * @notice Returns the assgined investor for staker 
+     * @notice Returns the assgined delegate for staker 
      * @param staker The staker
      */
-    function investorDelegations(
+    function delegations(
         address staker
     ) external view returns (address);
 
@@ -26,11 +26,29 @@ interface IQuantumPortalStakeWithDelegate {
     /**
      * @notice Delegates the stake to an investor if not set. 
      *   If staker has already delegated to someone else, will revert
-     * @param investor The investor (miner/validator)
-     * @param staker The staker
+     * @param delegate The delegate (miner/validator)
+     * @param delegator The staker
      */
-    function setInvestorDelegations(
-        address investor,
-        address staker
+    function setDelegation(
+        address delegate,
+        address delegator
+    ) external;
+
+    /**
+     * @notice Stakes with allocation. ONLY if stakeVerifyer is set
+     * @param to The staker
+     * @param delegate Delegate address
+     * @param allocation Amount allowed
+     * @param salt The salt
+     * @param expiry Signature expiry
+     * @param multiSignature The signature
+     */
+    function stakeToDelegateWithAllocation(
+        address to,
+        address delegate,
+        uint256 allocation,
+        bytes32 salt,
+        uint64 expiry,
+        bytes memory multiSignature
     ) external;
 }

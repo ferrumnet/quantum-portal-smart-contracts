@@ -1,18 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-interface IWorkerInvestor {
+interface IOperatorRelation {
     struct Relationship {
-        address investor;
+        address delegate;
         uint8 deleted;
     }
 
     /**
-     * @notice Returns the worker for an investor
-     * @param workerAddress The worker
+     * @notice Returns the delegate for a node operator
+     * @param nodeOperator The worker
      * @return The investor `Relationship`
      */
-    function getInvestor(
-        address workerAddress
+    function getDelegateForOperator(
+        address nodeOperator
     ) external view returns (Relationship memory);
 }
