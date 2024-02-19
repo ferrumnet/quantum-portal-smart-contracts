@@ -2,17 +2,27 @@
 pragma solidity ^0.8.0;
 
 import "./IQuantumPortalAuthorityMgr.sol";
+import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
+import "./QuantumPortalWorkPoolServer.sol";
 import "./QuantumPortalWorkPoolClient.sol";
-import "./IQuantumPortalWorkPoolServer.sol";
 import "foundry-contracts/contracts/signature/MultiSigCheckable.sol";
 
 /**
  @notice Authority manager, provides authority signature verification, for 
     different actions.
  */
-contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, QuantumPortalWorkPoolClient, MultiSigCheckable {
+contract QuantumPortalAuthorityMgr is
+    IQuantumPortalAuthorityMgr,
+    QuantumPortalWorkPoolClient,
+    QuantumPortalWorkPoolServer,
+    MultiSigCheckable
+{
     string public constant NAME = "FERRUM_QUANTUM_PORTAL_AUTHORITY_MGR";
     string public constant VERSION = "000.010";
+    bytes32 constant VALIDATE_AUTHORITY_SIGNATURE =
+        keccak256(
+            "ValidateAuthoritySignature(uint256 action,bytes32 msgHash,bytes32 salt,uint64 expiry)"
+        );
 
     // signers that have signed a message
     address[] public completedSigners;
@@ -26,15 +36,20 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, QuantumPortalW
     // the current quorumId we are checking
     address public currentQuorumId;
 
-    constructor() EIP712(NAME, VERSION) {}
-
-    bytes32 constant VALIDATE_AUTHORITY_SIGNATURE =
-        keccak256("ValidateAuthoritySignature(uint256 action,bytes32 msgHash,bytes32 salt,uint64 expiry)");
-
+    constructor() EIP712(NAME, VERSION) {
+        bytes memory _data = IFerrumDeployer(msg.sender).initData();
+        (address _portal, address _mgr) = abi.decode(_data, (address, address));
+        WithQp._initializeWithQp(_portal);
+        WithLedgerMgr._initializeWithLedgerMgr(_mgr);
+    }
+    
     /**
-     @notice Validates an authority signature
-             TODO: Update to differentiate between finalize and slash. For example more
-             signers requred for slash
+     * @notice Validates the authority signature
+     * @param action The action
+     * @param msgHash The message hash (summary of the object to be validated)
+     * @param salt A unique salt
+     * @param expiry Signature expiry
+     * @param signature The signatrue
      */
     function validateAuthoritySignature(
         Action action,
@@ -42,14 +57,21 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, QuantumPortalW
         bytes32 salt,
         uint64 expiry,
         bytes memory signature
-    ) external override {
-        require(msg.sender == mgr, "QPAM: unauthorized");
+    ) external override onlyMgr {
         require(action != Action.NONE, "QPAM: action required");
         require(msgHash != bytes32(0), "QPAM: msgHash required");
-        require(expiry != 0, "QPAM: expiry required");
         require(salt != 0, "QPAM: salt required");
-        require(expiry > block.timestamp, "QPAM: signature expired");
-        bytes32 message = keccak256(abi.encode(VALIDATE_AUTHORITY_SIGNATURE, uint256(action), msgHash, salt, expiry));
+        require(expiry > block.timestamp, "QPAM: already expired");
+        require(signature.length != 0, "QPAM: signature required");
+        bytes32 message = keccak256(
+            abi.encode(
+                VALIDATE_AUTHORITY_SIGNATURE,
+                uint256(action),
+                msgHash,
+                salt,
+                expiry
+            )
+        );
         console.log("verifyUniqueSalt");
         console.logBytes32(message);
         // console.logBytes(salt);
@@ -57,8 +79,13 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, QuantumPortalW
     }
 
     /**
-     @notice Validates an authority signature
-             Returns true if the signature is valid and 
+     * @notice Validates the authority signature for a single signer. 
+     *  This is to collect signatures one by one
+     * @param action The action
+     * @param msgHash The message hash (summary of the object to be validated)
+     * @param salt A unique salt
+     * @param expiry Signature expiry
+     * @param signature The signatrue
      */
     function validateAuthoritySignatureSingleSigner(
         Action action,
@@ -66,24 +93,44 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, QuantumPortalW
         bytes32 salt,
         uint64 expiry,
         bytes memory signature
-    ) external override returns (address[] memory signers, bool quorumComplete) {
-        require(msg.sender == mgr, "QPAM: unauthorized");
+    )
+        external
+        override
+        onlyMgr
+        returns (address[] memory signers, bool quorumComplete)
+    {
         // ensure that the current msgHash matches the one in process or msgHash is empty
         if (currentMsgHash != bytes32(0)) {
-            require(msgHash == currentMsgHash, "QPAM: msgHash different than expected");
+            require(
+                msgHash == currentMsgHash,
+                "QPAM: msgHash different than expected"
+            );
         }
 
         require(action != Action.NONE, "QPAM: action required");
         require(msgHash != bytes32(0), "QPAM: msgHash required");
-        require(expiry != 0, "QPAM: expiry required");
         require(salt != 0, "QPAM: salt required");
-        require(expiry > block.timestamp, "QPAM: signature expired");
-        bytes32 message = keccak256(abi.encode(VALIDATE_AUTHORITY_SIGNATURE, uint256(action), msgHash, salt, expiry));
+        require(expiry > block.timestamp, "QPAM: already expired");
+        require(signature.length != 0, "QPAM: signature required");
+        bytes32 message = keccak256(
+            abi.encode(
+                VALIDATE_AUTHORITY_SIGNATURE,
+                uint256(action),
+                msgHash,
+                salt,
+                expiry
+            )
+        );
 
         // Validate the message for only this signer
         bytes32 digest = _hashTypedDataV4(message);
         bool result;
-        (result, signers) = tryVerifyDigestWithAddressWithMinSigCheck(digest, 1, signature, false);
+        (result, signers) = tryVerifyDigestWithAddressWithMinSigCheck(
+            digest,
+            1,
+            signature,
+            false
+        );
         require(result, "QPAM: Invalid signer");
         require(signers.length == 1, "QPAM: Wrong number of signers");
         address signer = signers[0];
@@ -96,10 +143,13 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, QuantumPortalW
             currentQuorumId = signerQuorumId;
         } else {
             // check the signer is part of the same quorum
-            require(signerQuorumId == currentQuorumId, "QPAM: Signer quorum mismatch");
+            require(
+                signerQuorumId == currentQuorumId,
+                "QPAM: Signer quorum mismatch"
+            );
 
             // ensure not a duplicate signer
-            require(!alreadySigned[signer], "QPAM: Already Signed!");
+            require(!alreadySigned[signer], "QPAM: already Signed!");
         }
 
         // insert signer to the signers list
@@ -107,30 +157,67 @@ contract QuantumPortalAuthorityMgr is IQuantumPortalAuthorityMgr, QuantumPortalW
         alreadySigned[signer] = true;
 
         // if the quorum min length is complete, clear storage and return success
-        if (completedSigners.length >= quorumSubscriptions[signer].minSignatures) {
+        if (
+            completedSigners.length >= quorumSubscriptions[signer].minSignatures
+        ) {
             currentMsgHash = bytes32(0);
             currentQuorumId = address(0);
 
             // remove all signed mapping
-            for (uint i=0; i<completedSigners.length; i++) {
+            for (uint i = 0; i < completedSigners.length; i++) {
                 delete alreadySigned[completedSigners[i]];
             }
             delete completedSigners;
             return (completedSigners, true);
-        } else { 
+        } else {
             return (completedSigners, false);
         }
-
-    }
-
-    function withdraw(uint256 remoteChain, address worker, uint fee) external {
-        withdraw(IQuantumPortalWorkPoolServer.withdrawVariableRemote.selector, remoteChain, worker, fee);
     }
 
     /**
-     @notice Clears the currentMsgHash to unblock invalid states
+     * @notice Withdraw fees collected for the validator on the remote chain
+     * @param remoteChain The remote chain
+     * @param to The address to receive funds
+     * @param worker The worker
+     * @param fee The fee
+     */
+    function withdraw(uint256 remoteChain, address to, address worker, uint fee) external {
+        withdraw(
+            IQuantumPortalWorkPoolServer.withdrawVariableRemote.selector,
+            remoteChain,
+            to,
+            worker,
+            fee
+        );
+    }
+
+    /**
+     * @notice Clears the currentMsgHash to unblock invalid states
      */
     function clearCurrentMsgHash() external {
-        currentMsgHash = bytes32(0);
+        delete currentMsgHash;
+    }
+
+    /**
+     @notice Wrapper function for MultiSigCheckable.initialize, performs an additional precompile call to register finalizers
+     if on QPN chain.
+     */
+    function initializeQuoromAndRegisterFinalizer(
+        address quorumId,
+        uint64 groupId,
+        uint16 minSignatures,
+        uint8 ownerGroupId,
+        address[] calldata addresses
+    ) external {
+        
+        // first initialize the quorom
+        initialize(quorumId, groupId, minSignatures, ownerGroupId, addresses);
+
+        // if QPN testnet or mainnet, ensure the precompile is called
+        if (chainId == 26100 || chainId == 26000) {
+            for (uint i=0; i<addresses.length; i++) {
+                QuantumPortalFinalizerPrecompile(QUANTUM_PORTAL_PRECOMPILE).registerFinalizer(chainId, addresses[i]);
+            }
+        }
     }
 }

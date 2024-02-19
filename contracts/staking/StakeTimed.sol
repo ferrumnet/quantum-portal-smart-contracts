@@ -270,20 +270,22 @@ contract StakeTimed is BaseStakingV2, IRewardPool {
     }
 
     bytes32 constant TAKE_REWARDS_WITH_SIGNATURE_METHOD = keccak256(
-        "TakeRewardsWithSignature(address to,address id,address[] rewardTokens,bytes32 salt)");
+        "TakeRewardsWithSignature(address to,address id,address[] rewardTokens,bytes32 salt,uint64 expiry)");
     function takeRewardsWithSignature(
         address to,
         address id,
         address staker,
         address[] calldata rewardTokens,
         bytes32 salt,
+        uint64 expiry,
         bytes memory signature) external returns (uint256[] memory) {
         bytes32 message = keccak256(abi.encode(
             TAKE_REWARDS_WITH_SIGNATURE_METHOD,
             to,
             id,
             rewardTokens,
-            salt));
+            salt,
+            expiry));
         address _signer = signerUnique(message, signature);
         require(_signer == staker, "ST: Invalid signer");
         return _takeRewardsOnly(to, id, staker, rewardTokens);
@@ -313,7 +315,7 @@ contract StakeTimed is BaseStakingV2, IRewardPool {
     }
 
     bytes32 constant WITHDRAW_WITH_SIGNATURE_METHOD = keccak256(
-        "WithdrawWithSignature(address to,address rewardsTo,address id,address[] rewardTokens,uint256 amount,bytes32 salt)");
+        "WithdrawWithSignature(address to,address rewardsTo,address id,address[] rewardTokens,uint256 amount,bytes32 salt,uint64 expiry)");
     function withdrawWithSignature(
         address to,
         address rewardsTo,
@@ -322,6 +324,7 @@ contract StakeTimed is BaseStakingV2, IRewardPool {
         address[] calldata rewardTokens,
         uint256 amount,
         bytes32 salt,
+        uint64 expiry,
         bytes memory signature)
     external returns (uint256 actualAmount, uint256[] memory rewardAmount) {
         bytes32 message = keccak256(abi.encode(

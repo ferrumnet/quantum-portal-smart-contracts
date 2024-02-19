@@ -7,27 +7,58 @@ import "../../staking/library/TokenReceivable.sol";
 import "./PortalLedger.sol";
 import "./QuantumPortalLib.sol";
 
-abstract contract QuantumPortalPoc is TokenReceivable, PortalLedger, IQuantumPortalPoc, IVersioned {
-	string constant public override VERSION = "000.001";
+/**
+ * @notice The quantum portal main contract for multi-chain dApps
+ */
+abstract contract QuantumPortalPoc is
+    TokenReceivable,
+    PortalLedger,
+    IQuantumPortalPoc,
+    IVersioned
+{
+    string public constant override VERSION = "000.001";
     address public override feeTarget;
     address public override feeToken;
 
+    event LocalTransfer(address token, address to, uint256 amount);
+
+    /**
+     * @notice Restricted: Set the fee target
+     * @param _feeTarget The fee target
+     */
     function setFeeTarget(address _feeTarget) external onlyAdmin {
         feeTarget = _feeTarget;
     }
 
+    /**
+     * @notice Ristricted: Sets the fee token
+     * @param _feeToken The fee token
+     */
     function setFeeToken(address _feeToken) external onlyAdmin {
         feeToken = _feeToken;
     }
 
-    function txContext() external override view returns (QuantumPortalLib.Context memory) {
+    /**
+     * @inheritdoc IQuantumPortalPoc
+     */
+    function txContext()
+        external
+        view
+        override
+        returns (QuantumPortalLib.Context memory)
+    {
         return context;
     }
 
     /**
-     @notice Registers a run in the local context. No value transfer
+     * @inheritdoc IQuantumPortalPoc
      */
-    function run(uint64 remoteChainId, address remoteContract, address beneficiary, bytes memory remoteMethodCall) external override {
+    function run(
+        uint64 remoteChainId,
+        address remoteContract,
+        address beneficiary,
+        bytes memory remoteMethodCall
+    ) external override {
         require(remoteMethodCall.length != 0, "remoteMethodCall is required");
         require(remoteChainId != CHAIN_ID, "Remote cannot be self");
         IQuantumPortalLedgerMgr(mgr).registerTransaction(
@@ -37,14 +68,20 @@ abstract contract QuantumPortalPoc is TokenReceivable, PortalLedger, IQuantumPor
             beneficiary,
             address(0),
             0,
-            remoteMethodCall);
+            remoteMethodCall
+        );
     }
 
     /**
-     @notice Runs a remote method and pays the token amount to the remote method.
+     * @inheritdoc IQuantumPortalPoc
      */
     function runWithValue(
-        uint64 remoteChainId, address remoteContract, address beneficiary, address token, bytes memory method) external override {
+        uint64 remoteChainId,
+        address remoteContract,
+        address beneficiary,
+        address token,
+        bytes memory method
+    ) external override {
         require(remoteChainId != CHAIN_ID, "Remote cannot be self");
         IQuantumPortalLedgerMgr(mgr).registerTransaction(
             remoteChainId,
@@ -53,16 +90,26 @@ abstract contract QuantumPortalPoc is TokenReceivable, PortalLedger, IQuantumPor
             beneficiary,
             token,
             sync(token),
-            method);
+            method
+        );
     }
 
     /**
-     @notice Runs a remote withdraw. Mining this tx will update the balance for the user. User can then call a withdraw.
+     * @inheritdoc IQuantumPortalPoc
      */
     function runWithdraw(
-        uint64 remoteChainId, address remoteAddress, address token, uint256 amount) external override {
+        uint64 remoteChainId,
+        address remoteAddress,
+        address token,
+        uint256 amount
+    ) external override {
         require(remoteChainId != CHAIN_ID, "Remote cannot be self");
-        state.setRemoteBalances(remoteChainId, token, msg.sender, state.getRemoteBalances(remoteChainId, token, msg.sender) - amount);
+        state.setRemoteBalances(
+            remoteChainId,
+            token,
+            msg.sender,
+            state.getRemoteBalances(remoteChainId, token, msg.sender) - amount
+        );
         IQuantumPortalLedgerMgr(mgr).registerTransaction(
             remoteChainId,
             remoteAddress,
@@ -70,34 +117,75 @@ abstract contract QuantumPortalPoc is TokenReceivable, PortalLedger, IQuantumPor
             address(0),
             token,
             amount,
-            "");
+            ""
+        );
     }
 
     /**
-     @notice Transfers the remote balance to another account
+     * @inheritdoc IQuantumPortalPoc
      */
-    function remoteTransfer(uint256 chainId, address token, address to, uint256 amount) external override {
-        require(msg.sender == context.transaction.remoteContract, "QPP: can only be called within a mining context");
-        if (chainId == context.blockMetadata.chainId && token == context.transaction.token) {
+    function remoteTransfer(
+        uint256 chainId,
+        address token,
+        address to,
+        uint256 amount
+    ) external override {
+        require(
+            msg.sender == context.transaction.remoteContract,
+            "QPP: can only be called within a mining context"
+        );
+        if (
+            chainId == context.blockMetadata.chainId &&
+            token == context.transaction.token
+        ) {
             context.uncommitedBalance -= amount;
         } else {
-            state.setRemoteBalances(chainId, token, msg.sender, state.getRemoteBalances(chainId, token, msg.sender) - amount);
+            state.setRemoteBalances(
+                chainId,
+                token,
+                msg.sender,
+                state.getRemoteBalances(chainId, token, msg.sender) - amount
+            );
         }
-        state.setRemoteBalances(chainId, token, to, state.getRemoteBalances(chainId, token, to) + amount);
+        state.setRemoteBalances(
+            chainId,
+            token,
+            to,
+            state.getRemoteBalances(chainId, token, to) + amount
+        );
+        emit RemoteTransfer(chainId, token, msg.sender, to, amount);
     }
 
+    /**
+     * @notice Withdraws the local balance
+     * @param token The token
+     * @param amount Amount to withdraw
+     */
     function withdraw(address token, uint256 amount) external {
-        require(context.blockMetadata.chainId == 0, "QPP: cannot be called within a mining context");
+        require(
+            context.blockMetadata.chainId == 0,
+            "QPP: cannot be called within a mining context"
+        );
         uint256 bal = state.getRemoteBalances(CHAIN_ID, token, msg.sender);
         require(bal >= amount, "QPP: Not enough balance");
         state.setRemoteBalances(CHAIN_ID, token, msg.sender, bal - amount);
         sendToken(token, msg.sender, amount);
+        emit LocalTransfer(token, msg.sender, amount);
     }
 
     /**
-     @notice Returns the msgSender in the current context.
+     * @inheritdoc IQuantumPortalPoc
      */
-    function msgSender() external view override returns (uint256 sourceNetwork, address sourceMsgSender, address sourceBeneficiary) {
+    function msgSender()
+        external
+        view
+        override
+        returns (
+            uint256 sourceNetwork,
+            address sourceMsgSender,
+            address sourceBeneficiary
+        )
+    {
         sourceNetwork = context.blockMetadata.chainId;
         sourceMsgSender = context.transaction.sourceMsgSender;
         sourceBeneficiary = context.transaction.sourceBeneficiary;

@@ -6,32 +6,87 @@ import "foundry-contracts/contracts/common/WithAdmin.sol";
 
 import "hardhat/console.sol";
 
-contract QuantumPortalFeeConverterDirect is IQuantumPortalFeeConvertor, WithAdmin {
+/**
+ * @notice Direct fee convertor for QP. The fee should be update by a trusted third party regularly
+ */
+contract QuantumPortalFeeConverterDirect is
+    IQuantumPortalFeeConvertor,
+    WithAdmin
+{
     address public override qpFeeToken;
     uint256 public feePerByte;
+    mapping (uint256 => uint256) public feeTokenPriceList;
 
+    /**
+     * Restricted. Update the fee per byte number
+     * Note: When updating fpb on Eth network, remember FRM has only 6 decimals there
+     * @param fpb The fee per byte
+     */
     function updateFeePerByte(uint256 fpb) external onlyAdmin {
         feePerByte = fpb;
     }
 
-    function updatePrice() external override { }
+    /**
+     * @notice Unused
+     */
+    function updatePrice() external override {}
 
-    function localChainGasTokenPriceX128() external pure override returns (uint256) {
-        return FixedPoint128.Q128;
+    /**
+     * @notice Return the gas token (FRM) price for the local chain.
+     */
+    function localChainGasTokenPriceX128()
+        external
+        view
+        override
+        returns (uint256)
+    {
+        return feeTokenPriceList[block.chainid];
     }
 
-    function targetChainGasTokenPriceX128(uint256 targetChainId) external view override returns (uint256) {
+    /**
+     * @notice Sets the local chain gas token price.
+     */
+    function setChainGasTokenPriceX128(
+        uint256[] memory chainIds,
+        uint256[] memory pricesX128
+    ) external onlyAdmin {
+        require(chainIds.length == pricesX128.length, "QPFCD: Invalid args");
+        for(uint i=0; i<chainIds.length; i++) {
+            uint256 price = pricesX128[i];
+            require(price != 0, "QPFCD: price is zero");
+            feeTokenPriceList[chainIds[i]] = price;
+        }
+    }
+
+    /**
+     * @notice Return the gas token (FRM) price for the target chain
+     * @param targetChainId The target chain ID
+     */
+    function targetChainGasTokenPriceX128(
+        uint256 targetChainId
+    ) external view override returns (uint256) {
         return _targetChainGasTokenPriceX128(targetChainId);
     }
 
-    function _targetChainGasTokenPriceX128(uint256 targetChainId) internal view returns (uint256) {
-        // TODO: set manually
-        return FixedPoint128.Q128;
-    }
-
-    function targetChainFixedFee(uint256 targetChainId, uint256 size) external override view returns (uint256) {
+    /**
+     * @notice Get the fee for the target network
+     */
+    function targetChainFixedFee(
+        uint256 targetChainId,
+        uint256 size
+    ) external view override returns (uint256) {
         uint256 price = _targetChainGasTokenPriceX128(targetChainId);
         console.log("CALCING FEE PER BYTE", price, targetChainId);
-        return price * size * feePerByte / FixedPoint128.Q128;
+        return (price * size * feePerByte) / FixedPoint128.Q128;
+    }
+
+    /**
+     * @notice Return the gas token (FRM) price for the target chain
+     * @param targetChainId The target chain ID
+     */
+    function _targetChainGasTokenPriceX128(
+        uint256 targetChainId
+    ) internal view returns (uint256) {
+        return feeTokenPriceList[targetChainId];
     }
 }
