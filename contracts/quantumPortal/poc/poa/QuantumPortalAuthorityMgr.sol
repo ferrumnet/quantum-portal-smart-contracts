@@ -6,6 +6,7 @@ import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
 import "./QuantumPortalWorkPoolServer.sol";
 import "./QuantumPortalWorkPoolClient.sol";
 import "foundry-contracts/contracts/signature/MultiSigCheckable.sol";
+import "./IQuantumPortalFinalizerPrecompile.sol";
 
 /**
  @notice Authority manager, provides authority signature verification, for 
@@ -35,6 +36,8 @@ contract QuantumPortalAuthorityMgr is
 
     // the current quorumId we are checking
     address public currentQuorumId;
+
+    uint256 chainId = block.chainid;
 
     constructor() EIP712(NAME, VERSION) {
         bytes memory _data = IFerrumDeployer(msg.sender).initData();
