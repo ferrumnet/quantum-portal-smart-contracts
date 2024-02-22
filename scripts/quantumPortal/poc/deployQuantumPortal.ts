@@ -129,7 +129,7 @@ async function prep(conf: QpDeployConfig) {
     }
 
     let stakeToken = conf.FRM[chainId] || panick(`No stake token address for chain ${chainId}`);
-    const stakeInitData = abi.encode(['address', 'address', 'address'], [stakeToken, ctx.auth.address, ctx.gateway.address]);
+    const stakeInitData = abi.encode(['address', 'address', 'address', 'address'], [stakeToken, ctx.auth.address, ZeroAddress, ctx.gateway.address]);
     [ctx.stake, newStake] = await deployOrAttach(conf, conf.QuantumPortalStake, 'QuantumPortalStakeWithDelegate', conf.Owner, stakeInitData, qpWallet,);
     if (newStake) {
         console.log('New stake. Clearing the miner mgr');
