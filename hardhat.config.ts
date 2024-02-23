@@ -41,12 +41,11 @@ const config: HardhatUserConfig = {
       blockGasLimit: 50000000,
     },
     local: {
-      chainId: 31337,
-      url: `http://127.0.0.1:8545/`,
-      accounts: {
-        mnemonic: TEST_MNEMONICS,
-      },
-      // gasPrice: 18000000000,
+      chainId: 97,
+      url: getEnv("BSC_TESTNET_LIVE_NETWORK"),
+      accounts: [getEnv("TEST_ACCOUNT_PRIVATE_KEY")],
+      gas: 1000000,
+      // gasPrice: 20000000000,
     },
     mainnet: {
       chainId: 1,
@@ -58,7 +57,8 @@ const config: HardhatUserConfig = {
       chainId: 97,
       url: getEnv("BSC_TESTNET_LIVE_NETWORK"),
       accounts: [getEnv("TEST_ACCOUNT_PRIVATE_KEY")],
-      //   gasPrice: 20000000000,
+      gas: 1000000,
+      // gasPrice: 20000000000,
     },
     bsc: {
       chainId: 56,
