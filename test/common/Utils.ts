@@ -119,7 +119,7 @@ export async function deployWithOwner(ctx: TestContext, contract: string, owner:
 
 export async function getTransactionReceipt(id: string) {
 	let reci = await ethers.provider.getTransactionReceipt(id);
-	for(let i=0; i<100; i++) {
+	for(let i=0; i<1000; i++) {
 		console.log('No tx. Trying again ', i);
 		await sleep(1000);
 		reci = await ethers.provider.getTransactionReceipt(id);
@@ -154,12 +154,16 @@ export async function getTransactionLog(id: string, contract: any, eventName: st
 export async function contractExists(contractName: string, contract: string) {
 	const depFac = await ethers.getContractFactory(contractName);
 	const deployer = await depFac.attach(contract) as IVersioned;
+	console.log("COntract exsists");
     try {
+		console.log(deployer);
         const isThere = await deployer.VERSION();
+		console.log("isThere", isThere);
         if ( isThere && isThere.toString().length > 0) {
             return true;
         }
     } catch(e) {
+		console.log("Error from exists", e);
         return false;
     }
 }
