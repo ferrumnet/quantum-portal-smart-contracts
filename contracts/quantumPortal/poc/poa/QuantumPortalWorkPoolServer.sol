@@ -18,7 +18,6 @@ import "hardhat/console.sol";
 abstract contract QuantumPortalWorkPoolServer is
     IQuantumPortalWorkPoolServer,
     TokenReceivable,
-    WithAdmin,
     WithQp,
     WithLedgerMgr,
     WithRemotePeers
@@ -134,15 +133,5 @@ abstract contract QuantumPortalWorkPoolServer is
             "QPWPS:expected epoch<=lastLocalEpoch"
         );
         return (remoteChainId, lastLocalEpoch);
-    }
-
-    /**
-     * @notice Restricted: Update the base token
-     * @param _baseToken The base token address
-     */
-    function _updateBaseToken(
-        address _baseToken
-    ) internal {
-        baseToken = _baseToken;
     }
 }
