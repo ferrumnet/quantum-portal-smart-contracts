@@ -15,6 +15,14 @@ abstract contract WithLedgerMgr is WithAdmin {
     }
 
     /**
+     * @notice Updates the ledger mgr
+     * @param mgr The ledger mgr
+     */
+    function updateLedgerMgr(address mgr) external onlyOwner {
+        qpLedgerMgr = mgr;
+    }
+
+    /**
      * @notice Ristricted: update the manager
      * @param mgr The manager contract address
      */

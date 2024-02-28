@@ -7,6 +7,7 @@ import "./QuantumPortalWorkPoolServer.sol";
 import "./QuantumPortalWorkPoolClient.sol";
 import "foundry-contracts/contracts/signature/MultiSigCheckable.sol";
 import "./IQuantumPortalFinalizerPrecompile.sol";
+import "../utils/LibChainCheck.sol";
 
 /**
  @notice Authority manager, provides authority signature verification, for 
@@ -102,9 +103,9 @@ contract QuantumPortalAuthorityMgr is
         initialize(quorumId, groupId, minSignatures, ownerGroupId, addresses);
 
         // if QPN testnet or mainnet, ensure the precompile is called
-        if (chainId == 26100 || chainId == 26000) {
+        if (LibChainCheck.isFerrumChain()) {
             for (uint i=0; i<addresses.length; i++) {
-                QuantumPortalFinalizerPrecompile(QUANTUM_PORTAL_PRECOMPILE).registerFinalizer(chainId, addresses[i]);
+                QuantumPortalFinalizerPrecompile(QUANTUM_PORTAL_PRECOMPILE).registerFinalizer(block.chainid, addresses[i]);
             }
         }
     }
