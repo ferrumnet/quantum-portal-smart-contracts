@@ -176,8 +176,8 @@ export async function deployUsingDeployer(contract: string, owner: string, initD
     console.log('DEPLOYADDR IS ', deployerAddr);
 	console.log("owner is", owner);
 
-	const res = siger ? await deployer.connect(siger).deployOwnable(salt, owner, initData, contr.bytecode, { gasLimit: 10000000 })
-		: await deployer.deployOwnable(salt, owner, initData, contr.bytecode, { gasLimit: 10000000 });
+	const res = siger ? await deployer.connect(siger).deployOwnable(salt, owner, initData, contr.bytecode)
+		: await deployer.deployOwnable(salt, owner, initData, contr.bytecode);
 	console.log(`Deploy tx hash: ${res.hash}`)
 	const events = await getTransactionLog(res.hash, deployer, 'DeployedWithData');
 	// let reci = await getTransactionReceipt(res.hash);
