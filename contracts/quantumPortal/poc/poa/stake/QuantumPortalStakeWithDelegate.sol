@@ -49,6 +49,7 @@ contract QuantumPortalStakeWithDelegate is StakeOpen, OperatorRelation, IQuantum
     mapping(address => address) public override delegations; 
 
     constructor() {
+        console.log("COMP");
         bytes memory _data = IFerrumDeployer(msg.sender).initData();
         (address token, address authority, address _stakeVerifyer, address _gateway) = abi.decode(
             _data,
@@ -61,6 +62,8 @@ contract QuantumPortalStakeWithDelegate is StakeOpen, OperatorRelation, IQuantum
         auth = IQuantumPortalAuthorityMgr(authority);
         gateway = _gateway;
         stakeVerifyer = IQuantumPortalAuthorityMgr(_stakeVerifyer);
+
+        console.log("COMP");
     }
 
     /**

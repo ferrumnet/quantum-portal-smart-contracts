@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.2;
 
 import "./IQuantumPortalLedgerMgr.sol";
-import "./ICanEstimateGas.sol";
 import "foundry-contracts/contracts/common/WithAdmin.sol";
 import "./QuantumPortalLib.sol";
 import "./QuantumPortalState.sol";
+import "@openzeppelin/contracts/utils/Strings.sol";
 
 import "hardhat/console.sol";
 
@@ -13,7 +13,7 @@ import "hardhat/console.sol";
  * @notice Basis of the QP logic for interacting with multi-chain dApps
  *     and providing relevant execution context to them
  */
-contract PortalLedger is WithAdmin, ICanEstimateGas {
+contract PortalLedger is WithAdmin {
     address public mgr;
     QuantumPortalState public state;
     QuantumPortalLib.Context public context;
@@ -180,6 +180,7 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
         address token,
         uint256 amount
     ) external {
+        uint gasUsed = gasleft();
         bytes[] memory methods = new bytes[](1);
         methods[0] = method;
         QuantumPortalLib.RemoteTransaction memory t = QuantumPortalLib
@@ -211,16 +212,13 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
         });
 
         context = _context;
-        // This call will revert after execution but the tx should go through, hence enabling gas estimation
-        (bool result,) = address(this).call(
-            abi.encodeWithSelector(
-                ICanEstimateGas.executeTxAndRevertToEstimateGas.selector,
-                t.remoteContract,
-                t.methods[0]
-            )
-        );
-        require(!result);
+        if (t.methods.length != 0 && t.methods[0].length != 0) {
+            address(t.remoteContract).call(t.methods[0]);
+        }
         resetContext();
+        gasUsed = gasUsed - gasleft();
+        // Reverting so that the state does not change
+        revert(Strings.toString(gasUsed));
     }
 
     /**
@@ -257,18 +255,6 @@ contract PortalLedger is WithAdmin, ICanEstimateGas {
     function setManager(address _mgr, address _state) external onlyAdmin {
         mgr = _mgr;
         state = QuantumPortalState(_state);
-    }
-
-    /**
-     * @inheritdoc ICanEstimateGas
-     */
-    function executeTxAndRevertToEstimateGas(
-        address addr,
-        bytes memory method
-    ) public override {
-        require(msg.sender == address(this)); // Prevent remote calls
-        (bool result,) = addr.call(method);
-        revert();
     }
 
     function _rejectRemoteTransaction(

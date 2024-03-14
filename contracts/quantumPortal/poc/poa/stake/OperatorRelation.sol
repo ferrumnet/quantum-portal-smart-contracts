@@ -7,7 +7,7 @@ import "./IOperatorRelation.sol";
  * @notice This contract maintains relationship between an investor and a worker.
  * Investor puts the money, and worker does the work.
  */
-contract OperatorRelation is IOperatorRelation {
+abstract contract OperatorRelation is IOperatorRelation {
     mapping(address => address) public nodeOperator;
     mapping(address => IOperatorRelation.Relationship) public delegateLookup;
     event NodeOperatorAssigned(address investor, address nodeOperator);

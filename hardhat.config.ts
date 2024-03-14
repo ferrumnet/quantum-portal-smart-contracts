@@ -35,14 +35,14 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
-      accounts: [{ privateKey: getEnv("TEST_ACCOUNT_PRIVATE_KEY"), balance: '1000000000000000000000000'}],
-      // accounts: {
-      //   mnemonic: TEST_MNEMONICS,
-      //   accountsBalance: {
-      //     "0xfb743DE8A27B2DDDbbd15cBF0bF031337e082920": "100000000000000000000",
-      //   }
-      // },
-      blockGasLimit: 50000000,
+      // accounts: [{ privateKey: getEnv("TEST_ACCOUNT_PRIVATE_KEY"), balance: '1000000000000000000000000'}],
+      accounts: {
+        mnemonic: TEST_MNEMONICS,
+        // accountsBalance: {
+        //   "0xfb743DE8A27B2DDDbbd15cBF0bF031337e082920": "100000000000000000000",
+        // }
+      },
+      blockGasLimit: 50000000000,
     },
     local: {
       // chainId: 97,

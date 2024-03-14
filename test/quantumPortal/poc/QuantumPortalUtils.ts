@@ -9,13 +9,14 @@ import { abi, deployWithOwner, expiryInFuture, getCtx, isAllZero, Salt, TestCont
 import { getBridgeMethodCall } from 'foundry-contracts/dist/test/common/Eip712Utils';
 import { keccak256 } from "ethers/lib/utils";
 import { delpoyStake, deployMinerMgr } from "./poa/TestQuantumPortalStakeUtils";
-import { QuantumPortalStake } from "../../../typechain-types/QuantumPortalStake";
+import { QuantumPortalStakeWithDelegate } from "../../../typechain-types/QuantumPortalStakeWithDelegate";
 import { ERC20 } from "foundry-contracts/dist/test/common/UniswapV2";
 import { Signer } from "ethers";
 import { QuantumPortalMinerMgr } from "../../../typechain-types/QuantumPortalMinerMgr";
 import { QuantumPortalFeeConverterDirect } from "../../../typechain-types/QuantumPortalFeeConverterDirect";
 import { QuantumPortalState } from '../../../typechain-types/QuantumPortalState';
 import { advanceTimeAndBlock } from "../../common/TimeTravel";
+import { deployUsingDeployer } from "../../common/Utils";
 
 export const FERRUM_TOKENS = {
     26000: '0x00',
@@ -422,10 +423,13 @@ export async function deployAll(): Promise<PortalContext> {
     const poc2 = await pocFac.deploy(2) as QuantumPortalPocTest;
 
     // By default, both test ledger mgrs use the same authority mgr.
-	const autorityMgrF = await ethers.getContractFactory("QuantumPortalAuthorityMgr");
-	console.log('About to deploy the ledger managers');
-    const autorityMgr1 = await autorityMgrF.deploy() as QuantumPortalAuthorityMgr;
-    const autorityMgr2 = await autorityMgrF.connect(ctx.signers.acc1).deploy() as QuantumPortalAuthorityMgr;
+    const authInitData1 = abi.encode(['address', 'address'], [poc1.address, mgr1.address]);
+    const authInitData2 = abi.encode(['address', 'address'], [poc2.address, mgr2.address]);
+	console.log('About to deploy the authority managers');
+    const autorityMgr1 = await deployUsingDeployer('QuantumPortalAuthorityMgr', ctx.signers.acc1.address,
+        authInitData1, ctx.deployer.address, randomSalt(), ctx.signers.acc1) as QuantumPortalAuthorityMgr;
+    const autorityMgr2 = await deployUsingDeployer('QuantumPortalAuthorityMgr', ctx.signers.acc2.address,
+        authInitData2, ctx.deployer.address, randomSalt(), ctx.signers.acc2) as QuantumPortalAuthorityMgr;
 
     console.log('Deploying some tokens');
 	const tokenData = abi.encode(['address'], [ctx.owner]);
@@ -437,29 +441,25 @@ export async function deployAll(): Promise<PortalContext> {
     await feeConverter.updateFeePerByte(Wei.from('0.001'));
 
     console.log('Deploying staking');
-    const stake = await delpoyStake(ctx, tok1.address);
+    const stake = await delpoyStake(ctx, autorityMgr1.address, ZeroAddress, tok1.address);
     // const stake = await delpoyStake(ctx, FERRUM_TOKENS[ctx.chainId] || panick(`No FRM token is configured for chain ${ctx.chainId}`));
     console.log('Deploying mining mgr');
-    const miningMgr1 = await deployMinerMgr(ctx, stake, ctx.owner);
-    const miningMgr2 = await deployMinerMgr(ctx, stake, ctx.acc1); // To deploy a different contract.
+    const miningMgr1 = await deployMinerMgr(ctx, stake, poc1.address, mgr1.address, ctx.owner);
+    const miningMgr2 = await deployMinerMgr(ctx, stake, poc2.address, mgr2.address, ctx.acc1); // To deploy a different contract.
 
     console.log(`Registering a single authority ("${ctx.wallets[0]}"`);
-    await autorityMgr1.initialize(ctx.owner, 1, 1, 0, [ctx.wallets[0]]); 
-    await autorityMgr2.initialize(ctx.owner, 1, 1, 0, [ctx.wallets[0], ctx.wallets[1]]); 
+    await autorityMgr1.connect(ctx.signers.acc1).initialize(ctx.owner, 1, 1, 0, [ctx.wallets[0]]); 
+    await autorityMgr2.connect(ctx.signers.acc2).initialize(ctx.owner, 1, 1, 0, [ctx.wallets[0], ctx.wallets[1]]); 
 
     console.log(`Settting authority mgr (${autorityMgr1.address}/${autorityMgr2.address}) and miner mgr ${miningMgr1.address} / ${miningMgr2.address} on both QP managers, and fee converter`);
     await mgr1.updateAuthorityMgr(autorityMgr1.address);
     await mgr1.updateMinerMgr(miningMgr1.address);
     await mgr1.updateFeeConvertor(feeConverter.address);
-    await miningMgr1.initServer(poc1.address, mgr1.address, tok1.address);
-    await miningMgr1.setRemote(chainId2, miningMgr2.address);
-    await autorityMgr1.updateMgr(mgr1.address);
+    await miningMgr1.updateRemotePeers([chainId2], [miningMgr2.address]);
     await mgr2.updateAuthorityMgr(autorityMgr2.address);
     await mgr2.updateMinerMgr(miningMgr2.address);
     await mgr2.updateFeeConvertor(feeConverter.address);
-    await miningMgr2.connect(ctx.signers.acc1).initServer(poc2.address, mgr2.address, tok1.address);
-    await miningMgr2.connect(ctx.signers.acc1).setRemote(chainId1, miningMgr1.address);
-    await autorityMgr2.connect(ctx.signers.acc1).updateMgr(mgr2.address);
+    await miningMgr2.connect(ctx.signers.acc1).updateRemotePeers([chainId1], [miningMgr1.address]);
 
     console.log(`Deploying QP State`);
     const stateF = await ethers.getContractFactory('QuantumPortalState');
@@ -511,4 +511,21 @@ export async function deployAll(): Promise<PortalContext> {
             feeConverter,
         }
     } as PortalContext;
+}
+
+export async function estimateGasUsingEthCall(contract: string, encodedAbiForEstimateGas: string) {
+    const res = await ethers.provider.call({
+        data: encodedAbiForEstimateGas,
+        to: contract,
+    });
+    console.log(`Result of eth_call: `, res);
+
+    // Check if the result represents an error
+    if (res.startsWith("0x08c379a0")) {
+        const errorMessage = abi.decode(['string'], '0x'+res.substring(10)) as any as string;
+        return Number.parseInt(errorMessage);
+    } else {
+        // Parse the result for successful execution (if needed)
+        throw new Error('Estimate gas method call must fail, but this call will succeed');
+    }
 }
