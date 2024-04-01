@@ -149,6 +149,20 @@ contract QuantumPortalGateway is WithAdmin, IQuantumPortalPoc {
     }
 
     /**
+     * @notice This method cannot be called on the gateway.
+     *  Use gatewat.portal().runFromToken instead.
+     */
+    function runFromToken(
+        uint64,
+        address,
+        address,
+        bytes memory,
+        uint256
+    ) external override pure {
+        revert("QPG: Call the POC directly");
+    }
+
+    /**
      * @notice Proxy to QP ledger runWithValue method
      * @param remoteChain The remote chain ID
      * @param remoteContract The remote contract
