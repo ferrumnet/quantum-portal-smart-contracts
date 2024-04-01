@@ -53,6 +53,29 @@ abstract contract QuantumPortalPoc is
     /**
      * @inheritdoc IQuantumPortalPoc
      */
+    function runFromToken(
+        uint64 remoteChainId,
+        address remoteContract,
+        address beneficiary,
+        bytes memory remoteMethodCall,
+        uint256 amount
+    ) external override {
+        require(remoteMethodCall.length != 0, "remoteMethodCall is required");
+        require(remoteChainId != CHAIN_ID, "Remote cannot be self");
+        IQuantumPortalLedgerMgr(mgr).registerTransaction(
+            remoteChainId,
+            remoteContract,
+            msg.sender,
+            beneficiary,
+            msg.sender, // msg.sender will be the token itself
+            amount,
+            remoteMethodCall
+        );
+    }
+
+    /**
+     * @inheritdoc IQuantumPortalPoc
+     */
     function run(
         uint64 remoteChainId,
         address remoteContract,
