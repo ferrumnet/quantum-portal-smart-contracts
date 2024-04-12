@@ -255,6 +255,20 @@ contract QuantumPortalGateway is WithAdmin, IQuantumPortalPoc {
     }
 
     /**
+     * @notice Proxy for QP localTransfer
+     * @param token The token address
+     * @param to The to address
+     * @param amount The amount
+     */
+    function localTransfer(
+        address token,
+        address to,
+        uint256 amount
+    ) external override {
+        return quantumPortalPoc.localTransfer(token, to, amount);
+    }
+
+    /**
      * @notice Stake for the miner
      * @param to The staker
      * @param amount The stake amount

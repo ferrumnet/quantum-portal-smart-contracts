@@ -181,7 +181,6 @@ abstract contract QuantumPortalPoc is
 
     /**
      * @inheritdoc IQuantumPortalPoc
-     * TODO: Carefully consider all attack vectors...
      */
     function localTransfer(
         address token,
@@ -201,11 +200,12 @@ abstract contract QuantumPortalPoc is
                 CHAIN_ID,
                 token,
                 msg.sender,
-                state.getRemoteBalances(CHAI_ID, token, msg.sender) - amount
+                state.getRemoteBalances(CHAIN_ID, token, msg.sender) - amount
             );
         }
         // Instead of updating the remoteBalcne for `to`, we just send them tokens
-        emit RemoteTransfer(chainId, token, msg.sender, to, amount);
+        emit RemoteTransfer(CHAIN_ID, token, msg.sender, to, amount);
+        emit LocalTransfer(token, to, amount);
         sendToken(token, to, amount);
     }
 
