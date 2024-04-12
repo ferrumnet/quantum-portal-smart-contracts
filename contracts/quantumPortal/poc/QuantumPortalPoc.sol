@@ -180,6 +180,36 @@ abstract contract QuantumPortalPoc is
     }
 
     /**
+     * @inheritdoc IQuantumPortalPoc
+     * TODO: Carefully consider all attack vectors...
+     */
+    function localTransfer(
+        address token,
+        address to,
+        uint256 amount
+    ) external override {
+        require(
+            msg.sender == context.transaction.remoteContract,
+            "QPP: can only be called within a mining context"
+        );
+        if (
+            token == context.transaction.token
+        ) {
+            context.uncommitedBalance -= amount;
+        } else {
+            state.setRemoteBalances(
+                CHAIN_ID,
+                token,
+                msg.sender,
+                state.getRemoteBalances(CHAI_ID, token, msg.sender) - amount
+            );
+        }
+        // Instead of updating the remoteBalcne for `to`, we just send them tokens
+        emit RemoteTransfer(chainId, token, msg.sender, to, amount);
+        sendToken(token, to, amount);
+    }
+
+    /**
      * @notice Withdraws the local balance
      * @param token The token
      * @param amount Amount to withdraw

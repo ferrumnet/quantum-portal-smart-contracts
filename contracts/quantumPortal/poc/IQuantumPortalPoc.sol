@@ -119,4 +119,18 @@ interface IQuantumPortalPoc {
         address to,
         uint256 amount
     ) external;
+
+    /**
+     * @notice This allows contracts to pay out tokens from their local balance.
+     *    if the calling chain is the same chain as the transfer.
+     *    Unlike `remoteTransfer` this method calls the actual `transfer` on the token
+     * @param token The remote token tok transfer
+     * @param to Receiver address
+     * @param amount The amount to transfer
+     */
+    function localTransfer(
+        address token,
+        address to,
+        uint256 amount
+    ) external;
 }
