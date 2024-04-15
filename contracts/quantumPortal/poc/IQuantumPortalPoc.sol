@@ -23,12 +23,46 @@ interface IQuantumPortalPoc {
      *   in case the transaction rejected or failed
      * @param remoteMethodCall Abi encoded remote method call
      */
+    function runNativeFee(
+        uint64 remoteChain,
+        address remoteContract,
+        address beneficiary,
+        bytes memory remoteMethodCall
+    ) external payable;
+
+    /**
+     * @notice Runs a remote transaction
+     * @param remoteChain The remote chain ID
+     * @param remoteContract The remote contract address
+     * @param beneficiary Beneficiary. This is the address that recieves the funds / refunds in
+     *   in case the transaction rejected or failed
+     * @param remoteMethodCall Abi encoded remote method call
+     */
     function run(
         uint64 remoteChain,
         address remoteContract,
         address beneficiary,
         bytes memory remoteMethodCall
     ) external;
+
+    /**
+     * @notice Runs a remote transaction. This can be called by the token sending the value.
+     *   Specially useful for specialized tokens or non-evm chains.
+     *   This will trust that the amount is transferred to QP and delegates the management
+     *   of the remote balances to the token itself.
+     * @param remoteChain The remote chain ID
+     * @param remoteContract The remote contract address
+     * @param beneficiary Beneficiary. This is the address that recieves the funds / refunds in
+     *   in case the transaction rejected or failed
+     * @param method The encoded method to call
+     */
+    function runFromTokenNativeFee(
+        uint64 remoteChain,
+        address remoteContract,
+        address beneficiary,
+        bytes memory method,
+        uint256 amount
+    ) external payable;
 
     /**
      * @notice Runs a remote transaction. This can be called by the token sending the value.
@@ -48,6 +82,23 @@ interface IQuantumPortalPoc {
         bytes memory method,
         uint256 amount
     ) external;
+
+    /**
+     * @notice Runs a remote transaction and passes tokens to the remote contract
+     * @param remoteChain The remote chain ID
+     * @param remoteContract The remote contract address
+     * @param beneficiary Beneficiary. This is the address that recieves the funds / refunds in
+     *   in case the transaction rejected or failed
+     * @param token The token to send to the remote contract
+     * @param method The encoded method to call
+     */
+    function runWithValueNativeFee(
+        uint64 remoteChain,
+        address remoteContract,
+        address beneficiary,
+        address token,
+        bytes memory method
+    ) external payable;
 
     /**
      * @notice Runs a remote transaction and passes tokens to the remote contract

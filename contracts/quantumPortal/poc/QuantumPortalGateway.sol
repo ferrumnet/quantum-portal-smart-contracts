@@ -16,7 +16,7 @@ import "foundry-contracts/contracts/common/SafeAmount.sol";
  *     upate of QP contract logics. Always use this contract to interact
  *     with QP
  */
-contract QuantumPortalGateway is WithAdmin, IQuantumPortalPoc {
+contract QuantumPortalGateway is WithAdmin {
     string public constant VERSION = "000.010";
     IQuantumPortalPoc public quantumPortalPoc;
     IQuantumPortalLedgerMgr public quantumPortalLedgerMgr;
@@ -116,156 +116,15 @@ contract QuantumPortalGateway is WithAdmin, IQuantumPortalPoc {
     /**
      * @notice Proxy methods for IQuantumPortalPoc
      */
-    function feeTarget() external view override returns (address) {
+    function feeTarget() external view returns (address) {
         return quantumPortalPoc.feeTarget();
     }
 
     /**
      * @notice The fee token
      */
-    function feeToken() external view override returns (address) {
+    function feeToken() external view returns (address) {
         return quantumPortalPoc.feeToken();
-    }
-
-    /**
-     * @notice Proxy to QP Ledger run method
-     * @param remoteChain The remote chain ID
-     * @param remoteContract The remote contract address
-     * @param beneficiary The benficiary
-     * @param remoteMethodCall The remote method call
-     */
-    function run(
-        uint64 remoteChain,
-        address remoteContract,
-        address beneficiary,
-        bytes memory remoteMethodCall
-    ) external override {
-        quantumPortalPoc.run(
-            remoteChain,
-            remoteContract,
-            beneficiary,
-            remoteMethodCall
-        );
-    }
-
-    /**
-     * @notice This method cannot be called on the gateway.
-     *  Use gatewat.portal().runFromToken instead.
-     */
-    function runFromToken(
-        uint64,
-        address,
-        address,
-        bytes memory,
-        uint256
-    ) external override pure {
-        revert("QPG: Call the POC directly");
-    }
-
-    /**
-     * @notice Proxy to QP ledger runWithValue method
-     * @param remoteChain The remote chain ID
-     * @param remoteContract The remote contract
-     * @param beneficiary The beneficiary
-     * @param token The token address
-     * @param method The remote method call
-     */
-    function runWithValue(
-        uint64 remoteChain,
-        address remoteContract,
-        address beneficiary,
-        address token,
-        bytes memory method
-    ) external override {
-        quantumPortalPoc.runWithValue(
-            remoteChain,
-            remoteContract,
-            beneficiary,
-            token,
-            method
-        );
-    }
-
-    /**
-     * @notice Proxy to QP ledger runWithdraw method
-     * @param remoteChainId The remote chain ID
-     * @param remoteAddress The remote address
-     * @param token The token
-     * @param amount The amount
-     */
-    function runWithdraw(
-        uint64 remoteChainId,
-        address remoteAddress,
-        address token,
-        uint256 amount
-    ) external override {
-        quantumPortalPoc.runWithdraw(
-            remoteChainId,
-            remoteAddress,
-            token,
-            amount
-        );
-    }
-
-    /**
-     * @notice Proxy for QP msgSender
-     * @return sourceNetwork The source network ID
-     * @return sourceMsgSender The source message sender
-     * @return sourceBeneficiary The benficiary
-     */
-    function msgSender()
-        external
-        view
-        override
-        returns (
-            uint256 sourceNetwork,
-            address sourceMsgSender,
-            address sourceBeneficiary
-        )
-    {
-        return quantumPortalPoc.msgSender();
-    }
-
-    /**
-     * @notice Proxy for QP txContext
-     */
-    function txContext()
-        external
-        view
-        override
-        returns (QuantumPortalLib.Context memory)
-    {
-        return quantumPortalPoc.txContext();
-    }
-
-    /**
-     * @notice Proxy for QP remoteTransfer
-     * @param chainId The remote chain ID
-     * @param token The token address
-     * @param to The to address
-     * @param amount The amount
-     */
-    function remoteTransfer(
-        uint256 chainId,
-        address token,
-        address to,
-        uint256 amount
-    ) external override {
-        return quantumPortalPoc.remoteTransfer(chainId, token, to, amount);
-    }
-
-    /**
-     * @notice Proxy for QP localTransfer
-     * @param token The token address
-     * @param to The to address
-     * @param amount The amount
-     */
-    function localTransfer(
-        address token,
-        address to,
-        uint256 amount
-    ) external override {
-        return quantumPortalPoc.localTransfer(token, to, amount);
     }
 
     /**
