@@ -20,6 +20,7 @@ contract DummyMultiChainApp is IDummyMultiChainApp {
     QuantumPortalPoc public portal;
     QuantumPortalLedgerMgr public mgr;
     address public feeToken;
+    uint counter;
 
     constructor(address _portal, address _mgr, address _feeToken) {
         portal = QuantumPortalPoc(_portal);
@@ -74,6 +75,7 @@ contract DummyMultiChainApp is IDummyMultiChainApp {
     function receiveCall() external override {
         (uint netId, address sourceMsgSender, address beneficiary) = portal
             .msgSender();
+        counter = counter + 1;
         console.log(
             "DummyMultiChainApp: Remote msg called",
             netId,

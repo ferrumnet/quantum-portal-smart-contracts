@@ -176,7 +176,7 @@ export async function deployUsingDeployer(contract: string, owner: string, initD
     console.log('DEPLOYADDR IS ', deployerAddr);
 	console.log("owner is", owner);
 
-	const res = siger ? await deployer.connect(siger).deployOwnable(salt, owner, initData, contr.bytecode)
+	const res = siger ? await deployer.connect(siger).deployOwnable(salt, owner, initData, contr.bytecode, {gasLimit: 5000000})
 		: await deployer.deployOwnable(salt, owner, initData, contr.bytecode);
 	console.log(`Deploy tx hash: ${res.hash}`)
 	const events = await getTransactionLog(res.hash, deployer, 'DeployedWithData');
@@ -199,7 +199,7 @@ export async function deployUsingDeployer(contract: string, owner: string, initD
 	// }
 
 	const bytecodeHash = ethers.utils.keccak256(contr.bytecode);
-	const addr = await deployer.computeAddressOwnable(Salt, owner, initData, bytecodeHash);
+	const addr = await deployer.computeAddressOwnable(salt, owner, initData, bytecodeHash);
 	console.log('Deployed address ', {addr, eventAddr});
 	if (eventAddr !== addr) {
 		console.log('Address was diferent! Sad!')

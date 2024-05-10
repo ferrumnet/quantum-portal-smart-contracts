@@ -2,9 +2,9 @@ import { abi, deployDummyToken, deployWithOwner, TestContext, ZeroAddress } from
 import { ethers } from "hardhat";
 import { DummyToken } from "../../../../typechain-types/DummyToken";
 import { QuantumPortalMinerMgr } from "../../../../typechain-types/QuantumPortalMinerMgr";
-import { QuantumPortalStake } from "../../../../typechain-types/QuantumPortalStake";
+import { QuantumPortalStakeWithDelegate } from "../../../../typechain-types/QuantumPortalStakeWithDelegate";
 
-export async function delpoyStake(ctx: TestContext, tokenAddress?: string) {
+export async function delpoyStake(ctx: TestContext, auth: string, gateway: string, tokenAddress?: string) {
     if (!!tokenAddress) {
         const tf = await ethers.getContractFactory('DummyToken');
         const tok = await tf.attach(tokenAddress!) as DummyToken;
@@ -12,17 +12,19 @@ export async function delpoyStake(ctx: TestContext, tokenAddress?: string) {
     } else {
         await deployDummyToken(ctx);
     }
-    const initData = abi.encode(['address', 'address'], [ctx.token.address, ctx.token.address]);
+    const initData = abi.encode(['address', 'address', 'address', 'address'],
+        [ctx.token.address, auth, ZeroAddress, gateway]);
     console.log("INIT", initData);
-    const stk = await deployWithOwner(ctx, 'QuantumPortalStake', ctx.acc1, initData
-        ) as QuantumPortalStake;
+    const stk = await deployWithOwner(ctx, 'QuantumPortalStakeWithDelegate', ZeroAddress, initData
+        ) as QuantumPortalStakeWithDelegate;
+    console.log('DEPED')
     const stakeId = await stk.STAKE_ID();
     console.log(`Statke with ID ${stakeId} was deployed`);
     return stk;
 }
 
-export async function  deployMinerMgr(ctx: TestContext, stk: QuantumPortalStake, owner: string) {
-    const initData = abi.encode(['address'], [stk.address]);
+export async function  deployMinerMgr(ctx: TestContext, stk: QuantumPortalStake, portal: string, mgr: string, owner: string) {
+    const initData = abi.encode(['address', 'address', 'address'], [stk.address, portal, mgr]);
     console.log("INIT for QuantumPortalMinerMgr", initData)
     const min = await deployWithOwner(ctx, 'QuantumPortalMinerMgr', owner, initData
         ) as QuantumPortalMinerMgr;

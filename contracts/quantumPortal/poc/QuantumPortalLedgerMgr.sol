@@ -630,7 +630,8 @@ contract QuantumPortalLedgerMgr is
         uint256 amount,
         bytes memory method
     ) internal {
-        require(remoteChainId != CHAIN_ID, "QPLM: bad remoteChainId");
+        // We can allow self chain mining
+        // require(remoteChainId != CHAIN_ID, "QPLM: bad remoteChainId");
         QuantumPortalLib.Block memory b = state.getLastLocalBlock(
             remoteChainId
         );

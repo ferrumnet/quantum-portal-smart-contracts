@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./IQuantumPortalPoc.sol";
 import "foundry-contracts/contracts/common/IVersioned.sol";
+import "./IQuantumPortalPoc.sol";
+import "./IQuantumPortalNativeFeeRepo.sol";
 import "../../staking/library/TokenReceivable.sol";
 import "./PortalLedger.sol";
 import "./QuantumPortalLib.sol";
@@ -19,6 +20,7 @@ abstract contract QuantumPortalPoc is
     string public constant override VERSION = "000.001";
     address public override feeTarget;
     address public override feeToken;
+    address public nativeFeeRepo;
 
     event LocalTransfer(address token, address to, uint256 amount);
 
@@ -38,6 +40,10 @@ abstract contract QuantumPortalPoc is
         feeToken = _feeToken;
     }
 
+    function setNativeFeeRepo(address _nativeFeeRepo) external onlyAdmin {
+        nativeFeeRepo = _nativeFeeRepo;
+    }
+
     /**
      * @inheritdoc IQuantumPortalPoc
      */
@@ -53,14 +59,61 @@ abstract contract QuantumPortalPoc is
     /**
      * @inheritdoc IQuantumPortalPoc
      */
-    function run(
+    function runFromTokenNativeFee(
+        uint64 remoteChainId,
+        address remoteContract,
+        address beneficiary,
+        bytes memory remoteMethodCall,
+        uint256 amount
+    ) external payable override {
+        require(remoteContract != address(0) || beneficiary != address(0), "remoteContract or beneficiary is required");
+        IQuantumPortalNativeFeeRepo(nativeFeeRepo).swapFee{value: msg.value}();
+        IQuantumPortalLedgerMgr(mgr).registerTransaction(
+            remoteChainId,
+            remoteContract,
+            msg.sender,
+            beneficiary,
+            msg.sender, // msg.sender will be the token itself
+            amount,
+            remoteMethodCall
+        );
+    }
+
+    /**
+     * @inheritdoc IQuantumPortalPoc
+     */
+    function runFromToken(
+        uint64 remoteChainId,
+        address remoteContract,
+        address beneficiary,
+        bytes memory remoteMethodCall,
+        uint256 amount
+    ) external override {
+        require(remoteContract != address(0) || beneficiary != address(0), "remoteContract or beneficiary is required");
+        IQuantumPortalLedgerMgr(mgr).registerTransaction(
+            remoteChainId,
+            remoteContract,
+            msg.sender,
+            beneficiary,
+            msg.sender, // msg.sender will be the token itself
+            amount,
+            remoteMethodCall
+        );
+    }
+
+    /**
+     * @inheritdoc IQuantumPortalPoc
+     */
+    function runNativeFee(
         uint64 remoteChainId,
         address remoteContract,
         address beneficiary,
         bytes memory remoteMethodCall
-    ) external override {
+    ) external payable override {
+        require(remoteContract != address(0) || beneficiary != address(0), "remoteContract or beneficiary is required");
         require(remoteMethodCall.length != 0, "remoteMethodCall is required");
-        require(remoteChainId != CHAIN_ID, "Remote cannot be self");
+        IQuantumPortalNativeFeeRepo(nativeFeeRepo).swapFee{value: msg.value}();
+        // require(remoteChainId != CHAIN_ID, "Remote cannot be self");
         IQuantumPortalLedgerMgr(mgr).registerTransaction(
             remoteChainId,
             remoteContract,
@@ -75,6 +128,53 @@ abstract contract QuantumPortalPoc is
     /**
      * @inheritdoc IQuantumPortalPoc
      */
+    function run(
+        uint64 remoteChainId,
+        address remoteContract,
+        address beneficiary,
+        bytes memory remoteMethodCall
+    ) external override {
+        require(remoteContract != address(0) || beneficiary != address(0), "remoteContract or beneficiary is required");
+        require(remoteMethodCall.length != 0, "remoteMethodCall is required");
+        // require(remoteChainId != CHAIN_ID, "Remote cannot be self");
+        IQuantumPortalLedgerMgr(mgr).registerTransaction(
+            remoteChainId,
+            remoteContract,
+            msg.sender,
+            beneficiary,
+            address(0),
+            0,
+            remoteMethodCall
+        );
+    }
+
+    /**
+     * @inheritdoc IQuantumPortalPoc
+     */
+    function runWithValueNativeFee(
+        uint64 remoteChainId,
+        address remoteContract,
+        address beneficiary,
+        address token,
+        bytes memory method
+    ) external payable override {
+        require(remoteContract != address(0) || beneficiary != address(0), "remoteContract or beneficiary is required");
+        // require(remoteChainId != CHAIN_ID, "Remote cannot be self");
+        IQuantumPortalNativeFeeRepo(nativeFeeRepo).swapFee{value: msg.value}();
+        IQuantumPortalLedgerMgr(mgr).registerTransaction(
+            remoteChainId,
+            remoteContract,
+            msg.sender,
+            beneficiary,
+            token,
+            sync(token),
+            method
+        );
+    }
+
+    /**
+     * @inheritdoc IQuantumPortalPoc
+     */
     function runWithValue(
         uint64 remoteChainId,
         address remoteContract,
@@ -82,7 +182,8 @@ abstract contract QuantumPortalPoc is
         address token,
         bytes memory method
     ) external override {
-        require(remoteChainId != CHAIN_ID, "Remote cannot be self");
+        require(remoteContract != address(0) || beneficiary != address(0), "remoteContract or beneficiary is required");
+        // require(remoteChainId != CHAIN_ID, "Remote cannot be self");
         IQuantumPortalLedgerMgr(mgr).registerTransaction(
             remoteChainId,
             remoteContract,
@@ -154,6 +255,37 @@ abstract contract QuantumPortalPoc is
             state.getRemoteBalances(chainId, token, to) + amount
         );
         emit RemoteTransfer(chainId, token, msg.sender, to, amount);
+    }
+
+    /**
+     * @inheritdoc IQuantumPortalPoc
+     */
+    function localTransfer(
+        address token,
+        address to,
+        uint256 amount
+    ) external override {
+        require(
+            msg.sender == context.transaction.remoteContract,
+            "QPP: can only be called within a mining context"
+        );
+        if (
+            token == context.transaction.token
+        ) {
+            context.uncommitedBalance -= amount;
+        } else {
+            // TODO: What if the tx failed? Make sure this will be reverted
+            state.setRemoteBalances(
+                CHAIN_ID,
+                token,
+                msg.sender,
+                state.getRemoteBalances(CHAIN_ID, token, msg.sender) - amount
+            );
+        }
+        // Instead of updating the remoteBalcne for `to`, we just send them tokens
+        emit RemoteTransfer(CHAIN_ID, token, msg.sender, to, amount);
+        emit LocalTransfer(token, to, amount);
+        sendToken(token, to, amount);
     }
 
     /**

@@ -11,6 +11,14 @@ abstract contract WithQp is WithAdmin {
     IQuantumPortalPoc public portal;
 
     /**
+     * @notice Upddates the qp portal
+     * @param _portal the portal
+     */
+    function updatePortal(address _portal) external onlyOwner {
+        portal = IQuantumPortalPoc(_portal);
+    }
+
+    /**
      * @notice Initialize the multi-chain contract. Pass data using
      * the initiData
      */

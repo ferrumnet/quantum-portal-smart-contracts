@@ -1,8 +1,8 @@
-import { throws, Wei, ZeroAddress } from 
+import { abi, throws, Wei, ZeroAddress } from 
     'foundry-contracts/dist/test/common/Utils';
 import { expect } from "chai";
 import { advanceTimeAndBlock } from "../../common/TimeTravel";
-import { deployAll, PortalContext, QuantumPortalUtils } from "./QuantumPortalUtils";
+import { deployAll, estimateGasUsingEthCall, PortalContext, QuantumPortalUtils } from "./QuantumPortalUtils";
 import { ethers } from 'hardhat';
 import { EstimateGasExample } from '../../../typechain-types/EstimateGasExample';
 
@@ -78,7 +78,7 @@ describe("Test qp", function () {
                     amount: tx.amount.toString(),
                     gas: tx.gas.toString(),
                     fixedFee: tx.fixedFee.toString(),
-                    method: tx.methods[0].toString(),
+                    methods: [tx.methods[0].toString()],
                     remoteContract: tx.remoteContract.toString(),
                     sourceBeneficiary: tx.sourceBeneficiary.toString(),
                     sourceMsgSender: tx.sourceMsgSender.toString(),
@@ -159,7 +159,7 @@ describe("Test qp", function () {
         console.log("Now lets check our miner's balance");
         feeAmount = await ctx.chain2.feeConverter.targetChainFixedFee(ctx.chain1.chainId, QuantumPortalUtils.FIXED_FEE_SIZE + 300 /* withdraw call estimate */);
         await ctx.chain2.token.approve(ctx.chain2.minerMgr.address, feeAmount);
-        await ctx.chain2.minerMgr.withdraw(ctx.chain1.chainId, ctx.wallets[0], feeAmount);
+        await ctx.chain2.minerMgr.withdraw(ctx.chain1.chainId, ctx.wallets[0], ctx.owner, feeAmount);
         console.log('Called withdraw. Now we need to mine and finalize');
         console.log(`Current balance is: ${(await ctx.chain2.token.balanceOf(ctx.acc1)).toString()}`);
         await QuantumPortalUtils.mineAndFinilizeTwoToOne(ctx, 1);
@@ -169,13 +169,41 @@ describe("Test qp", function () {
         expect(finalBal).to.be.equal('0.144');
     });
 
+    it('Can estimate gas', async function() {
+        const ctx = await deployAll();
+        const estimageGasTestF = await ethers.getContractFactory('EstimateGasExample');
+        const estimageGasTest = await estimageGasTestF.deploy(ctx.chain2.poc.address) as EstimateGasExample;
+
+        let methodCall = estimageGasTest.interface.encodeFunctionData('setNumber', ['1']);
+        await estimageGasTest.setNumber('6');
+        const ensureNumberIs6 = async () => {
+            const num = (await estimageGasTest.number()). toString();
+            expect(num).to.be.equal('6');
+            console.log('State stayed');
+        }
+
+        let estimateMethodCall = ctx.chain2.poc.interface.encodeFunctionData(
+            'estimateGasForRemoteTransaction',
+            [ctx.chain1.chainId,
+            ZeroAddress,
+            estimageGasTest.address,
+            ZeroAddress,
+            methodCall,
+            ZeroAddress,
+            '0']
+        );
+
+        const gasUsed = await estimateGasUsingEthCall(ctx.chain2.poc.address, estimateMethodCall);
+        console.log('Gas used: ', gasUsed);
+        expect(gasUsed).to.be.greaterThan(26000);
+    });
+
     it('Estimate gas reverts the work', async function() {
         const ctx = await deployAll();
 
         const estimageGasTestF = await ethers.getContractFactory('EstimateGasExample');
         const estimageGasTest = await estimageGasTestF.deploy(ctx.chain2.poc.address) as EstimateGasExample;
 
-        let methodCall = estimageGasTest.interface.encodeFunctionData('setNumber', ['1']);
         await estimageGasTest.setNumber('6');
         const ensureNumberIs6 = async () => {
             const num = (await estimageGasTest.number()). toString();
@@ -192,23 +220,22 @@ describe("Test qp", function () {
             method,
             ZeroAddress,
             '0');
-        const runTheEstim = (method: string) => ctx.chain2.poc.estimateGasForRemoteTransaction(
-            ctx.chain1.chainId,
-            ZeroAddress,
-            estimageGasTest.address,
-            ZeroAddress,
-            method,
-            ZeroAddress,
-            '0');
-        let gasNeeded = await estim(methodCall);
-        console.log('Gas needed to run remote tx is: ', gasNeeded.toString());
-        console.log('Making sure estate cannot change');
-        try { await ctx.chain2.poc.executeTxAndRevertToEstimateGas(estimageGasTest.address, methodCall); } catch (e) {};
-        await ensureNumberIs6();
+        const runTheEstim = async (method: string) => {
+            try {
+                await estim(method);
+                throw new Error('estmate gas must fail');
+            } catch(e) {
+                const msg = e.toString();
+                const errMsg = msg.split("reverted with reason string '")[1].split("'")[0];
+                console.log('Result of calling ', method, 'is:', errMsg);
+                return errMsg;
+            }
+        }
+        let methodCall = estimageGasTest.interface.encodeFunctionData('setNumber', ['1']);
         await runTheEstim(methodCall);
         await ensureNumberIs6();
-        gasNeeded = await estimageGasTest.estimateGas.setNumber('1');
-        console.log('Gas needed to run directly is: ', gasNeeded.toString());
+        // await estimageGasTest.estimateGas.setNumber('1');
+        // console.log('Gas needed to run directly is: ', gasNeeded.toString());
 
         console.log('Estimate a few more methods');
         const methodCallGetContextOpen = estimageGasTest.interface.encodeFunctionData('getContextOpen');
@@ -216,20 +243,16 @@ describe("Test qp", function () {
         const methodCallExpensiveContextCall100 = estimageGasTest.interface.encodeFunctionData('expensiveContextCall', ['100']);
         const methodCallExpensiveContextCall1000 = estimageGasTest.interface.encodeFunctionData('expensiveContextCall', ['1000']);
         const methodCallExpensiveContextCall10000 = estimageGasTest.interface.encodeFunctionData('expensiveContextCall', ['10000']);
-        let gasNeededGetContextOpen = (await estim(methodCallGetContextOpen)).toString();
-        await runTheEstim(methodCallGetContextOpen);
+        let gasNeededGetContextOpen = (await runTheEstim(methodCallGetContextOpen)).toString();
+        await (methodCallGetContextOpen);
         await ensureNumberIs6();
-        let gasNeededmethodCallGetContextLimit = (await estim(methodCallGetContextLimit)).toString();
-        await runTheEstim(methodCallGetContextLimit);
+        let gasNeededmethodCallGetContextLimit = (await runTheEstim(methodCallGetContextLimit)).toString();
         await ensureNumberIs6();
-        let gasNeededmethodCallExpensiveContextCall100 = (await estim(methodCallExpensiveContextCall100)).toString();
-        await runTheEstim(methodCallExpensiveContextCall100);
+        let gasNeededmethodCallExpensiveContextCall100 = (await runTheEstim(methodCallExpensiveContextCall100)).toString();
         await ensureNumberIs6();
-        let gasNeededmethodCallExpensiveContextCall1000 = (await estim(methodCallExpensiveContextCall1000)).toString();
-        await runTheEstim(methodCallExpensiveContextCall1000);
+        let gasNeededmethodCallExpensiveContextCall1000 = (await runTheEstim(methodCallExpensiveContextCall1000)).toString();
         await ensureNumberIs6();
-        let gasNeededmethodCallExpensiveContextCall10000 = (await estim(methodCallExpensiveContextCall10000)).toString();
-        await runTheEstim(methodCallExpensiveContextCall10000);
+        let gasNeededmethodCallExpensiveContextCall10000 = (await runTheEstim(methodCallExpensiveContextCall10000)).toString();
         await ensureNumberIs6();
 
         console.log('Gas needed:', {gasNeededGetContextOpen, gasNeededmethodCallGetContextLimit,
