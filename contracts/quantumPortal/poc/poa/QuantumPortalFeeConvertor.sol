@@ -12,6 +12,7 @@ import "hardhat/console.sol";
  * @notice Fee convertor utility for QP. Used for gas calculations
  */
 contract QuantumPortalFeeConverter is IQuantumPortalFeeConvertor, WithAdmin {
+    string public constant VERSION = "0.0.1";
     address public override qpFeeToken;
     address public networkFeeWrappedToken;
     IPriceOracle oracle;

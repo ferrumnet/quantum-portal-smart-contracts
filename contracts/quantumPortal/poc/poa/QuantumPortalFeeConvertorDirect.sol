@@ -13,6 +13,7 @@ contract QuantumPortalFeeConverterDirect is
     IQuantumPortalFeeConvertor,
     WithAdmin
 {
+    string public constant VERSION = "0.0.1";
     address public override qpFeeToken;
     uint256 public feePerByte;
     mapping (uint256 => uint256) public feeTokenPriceList;

@@ -1,5 +1,5 @@
 import { ethers } from "hardhat";
-import { abi, ZeroAddress, sleep } from "foundry-contracts/dist/test/common/Utils";
+import { abi, ZeroAddress, sleep, Wei } from "foundry-contracts/dist/test/common/Utils";
 import { panick, _WETH, deployUsingDeployer, contractExists, isAllZero, distributeTestTokensIfTest } from "../../../test/common/Utils";
 import { QuantumPortalPoc } from "../../../typechain/QuantumPortalPoc";
 import { QuantumPortalLedgerMgr } from "../../../typechain/QuantumPortalLedgerMgr";
@@ -9,11 +9,10 @@ import { QuantumPortalMinerMgr } from "../../../typechain/QuantumPortalMinerMgr"
 import { QuantumPortalGateway } from "../../../typechain/QuantumPortalGateway";
 import { UniswapOracle } from "../../../typechain/UniswapOracle";
 import { loadQpDeployConfig, QpDeployConfig } from "../../utils/DeployUtils";
-import { Signer } from "ethers";
+import { Signer, getDefaultProvider } from "ethers";
 import { QuantumPortalFeeConverterDirect } from "../../../typechain-types/QuantumPortalFeeConverterDirect";
 import { QuantumPortalState } from "../../../typechain-types/QuantumPortalState";
-import { IVersioned } from "../../typechain/IVersioned";
-import { randomSalt } from "foundry-contracts/dist/test/common/Eip712Utils";
+import { TEST_MNEMONICS } from "../../../test/common/TestAccounts";
 const DEFAULT_QP_CONFIG_FILE = 'QpDeployConfig.yaml';
 
 interface Ctx {
@@ -80,21 +79,6 @@ async function prep(conf: QpDeployConfig) {
 
     console.log("Deployer Contract ", conf.DeployerContract);
 
-    // const depFac = await ethers.getContractFactory("FerrumDeployer");
-	// const deployer = await depFac.attach(conf.DeployerContract) as IVersioned;
-	// console.log("Main contract exsists");
-    // try {
-	// 	console.log(deployer);
-    //     const isThere = await deployer.VERSION();
-	// 	console.log("isThere", isThere);
-    //     if ( isThere && isThere.toString().length > 0) {
-    //         return true;
-    //     }
-    // } catch(e) {
-	// 	console.log("Error from exists", e);
-    //     return false;
-    // }
-
     if (conf.DeployerContract == undefined || !(
             await (contractExists('FerrumDeployer', conf.DeployerContract)))) {
         console.log(`No deployer contract. Deploying one using ("${deployerWallet.address}")...`);
@@ -102,7 +86,6 @@ async function prep(conf: QpDeployConfig) {
         const ferrumDep = await FerrumDep.connect(deployerWallet).deploy();
         logForRecord('Ferrum Deployer address', ferrumDep.address);
         conf.DeployerContract = ferrumDep.address;
-        // conf.DeployerSalt = randomSalt();
         sleep(2000);
     }
 
