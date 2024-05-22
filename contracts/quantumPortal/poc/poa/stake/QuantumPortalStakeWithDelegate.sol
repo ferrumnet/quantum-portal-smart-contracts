@@ -229,7 +229,7 @@ contract QuantumPortalStakeWithDelegate is StakeOpen, OperatorRelation, IQuantum
         require(delegate != address(0), "QPS: no delegate assigned");
         require(delegateSlash[delegate] == 0, "QPS: delegate is slashed");
         uint256 amount = StakeOpen._stake(to, id, 0);
-        require(address(stakeVerifyer) != address(0) || allocation >= amount, "QPS: not enough allocation");
+        require(address(stakeVerifyer) == address(0) || allocation >= amount, "QPS: not enough allocation");
         delegateStake[delegate] = delegateStake[delegate] + amount;
         return amount;
     }

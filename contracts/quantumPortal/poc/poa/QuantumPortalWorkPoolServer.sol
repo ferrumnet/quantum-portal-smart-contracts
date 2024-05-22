@@ -105,6 +105,10 @@ abstract contract QuantumPortalWorkPoolServer is
         sendToken(baseToken, to, amount);
     }
 
+    function _initialize() internal {
+        baseToken = portal.feeToken();
+    }
+
     /**
      * @notice Withdraw rewards on the remote chain
      * @param epoch The local epoch

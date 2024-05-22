@@ -14,6 +14,7 @@ contract QuantumPortalFeeConverterDirect is
     WithAdmin
 {
     string public constant VERSION = "0.0.1";
+    uint constant DEFAULT_PRICE = 0x100000000000000000000000000000000; //FixedPoint128.Q128;
     address public override qpFeeToken;
     uint256 public feePerByte;
     mapping (uint256 => uint256) public feeTokenPriceList;
@@ -77,6 +78,9 @@ contract QuantumPortalFeeConverterDirect is
         uint256 size
     ) external view override returns (uint256) {
         uint256 price = _targetChainGasTokenPriceX128(targetChainId);
+        if (price == 0) {
+            price = DEFAULT_PRICE;
+        }
         console.log("CALCING FEE PER BYTE", price, targetChainId);
         return (price * size * feePerByte) / FixedPoint128.Q128;
     }
