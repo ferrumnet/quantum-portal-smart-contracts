@@ -58,6 +58,7 @@ contract QuantumPortalMinerMgr is
         miningStake = _miningStake;
         WithQp._initializeWithQp(_portal);
         WithLedgerMgr._initializeWithLedgerMgr(_mgr);
+        QuantumPortalWorkPoolServer._initialize();
     }
 
     /**

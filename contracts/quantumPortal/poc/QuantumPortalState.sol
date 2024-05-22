@@ -5,6 +5,7 @@ import "./QuantumPortalLib.sol";
 import "foundry-contracts/contracts/common/WithAdmin.sol";
 
 contract QuantumPortalState is WithAdmin {
+    string public constant VERSION = "0.0.1";
     mapping(uint256 => IQuantumPortalLedgerMgr.LocalBlock) private localBlocks;
     mapping(uint256 => QuantumPortalLib.RemoteTransaction[])
         private localBlockTransactions;

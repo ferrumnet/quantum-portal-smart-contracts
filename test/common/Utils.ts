@@ -154,16 +154,16 @@ export async function getTransactionLog(id: string, contract: any, eventName: st
 export async function contractExists(contractName: string, contract: string) {
 	const depFac = await ethers.getContractFactory(contractName);
 	const deployer = await depFac.attach(contract) as IVersioned;
-	console.log("COntract exsists");
+	console.log(`Checking if contract ${contractName}:${contract} exists.`);
     try {
-		console.log(deployer);
         const isThere = await deployer.VERSION();
 		console.log("isThere", isThere);
         if ( isThere && isThere.toString().length > 0) {
             return true;
         }
     } catch(e) {
-		console.log("Error from exists", e);
+		// console.log("Error from exists", e);
+		console.log("Contract does not exist");
         return false;
     }
 }
@@ -176,7 +176,7 @@ export async function deployUsingDeployer(contract: string, owner: string, initD
     console.log('DEPLOYADDR IS ', deployerAddr);
 	console.log("owner is", owner);
 
-	const res = siger ? await deployer.connect(siger).deployOwnable(salt, owner, initData, contr.bytecode, {gasLimit: 5000000})
+	const res = siger ? await deployer.connect(siger).deployOwnable(salt, owner, initData, contr.bytecode, {gasLimit: 6000000})
 		: await deployer.deployOwnable(salt, owner, initData, contr.bytecode);
 	console.log(`Deploy tx hash: ${res.hash}`)
 	const events = await getTransactionLog(res.hash, deployer, 'DeployedWithData');

@@ -49,7 +49,7 @@ contract QuantumPortalStakeWithDelegate is StakeOpen, OperatorRelation, IQuantum
     mapping(address => address) public override delegations; 
 
     constructor() {
-        console.log("COMP");
+        console.log("COMPX");
         bytes memory _data = IFerrumDeployer(msg.sender).initData();
         (address token, address authority, address _stakeVerifyer, address _gateway) = abi.decode(
             _data,
@@ -229,7 +229,7 @@ contract QuantumPortalStakeWithDelegate is StakeOpen, OperatorRelation, IQuantum
         require(delegate != address(0), "QPS: no delegate assigned");
         require(delegateSlash[delegate] == 0, "QPS: delegate is slashed");
         uint256 amount = StakeOpen._stake(to, id, 0);
-        require(address(stakeVerifyer) != address(0) || allocation >= amount, "QPS: not enough allocation");
+        require(address(stakeVerifyer) == address(0) || allocation >= amount, "QPS: not enough allocation");
         delegateStake[delegate] = delegateStake[delegate] + amount;
         return amount;
     }

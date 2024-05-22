@@ -4,13 +4,13 @@ pragma solidity ^0.8.0;
 import "./IOperatorRelation.sol";
 
 /**
- * @notice This contract maintains relationship between an investor and a worker.
- * Investor puts the money, and worker does the work.
+ * @notice This contract maintains relationship between an delegate and a nodeOperator.
+ * delegate is used for stakes, and nodeOperator does the work.
  */
 abstract contract OperatorRelation is IOperatorRelation {
     mapping(address => address) public nodeOperator;
     mapping(address => IOperatorRelation.Relationship) public delegateLookup;
-    event NodeOperatorAssigned(address investor, address nodeOperator);
+    event NodeOperatorAssigned(address delegate, address nodeOperator);
 
     /**
      * @inheritdoc IOperatorRelation
@@ -23,11 +23,11 @@ abstract contract OperatorRelation is IOperatorRelation {
 
     /**
      * @notice Assigns an operator to the given address from the `msg.sender`. An operator can be used once
-     * @param to The operator
+     * @param toOp The operator
      */
-    function assignOperator(address to) external {
+    function assignOperator(address toOp) external {
         address currentOperator = nodeOperator[msg.sender];
-        if (to == address(0)) {
+        if (toOp == address(0)) {
             require(currentOperator != address(0), "D: nothing to delete");
             delete nodeOperator[msg.sender];
             delegateLookup[currentOperator].deleted = uint8(1);
@@ -35,16 +35,16 @@ abstract contract OperatorRelation is IOperatorRelation {
             return;
         }
         require(
-            delegateLookup[to].delegate == address(0),
+            delegateLookup[toOp].delegate == address(0),
             "D: to is already in investor"
         );
-        require(nodeOperator[to] == address(0), "D: to is an investor");
-        require(currentOperator != to, "M: nothing will change");
-        nodeOperator[msg.sender] = to;
+        require(nodeOperator[toOp] == address(0), "D: to is an investor");
+        require(currentOperator != toOp, "M: nothing will change");
+        nodeOperator[msg.sender] = toOp;
         if (currentOperator != address(0)) {
             delegateLookup[currentOperator].deleted = uint8(1);
         }
-        delegateLookup[to].delegate = msg.sender;
-        emit NodeOperatorAssigned(msg.sender, to);
+        delegateLookup[toOp].delegate = msg.sender;
+        emit NodeOperatorAssigned(msg.sender, toOp);
     }
 }

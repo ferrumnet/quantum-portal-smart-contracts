@@ -377,7 +377,9 @@ contract QuantumPortalLedgerMgr is
      * @notice Registers self as a miner
      */
     function registerMiner() external {
+        console.log("REGISTERING MINER");
         uint256 stake = stakeOf(msg.sender);
+        console.log("STAKEOF", stake, minerMinimumStake);
         require(stake >= minerMinimumStake, "QPLM: not enough stake");
         IQuantumPortalMinerMembership(minerMgr).registerMiner(msg.sender);
     }
