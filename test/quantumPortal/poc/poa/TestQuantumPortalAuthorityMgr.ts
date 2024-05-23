@@ -13,7 +13,9 @@ async function deployAm(ctx: TestContext) {
 
 describe("Test qp authority manager", function () {
 	it('qpam can verify a properly signed message', async function() {
+        console.log("O LA LA")
         const ctx = await getCtx();
+        console.log("O LA LA2")
         const am = await deployAm(ctx);
 
         const action = '2';

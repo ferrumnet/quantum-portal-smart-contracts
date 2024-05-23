@@ -413,7 +413,8 @@ export async function deployAll(): Promise<PortalContext> {
 	const ctx = await getCtx();
 	const mgrFac = await ethers.getContractFactory("QuantumPortalLedgerMgrTest");
 	console.log('About to deploy the ledger managers');
-    const mgr1 = await mgrFac.deploy(26000) as QuantumPortalLedgerMgrTest;
+    const mgr1 = await mgrFac.deploy(26000, {gasLimit: 8000000}) as QuantumPortalLedgerMgrTest;
+    console.log('MGR LAUNCHED', await mgr1.VERSION());
     const mgr2 = await mgrFac.deploy(2) as QuantumPortalLedgerMgrTest;
 
     console.log('Setting min stakes');

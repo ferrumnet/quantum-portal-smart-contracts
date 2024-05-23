@@ -83,7 +83,7 @@ async function prep(conf: QpDeployConfig) {
             await (contractExists('FerrumDeployer', conf.DeployerContract)))) {
         console.log(`No deployer contract. Deploying one using ("${deployerWallet.address}")...`);
         const FerrumDep = await ethers.getContractFactory("FerrumDeployer");
-        const ferrumDep = await FerrumDep.connect(deployerWallet).deploy();
+        const ferrumDep = await FerrumDep.connect(deployerWallet).deploy({gasLimit: 2000000});
         logForRecord('Ferrum Deployer address', ferrumDep.address);
         conf.DeployerContract = ferrumDep.address;
         sleep(2000);

@@ -23,7 +23,7 @@ export async function delpoyStake(ctx: TestContext, auth: string, gateway: strin
     return stk;
 }
 
-export async function  deployMinerMgr(ctx: TestContext, stk: QuantumPortalStake, portal: string, mgr: string, owner: string) {
+export async function  deployMinerMgr(ctx: TestContext, stk: QuantumPortalStakeWithDelegate, portal: string, mgr: string, owner: string) {
     const initData = abi.encode(['address', 'address', 'address'], [stk.address, portal, mgr]);
     console.log("INIT for QuantumPortalMinerMgr", initData)
     const min = await deployWithOwner(ctx, 'QuantumPortalMinerMgr', owner, initData
