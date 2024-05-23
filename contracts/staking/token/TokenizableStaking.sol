@@ -5,7 +5,6 @@ import "../BaseStakingV2.sol";
 import "../factory/IStakingFactory.sol";
 
 abstract contract TokenizableStaking is BaseStakingV2, IStakeTransferrer {
-  using SafeMath for uint256;
   mapping(address => mapping(address => mapping(address => uint))) public override allowance;
 
 	function _approve(address id, address owner, address spender, uint value) private {
@@ -31,14 +30,14 @@ abstract contract TokenizableStaking is BaseStakingV2, IStakeTransferrer {
 		uint256 stakeFrom = state.stakes[id][from];
 		uint256 debtFrom = state.stakeDebts[id][from];
 
-		state.stakes[id][from] = stakeFrom.sub(amount);
+		state.stakes[id][from] = stakeFrom-(amount);
 		uint256 stakeTo = state.stakes[id][to];
-		state.stakes[id][to] = stakeTo.add(amount);
+		state.stakes[id][to] = stakeTo+(amount);
 
 		uint256 debtTo = state.stakeDebts[id][to];
 		uint256 debtAmount = FullMath.mulDiv(amount, debtFrom, stakeFrom);
-		debtFrom = debtFrom.sub(debtAmount);
-		debtTo = debtTo.add(debtAmount);
+		debtFrom = debtFrom-(debtAmount);
+		debtTo = debtTo+(debtAmount);
 		state.stakeDebts[id][to] = debtTo;
 		state.stakeDebts[id][from] = debtFrom;
   }
@@ -61,7 +60,7 @@ abstract contract TokenizableStaking is BaseStakingV2, IStakeTransferrer {
 	function transferFromOnlyPool(address id, address sender, address from, address to, uint value)
 	external override onlyPool(id) returns (bool) {
 			if (allowance[id][from][sender] != type(uint256).max) {
-					allowance[id][from][sender] = allowance[id][from][sender].sub(value);
+					allowance[id][from][sender] = allowance[id][from][sender]-(value);
 			}
 			_transfer(id, from, to, value);
 			return true;

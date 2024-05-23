@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.2;
+pragma solidity 0.8.25;
 
 import "./IBridgePool.sol";
 import "./IBridgeRoutingTable.sol";
@@ -61,7 +61,7 @@ contract BridgePoolV12 is TokenReceivable, IBridgePool, WithQp, WithRemotePeers 
         _;
     }
 
-    constructor() {}
+    constructor() Ownable(msg.sender) {}
 
     /*
      *************** Owner only operations ***************

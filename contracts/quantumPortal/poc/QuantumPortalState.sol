@@ -41,6 +41,8 @@ contract QuantumPortalState is WithAdmin {
         _;
     }
 
+    constructor() Ownable(msg.sender) {}
+
     /**
      * @notice Get the local block
      * @param key The key

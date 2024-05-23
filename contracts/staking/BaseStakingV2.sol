@@ -14,7 +14,6 @@ import "foundry-contracts/contracts/taxing/IGeneralTaxDistributor.sol";
 
 abstract contract BaseStakingV2 is IStakeV2, IStakeInfo, TokenReceivable, Admined,
   StakingV2CommonSignatures {
-  using SafeMath for uint256;
   using StakeFlags for uint16;
   address public /*immutable*/ factory;
   StakingBasics.StakeExtraInfo internal extraInfo;
@@ -102,7 +101,7 @@ abstract contract BaseStakingV2 is IStakeV2, IStakeInfo, TokenReceivable, Admine
     uint256 currentSwept = state.stakeSwept[id];
     uint256 balance = state.stakedBalance[id];
     state.stakeSwept[id] = balance;
-    sendToken(baseInfo.baseToken[id], sweepTarget, balance.sub(currentSwept));
+    sendToken(baseInfo.baseToken[id], sweepTarget, balance-(currentSwept));
   }
 
   function sweepRewards(address id, address[] memory rewardTokens) external {
@@ -119,7 +118,7 @@ abstract contract BaseStakingV2 is IStakeV2, IStakeInfo, TokenReceivable, Admine
 
   function _sweepSignleReward(address id, address rewardToken, address sweepTarget) internal {
     uint256 totalRewards = reward.rewardsTotal[id][rewardToken];
-    uint256 toPay = totalRewards.sub(reward.fakeRewardsTotal[id][rewardToken]);
+    uint256 toPay = totalRewards-(reward.fakeRewardsTotal[id][rewardToken]);
     reward.fakeRewardsTotal[id][rewardToken] = totalRewards;
     sendToken(rewardToken, sweepTarget, toPay);
   }

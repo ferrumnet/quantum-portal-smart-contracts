@@ -12,7 +12,7 @@ contract MultiChainToken is ERC20, Ownable {
     mapping(uint256 => address) public remotes;
     IQuantumPortalPoc public portal;
 
-    constructor() {
+    constructor() Ownable(msg.sender) {
         uint256 overrideChainID; // for test only. provide 0 outside a test
         (name, symbol, overrideChainID) = abi.decode(
             IFerrumDeployer(msg.sender).initData(),

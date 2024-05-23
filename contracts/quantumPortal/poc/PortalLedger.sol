@@ -13,7 +13,7 @@ import "hardhat/console.sol";
  * @notice Basis of the QP logic for interacting with multi-chain dApps
  *     and providing relevant execution context to them
  */
-contract PortalLedger is WithAdmin {
+abstract contract PortalLedger is WithAdmin {
     address public mgr;
     QuantumPortalState public state;
     QuantumPortalLib.Context public context;

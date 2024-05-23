@@ -9,7 +9,8 @@ import "foundry-contracts/contracts/signature/MultiSigLib.sol";
 import "./QuantumPortalWorkPoolClient.sol";
 import "./QuantumPortalWorkPoolServer.sol";
 import "./QuantumPortalMinerMembership.sol";
-import "@openzeppelin/contracts/utils/cryptography/draft-EIP712.sol";
+import "@openzeppelin/contracts/utils/cryptography/EIP712.sol";
+import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 import "hardhat/console.sol";
 
@@ -52,7 +53,7 @@ contract QuantumPortalMinerMgr is
 
     event SlashRequested(SlashHistory data);
 
-    constructor() EIP712(NAME, VERSION) {
+    constructor() EIP712(NAME, VERSION) Ownable(msg.sender) {
         bytes memory _data = IFerrumDeployer(msg.sender).initData();
         (address _miningStake, address _portal, address _mgr) = abi.decode(_data, (address, address, address));
         miningStake = _miningStake;

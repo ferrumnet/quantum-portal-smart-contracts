@@ -18,7 +18,7 @@ contract StakeOpen is Sweepable, BaseStakingV2, IRewardPool {
 
     string constant public VERSION = "000.001";
 
-    constructor() EIP712("FERRUM_STAKING_V2_OPEN", VERSION) {}
+    constructor() EIP712("FERRUM_STAKING_V2_OPEN", VERSION) Ownable(msg.sender) {}
 
     function initDefault(address token) external nonZeroAddress(token) {
         StakingBasics.StakeInfo storage info = stakings[token];

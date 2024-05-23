@@ -325,5 +325,5 @@ abstract contract QuantumPortalPoc is
 }
 
 contract QuantumPortalPocImpl is QuantumPortalPoc {
-    constructor() PortalLedger(0) {}
+    constructor() PortalLedger(0) Ownable(msg.sender) {}
 }

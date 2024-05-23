@@ -28,7 +28,7 @@ contract QuantumPortalAuthorityMgr is
 
     uint256 chainId = block.chainid;
 
-    constructor() EIP712(NAME, VERSION) {
+    constructor() EIP712(NAME, VERSION) Ownable(msg.sender) {
         bytes memory _data = IFerrumDeployer(msg.sender).initData();
         (address _portal, address _mgr) = abi.decode(_data, (address, address));
         WithQp._initializeWithQp(_portal);
