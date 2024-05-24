@@ -20,7 +20,7 @@ error TxAlreadyProcessed ();
 
 contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent {
     using SafeERC20 for IERC20;
-    struct Intent {
+    struct RemoteCall {
         uint64 targetNetwork;
         address beneficiary;
         address targetContract;
@@ -42,8 +42,7 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent {
         uint totalSupplyQp;
         mapping (address=>uint) qpBalanceOf;
         mapping(address => mapping(address => uint)) allowance;
-        mapping (address=>Intent) intents;
-        mapping (bytes32=>uint) processedTxs;
+        mapping (bytes32 => uint) processedTxs;
     }
 
     // keccak256(abi.encode(uint256(keccak256("ferrum.storage.QPERC20")) - 1)) & ~bytes32(uint256(0xff))
@@ -54,8 +53,8 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent {
     event BtcTransfer(address indexed from, address indexed to, uint value);
     event QpTransfer(address indexed from, address indexed to, uint value);
     event TransactionProcessed(address indexed miner, uint blocknumber, bytes32 txid, uint timestamp);
-    event IntentProcessed(address indexed sender, Intent intent, uint amount);
-    event IntentProcessFailed(address indexed sender, Intent intent, uint amount);
+    event RemoteCallProcessed(address indexed beneficiary, RemoteCall remoteCall, uint amount);
+    event RemoteCallProcessFailed(address indexed beneficiary, RemoteCall remoteCall, uint amount);
     event SettlementInitiated(address indexed sender, string btcAddress, uint amount, uint btcFee);
 
     function _getQPERC20Storage() internal pure returns (QpErc20Storage storage $) {
@@ -67,6 +66,46 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent {
     constructor(
     ) {
         _disableInitializers();
+    }
+
+    function tokenId() external view returns (uint) {
+        return _getQPERC20Storage().tokenId;
+    }
+
+    function version() external view returns (uint64) {
+        return _getQPERC20Storage().version;
+    }
+
+    function factory() external view returns (ITokenFactory) {
+        return _getQPERC20Storage().factory;
+    }
+
+    function name() external virtual view returns (string memory) {
+        return _getQPERC20Storage().name;
+    }
+
+    function symbol() external virtual view returns (string memory) {
+        return _getQPERC20Storage().symbol;
+    }
+
+    function decimals() external view returns (uint8) {
+        return _getQPERC20Storage().decimals;
+    }
+
+    function totalSupply() external view returns (uint) {
+        return _getQPERC20Storage().totalSupply;
+    }
+
+    function totalSupplyQp() external view returns (uint) {
+        return _getQPERC20Storage().totalSupplyQp;
+    }
+
+    function allowance(address owner, address spender) external view returns (uint) {
+        return _getQPERC20Storage().allowance[owner][spender];
+    }
+
+    function processedTxs(bytes32 txid) external view returns (uint) {
+        return _getQPERC20Storage().processedTxs[txid];
     }
 
     function initialize(
@@ -222,31 +261,29 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent {
         return true;
     }
 
-    /**
-     * @notice Only one intent at a time
-     */
-    function registerIntent(
-        address sender,
-        uint64 targetNetwork,
-        address targetContract,
-        address beneficiary,
-        bytes calldata methodCall,
-        uint fee
-    ) external {
-        QpErc20Storage storage $ = _getQPERC20Storage();
-        // 1. Transfer fee
-        // 2. Register the intent
-        address portal = $.factory.portal();
-        if (IWalletRegistration($.factory.registration()).walletForProxy(_msgSender()) != sender) revert NotRegisteredAsWalletOwner();
-        IERC20(IQuantumPortalPoc(portal).feeToken()).safeTransferFrom(_msgSender(), address(this), fee);
-        $.intents[sender] = Intent ({
-            targetNetwork: targetNetwork,
-            targetContract: targetContract,
-            beneficiary: beneficiary,
-            methodCall: methodCall,
-            fee: fee
-        });
-    }
+    // /**
+    //  * @notice Only one remoteCall at a time
+    //  */
+    // function registerRemoteCall(
+    //     uint64 targetNetwork,
+    //     address targetContract,
+    //     address beneficiary,
+    //     bytes memory methodCall,
+    //     uint fee
+    // ) internal {
+    //     QpErc20Storage storage $ = _getQPERC20Storage();
+    //     // 1. Transfer fee
+    //     // 2. Register the intent
+    //     address portal = $.factory.portal();
+    //     IERC20(IQuantumPortalPoc(portal).feeToken()).safeTransferFrom(_msgSender(), address(this), fee);
+    //     $.remoteCalls[beneficiary] = RemoteCall ({
+    //         targetNetwork: targetNetwork,
+    //         targetContract: targetContract,
+    //         beneficiary: beneficiary,
+    //         methodCall: methodCall,
+    //         fee: fee
+    //     });
+    // }
 
     /**
      * @notice Processes the transaction. We encode the tx in a custome format to save space.
@@ -301,6 +338,15 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent {
     //     }
     // }
 
+    // function registerEncodedCall(bytes calldata call) internal {
+    //     (uint64 targetNetwork,
+    //     address beneficiary,
+    //     address targetContract,
+    //     bytes memory methodCall,
+    //     uint fee) = abi.decode(call, (uint64, address, address, bytes, uint));
+    //     registerRemoteCall(beneficiary, targetNetwork, targetContract, beneficiary, methodCall, fee);
+    // }
+
     // called for every transaction
     // TODO: Make it such that the data can be verified from the base layer.
     // so that we won't need to worry about the security
@@ -311,7 +357,8 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent {
         uint[] calldata values,
         uint blocknumber,
         bytes32 txid,
-        uint timestamp) external {
+        uint timestamp,
+        bytes memory remoteCall) public {
         QpErc20Storage storage $ = _getQPERC20Storage();
         if ($.processedTxs[txid] != 0) revert TxAlreadyProcessed();
         
@@ -327,21 +374,7 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent {
                 _transferBtc(froms[i], address(this), inputs[i]);
                 sum_inputs += inputs[i];
             }
-
-            address qpWallet = $.factory.qpWallet();
-            uint sum_outputs;
-            for (uint i = 0; i < tos.length; i++) {
-                // this is a transfer to the recipient
-                _transferBtc(address(this), tos[i], values[i]);
-                sum_outputs += values[i];
-
-                // if (tos[i] == qpWallet) {
-                //     processIntent(froms, values[i]);
-                // }
-            }
-            // burn consumed fee
-            uint fee = sum_inputs - sum_outputs;
-            _burnBtc(address(this), fee);
+            processMultiTransferOutputs(tos, values, sum_inputs, remoteCall);
         }
 
         address miner = msg.sender;
@@ -349,34 +382,64 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent {
         emit TransactionProcessed(miner, blocknumber, txid, timestamp);
     }
 
-    function processIntent(address[] calldata froms, uint amount) internal {
+    function processMultiTransferOutputs(
+        address[] calldata tos,
+        uint[] calldata values,
+        uint sumInputs,
+        bytes memory remoteCall
+    ) private {
         QpErc20Storage storage $ = _getQPERC20Storage();
-        // This is an intent execution...
-        address intentSource;
-        Intent memory intent;
-        for (uint j=0; j < froms.length; j++) {
-            if ($.intents[froms[j]].targetNetwork != 0) {
-                intent = $.intents[froms[j]];
-                intentSource = froms[j];
-                break;
+        address qpWallet = $.factory.qpWallet();
+        uint sumOutputs;
+        uint sumQpOutputs;
+        for (uint i = 0; i < tos.length; i++) {
+            // this is a transfer to the recipient
+            _transferBtc(address(this), tos[i], values[i]);
+            sumOutputs += values[i];
+
+            if (tos[i] == qpWallet) {
+                sumQpOutputs += values[i];
             }
         }
-        if (intentSource != address(0)) {
-            address portal = $.factory.portal();
-            delete $.intents[intentSource];
-            address feeToken = IQuantumPortalPoc(portal).feeToken();
-            IERC20(feeToken).safeTransfer(IQuantumPortalPoc(portal).feeTarget(), intent.fee);
-            try IQuantumPortalPoc(portal).runFromToken(
-                intent.targetNetwork,
-                intent.targetContract,
-                intent.beneficiary,
-                intent.methodCall,
-                amount
-            ) {
-                emit IntentProcessed(msg.sender, intent, amount);
-            } catch {
-                emit IntentProcessFailed(msg.sender, intent, amount);
-            }
+        // burn consumed fee
+        uint fee = sumInputs - sumOutputs;
+        _burnBtc(address(this), fee);
+        if (sumQpOutputs > 0) {
+            processRemoteCall(remoteCall, sumQpOutputs);
+        }
+    }
+
+    function processRemoteCall(bytes memory remoteCall, uint amount) internal {
+        if (remoteCall.length == 0) { return; }
+        QpErc20Storage storage $ = _getQPERC20Storage();
+
+        RemoteCall memory rc;
+        (uint64 targetNetwork,
+        address beneficiary,
+        address targetContract,
+        bytes memory methodCall,
+        uint fee) = abi.decode(remoteCall, (uint64, address, address, bytes, uint));
+        address portal = $.factory.portal();
+        address feeToken = IQuantumPortalPoc(portal).feeToken();
+        // TODO: We assume fees are already collected. This needs to be verified separately
+        IERC20(feeToken).safeTransfer(IQuantumPortalPoc(portal).feeTarget(), fee);
+        rc = RemoteCall({
+            targetNetwork: targetNetwork,
+            beneficiary: beneficiary,
+            targetContract: targetContract,
+            methodCall: methodCall,
+            fee: fee
+        });
+        try IQuantumPortalPoc(portal).runFromToken(
+            targetNetwork,
+            targetContract,
+            beneficiary,
+            methodCall,
+            amount
+        ) {
+            emit RemoteCallProcessed(msg.sender, rc, amount);
+        } catch {
+            emit RemoteCallProcessFailed(msg.sender, rc, amount);
         }
     }
 

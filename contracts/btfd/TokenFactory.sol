@@ -9,6 +9,8 @@ import "./Bitcoin.sol";
 import "./QpErc20Token.sol";
 import "./WalletRegistration.sol";
 
+import "hardhat/console.sol";
+
 contract TokenFactory is ITokenFactory, Ownable {
     address public runeImplementation;
     UpgradeableBeacon public runeBeacon;
@@ -18,6 +20,7 @@ contract TokenFactory is ITokenFactory, Ownable {
     address public override portal;
     address public override qpWallet;
     address public override registration;
+    mapping (bytes32 => address) public runeTokens;
 
     event Deployed(address impl, address deped, address beacon);
 
@@ -39,7 +42,9 @@ contract TokenFactory is ITokenFactory, Ownable {
 
     function upgradeImplementations(address newRuneImpl, address newBtcImpl, address _registration) external onlyOwner {
         runeBeacon.upgradeTo(newRuneImpl);
+        runeImplementation = newRuneImpl;
         btcBeacon.upgradeTo(newBtcImpl);
+        btcImplementation = newBtcImpl;
         registration = _registration;
     }
 
@@ -48,7 +53,7 @@ contract TokenFactory is ITokenFactory, Ownable {
         uint version
     ) external view returns(address) {
         bytes32 salt = keccak256(abi.encode(runeId, version));
-        return Create2.computeAddress(salt, keccak256(type(BeaconProxy).creationCode), address(this));
+        return runeTokens[salt];
     }
 
     function deployRuneToken(
@@ -75,6 +80,7 @@ contract TokenFactory is ITokenFactory, Ownable {
             totalSupply,
             deployTxId
         );
+        runeTokens[salt] = address(dep);
         emit Deployed(runeImplementation, address(dep), address(runeBeacon));
     }
 
