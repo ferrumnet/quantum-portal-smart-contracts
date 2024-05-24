@@ -6,11 +6,11 @@ import { Wei, abi, expiryInFuture } from "../../test/common/Utils";
 import { randomSalt } from "foundry-contracts/dist/test/common/Eip712Utils";
 import { ZeroAddress } from "foundry-contracts/dist/test/common/Utils";
 import { QuantumPortalPocTest } from "../../typechain-types/QuantumPortalPocTest";
+import { QuantumPortalWorkPoolServer } from "../../typechain-types/QuantumPortalWorkPoolServer";
 const DEFAULT_QP_CONFIG_FILE = 'QpDeployConfig.yaml';
-const chainId = 43113;
+const chainId = 31337;
 
 async function upgradeBtc(conf: QpDeployConfig) {
-    const chainId = 43113;
     const newBtc = '0xca074f82f10431DFc42237F3d6B1CCbC2265f390';
 	const [owner, acc1, acc2, acc3, acc4, acc5] = await ethers.getSigners();
     const facF = await ethers.getContractFactory('TokenFactory');
@@ -42,6 +42,10 @@ async function deployFeeToken(conf: QpDeployConfig) {
     const pocF = await ethers.getContractFactory('QuantumPortalPocTest');
     const poc = await pocF.attach(conf.QuantumPortalPoc) as QuantumPortalPocTest;
     await poc.setFeeToken(tok.address);
+
+    const mmF = await ethers.getContractFactory('QuantumPortalMinerMgr');
+    const mm = await mmF.attach(conf.QuantumPortalMinerMgr) as QuantumPortalWorkPoolServer;
+    await mm.updateBaseToken(tok.address);
 }
 
 async function prep(conf: QpDeployConfig) {

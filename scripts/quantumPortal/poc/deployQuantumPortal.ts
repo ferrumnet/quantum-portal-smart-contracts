@@ -184,6 +184,8 @@ async function prep(conf: QpDeployConfig) {
         console.log('Updating state on ledgerMgr and Poc');
         await ctx.mgr.connect(qpWallet).updateState(ctx.state.address);
         await ctx.poc.connect(qpWallet).setManager(ctx.mgr.address, ctx.state.address);
+        await ctx.state.setMgr(ctx.mgr.address);
+        await ctx.state.setLedger(ctx.poc.address);
     }
     if (newPoc || newMinerMgr) {
         console.log('Updating the fee target');
