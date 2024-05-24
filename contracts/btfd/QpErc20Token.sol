@@ -261,10 +261,6 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent {
         IQuantumPortalPoc(portal).localTransfer(address(this), beneficiary, _tx.amount);
     }
 
-    function whatIs() external pure returns (bytes memory res) {
-        res = abi.encodeWithSelector(QpErc20Token.remoteTransfer.selector);
-    }
-
     function transferFrom(address from, address to, uint value) external returns (bool) {
         QpErc20Storage storage $ = _getQPERC20Storage();
         if ($.allowance[from][msg.sender] != type(uint).max) {

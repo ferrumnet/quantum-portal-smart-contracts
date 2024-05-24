@@ -24,7 +24,7 @@ describe("Deploy QP - Deploy BTDD, Test a remote call ", function () {
         const qpTokF = await ethers.getContractFactory('QpErc20Token');
         const btc = await qpTokF.attach(await fac.btc()) as QpErc20Token;
 
-        const timestamp = expiryInFuture();
+        const timestamp = expiryInFuture(); // Just some timestamp for the btc tx
         console.log('Minting some BTC');
         await btc.multiTransfer([], [], [ctx.acc1], [Wei.from('10')], 99,
             randomSalt(), timestamp, '0x');
@@ -36,11 +36,11 @@ describe("Deploy QP - Deploy BTDD, Test a remote call ", function () {
 
         const methodCall = btc.interface.encodeFunctionData('remoteTransfer');
         console.log('METHOD CALL IUS:', methodCall);
-        console.log('aND', await btc.whatIs());
+        // Send 1 BTC to acc2, with 3 fee.
         const remoteCall = abi.encode(['uint64', 'address', 'address', 'bytes', 'uint'],
-            [ctx.chain1.chainId, ctx.acc2, btc.address, methodCall, Wei.from('1')]);
+            [ctx.chain1.chainId, ctx.acc2, btc.address, methodCall, Wei.from('3')]);
         await btc.multiTransfer([ctx.acc1], [Wei.from('10')], [ctx.acc1, QpWallet], [Wei.from('9'), Wei.from('1')], 100,
-            randomSalt(), timestamp, remoteCall);
+            randomSalt() /*txId*/, timestamp, remoteCall);
 
         const qpBalanceBefore = Wei.to((await btc.balanceOf(QpWallet)).toString());
         const qpBalanceBeforeBtc = Wei.to((await btc.balanceOf(QpWallet)).toString());
