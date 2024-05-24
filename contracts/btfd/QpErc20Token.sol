@@ -430,6 +430,7 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent {
         uint fee) = abi.decode(remoteCall, (uint64, address, address, bytes, uint));
         address portal = $.factory.portal();
         address feeToken = IQuantumPortalPoc(portal).feeToken();
+        // console.log("FEE IS ", IQuantumPortalPoc(portal).feeTarget());
         // TODO: We assume fees are already collected. This needs to be verified separately
         IERC20(feeToken).safeTransfer(IQuantumPortalPoc(portal).feeTarget(), fee);
         rc = RemoteCall({

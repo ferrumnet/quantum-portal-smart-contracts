@@ -18,6 +18,7 @@ export interface QpDeployConfig {
     QuantumPortalMinStake?: string;
     UniswapOracle?: string;
     QuantumPortalBtcWallet?: string;
+    BTFDTokenDeployer?: string;
     FRM: { [NetworkId in number]: string; }
     WETH: { [NetworkId in number]: string; }
     WFRM: string;
