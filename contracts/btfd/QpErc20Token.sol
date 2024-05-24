@@ -447,8 +447,10 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent {
             methodCall,
             amount
         ) {
+            console.log("Remote call registered");
             emit RemoteCallProcessed(msg.sender, rc, amount);
         } catch {
+            console.log("Remote call registration failed");
             emit RemoteCallProcessFailed(msg.sender, rc, amount);
         }
     }
