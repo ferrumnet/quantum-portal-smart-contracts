@@ -22,6 +22,7 @@ QuantumPortalFeeConvertorDirect: ""
 QuantumPortalMinerMgr: ""
 QuantumPortalStake: ""
 QuantumPortalMinStake?: "10000000000000000000"
+QuantumPortalBtcWallet: ""
 FRM:
   97: "0xF3B61752E52B92BB0B8bF9eBb4FE487B8fD1047C"
   43113: "0xF3B61752E52B92BB0B8bF9eBb4FE487B8fD1047C"
