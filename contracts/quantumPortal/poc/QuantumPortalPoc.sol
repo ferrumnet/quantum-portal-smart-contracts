@@ -265,15 +265,18 @@ abstract contract QuantumPortalPoc is
         address to,
         uint256 amount
     ) external override {
+        console.log("LOCAL TX");
         require(
             msg.sender == context.transaction.remoteContract,
             "QPP: can only be called within a mining context"
         );
+        console.log("LOCAL TX2");
         if (
             token == context.transaction.token
         ) {
             context.uncommitedBalance -= amount;
         } else {
+            console.log("UPDATING BAL", amount, msg.sender);
             // TODO: What if the tx failed? Make sure this will be reverted
             state.setRemoteBalances(
                 CHAIN_ID,
@@ -285,7 +288,14 @@ abstract contract QuantumPortalPoc is
         // Instead of updating the remoteBalcne for `to`, we just send them tokens
         emit RemoteTransfer(CHAIN_ID, token, msg.sender, to, amount);
         emit LocalTransfer(token, to, amount);
-        sendToken(token, to, amount);
+        console.log('SENDING TOKENS');
+        if (token == msg.sender && token == context.transaction.token) {
+            // Virtual balances are managed by token contract. There is no real balance so we just 
+            // use the transfer method without inventory control.
+            IERC20(token).transfer(to, amount);
+        } else {
+            sendToken(token, to, amount);
+        }
     }
 
     /**

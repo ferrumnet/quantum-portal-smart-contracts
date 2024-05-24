@@ -352,8 +352,10 @@ abstract contract PortalLedger is WithAdmin {
         }
         bytes memory data;
         console.log("CALLING ", localContract);
-        (success, data) = localContract.call{gas: gas}(method);
-        // (success, data) = addr.call(method);
+        console.log("GAS ", gas);
+        console.logBytes(method);
+        // (success, data) = localContract.call{gas: gas}(method);
+        (success, data) = localContract.call(method);
         if (!success) {
             bytes32 revertReason = extractRevertReasonSingleBytes32(data);
             console.log("CALL TO CONTRACT FAILED");

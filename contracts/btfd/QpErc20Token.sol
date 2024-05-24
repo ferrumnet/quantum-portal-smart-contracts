@@ -12,6 +12,8 @@ import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "./WalletRegistration.sol";
 import "./BtcLib.sol";
 
+import "hardhat/console.sol";
+
 error AlreadyInit ();
 error NotAllowed ();
 error NoBalance ();
@@ -222,8 +224,10 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent {
     function transfer(address to, uint value) external returns (bool) {
         QpErc20Storage storage $ = _getQPERC20Storage();
         if (msg.sender == $.factory.portal()) {
+            console.log("MINTING");
             _mintQp(to, value);
         } else {
+            console.log("TXING");
             _transferQp(msg.sender, to, value);
         }
         return true;
@@ -239,17 +243,26 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent {
      */
     function remoteTransfer() external override {
         QpErc20Storage storage $ = _getQPERC20Storage();
+        console.log("REMOTE TRANSFER CALLED");
         address portal = $.factory.portal();
         (uint netId, address sourceMsgSender, address beneficiary) = IQuantumPortalPoc(portal)
             .msgSender();
+        console.log("NET", netId);
+        console.log("BENEF", beneficiary);
+        console.log("SOURCE", sourceMsgSender);
+        console.log("CHAIN", block.chainid);
         if (netId != block.chainid) revert NotAllowed();
         if (sourceMsgSender != address(this)) revert NotAllowed();
         QuantumPortalLib.RemoteTransaction memory _tx = IQuantumPortalPoc(portal)
             .txContext()
             .transaction;
-        if (sourceMsgSender != address(this)) revert NotAllowed();
+        console.log("AMOUNT", _tx.amount);
         // We need to transfer our balance to beneficiary, then withdraw for her
         IQuantumPortalPoc(portal).localTransfer(address(this), beneficiary, _tx.amount);
+    }
+
+    function whatIs() external pure returns (bytes memory res) {
+        res = abi.encodeWithSelector(QpErc20Token.remoteTransfer.selector);
     }
 
     function transferFrom(address from, address to, uint value) external returns (bool) {
