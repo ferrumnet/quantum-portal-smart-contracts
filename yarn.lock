@@ -1308,6 +1308,13 @@ array.prototype.reduce@^1.0.5:
     es-array-method-boxes-properly "^1.0.0"
     is-string "^1.0.7"
 
+ascii-table3@^0.9.0:
+  version "0.9.0"
+  resolved "https://registry.yarnpkg.com/ascii-table3/-/ascii-table3-0.9.0.tgz#fed1f8c735bd056f1d67b4dff482a72b0858ebad"
+  integrity sha512-/JcvVCQRTVQHwLI8TCxSeOS9AcCV01MbCJC4plSP5ulygJH+D30lz85nvMcER5k+qoX2fJ1C/i13Zo1/eoMGTw==
+  dependencies:
+    printable-characters "^1.0.42"
+
 asn1.js@^5.2.0:
   version "5.4.1"
   resolved "https://registry.yarnpkg.com/asn1.js/-/asn1.js-5.4.1.tgz#11a980b84ebb91781ce35b0fdc2ee294e3783f07"
@@ -6157,6 +6164,11 @@ prettier@^2.1.2:
   version "2.8.3"
   resolved "https://registry.yarnpkg.com/prettier/-/prettier-2.8.3.tgz#ab697b1d3dd46fb4626fbe2f543afe0cc98d8632"
   integrity sha512-tJ/oJ4amDihPoufT5sM0Z1SKEuKay8LfVAMlbbhnnkvt6BUserZylqo2PN+p9KeljLr0OHa2rXHU1T8reeoTrw==
+
+printable-characters@^1.0.42:
+  version "1.0.42"
+  resolved "https://registry.yarnpkg.com/printable-characters/-/printable-characters-1.0.42.tgz#3f18e977a9bd8eb37fcc4ff5659d7be90868b3d8"
+  integrity sha512-dKp+C4iXWK4vVYZmYSd0KBH5F/h1HoZRsbJ82AVKRO3PEo8L4lBS/vLwhVtpwwuYcoIsVY+1JYKR268yn480uQ==
 
 private@^0.1.6, private@^0.1.8:
   version "0.1.8"
