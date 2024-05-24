@@ -13,6 +13,8 @@ describe("Deploy QP - Deploy BTDD, Test a remote call ", function () {
         const ctx = await deployAll();
         const QpWallet = ctx.acc5;
         printSeparator();
+
+        console.log('GAS LOCAL TOKEN PRICE', await ctx.chain1.feeConverter.localChainGasTokenPriceX128());
     
         console.log('Deploying BTFD')
         const facF = await ethers.getContractFactory('TokenFactory');
