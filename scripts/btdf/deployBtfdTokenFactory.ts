@@ -15,6 +15,8 @@ async function prep(conf: QpDeployConfig) {
     console.log('Deploying BTFD', {portal: conf.QuantumPortalPoc, qpWallet: conf.QuantumPortalBtcWallet});
     const fac = await facF.deploy(conf.QuantumPortalPoc, conf.QuantumPortalBtcWallet) as TokenFactory;
 
+    console.log('Deployed at:', fac.address);
+
     // Make sure the implementations are there
     console.log(`runeImplementation: ${await fac.runeImplementation()}`);
     console.log(`runeBeacon: ${await fac.runeBeacon()}`);

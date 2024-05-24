@@ -44,7 +44,11 @@ contract QuantumPortalFeeConverterDirect is
         override
         returns (uint256)
     {
-        return feeTokenPriceList[block.chainid];
+        uint price = feeTokenPriceList[block.chainid];
+        if (price == 0) {
+            return DEFAULT_PRICE;
+        }
+        return price;
     }
 
     /**
