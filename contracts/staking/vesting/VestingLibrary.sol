@@ -1,14 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "../library/StakingBasics.sol";
 import "foundry-contracts/contracts/math/FullMath.sol";
 import "foundry-contracts/contracts/math/SafeCast.sol";
 import "foundry-contracts/contracts/math/FixedPoint128.sol";
 
 library VestingLibrary {
-  using SafeMath for uint256;
   uint256 constant YEAR_IN_SECONDS = 365 * 24 * 3600;
   enum PeriodType { Unlocked, NoWithdraw, LinearReward, LinearBase, LinearBaseLinearReward }
   struct VestingItem {
@@ -74,9 +72,9 @@ library VestingLibrary {
     require(len != 0 ,"VL: No vesting defined");
     for(uint i=0; i < len; i++) {
       uint256 vAmount = items[id][rewardToken][i].amount;
-      total = total.add(vAmount);
+      total = total+vAmount;
     }
-    return total.sub(rewardAdded[id][rewardToken]);
+    return total-(rewardAdded[id][rewardToken]);
   }
 
   function calculatePoolShare(uint256 shareBalance, uint256 stakeBalance)
@@ -88,8 +86,8 @@ library VestingLibrary {
   function calculateMaxApy(uint256 baseTime, uint256 timeNow,
       uint256 maxApyX128, uint256 amount) internal pure returns (uint256) {
           require(timeNow > baseTime, "VL: Bad timing");
-          return FullMath.mulDiv(amount, maxApyX128.mul(timeNow - baseTime),
-            FixedPoint128.Q128.mul(YEAR_IN_SECONDS));
+          return FullMath.mulDiv(amount, maxApyX128*(timeNow - baseTime),
+            FixedPoint128.Q128*(YEAR_IN_SECONDS));
   }
 
   function calculateFeeX10000(uint256 amount, uint256 feeX10000) internal pure returns (uint256) {
@@ -107,7 +105,7 @@ library VestingLibrary {
 
   function calculateRemainingStakeRatioX128(uint256 userBalance, uint256 withdrawAmount)
   internal pure returns (uint256) {
-    return FullMath.mulDiv(userBalance.sub(withdrawAmount), FixedPoint128.Q128, userBalance);
+    return FullMath.mulDiv(userBalance-(withdrawAmount), FixedPoint128.Q128, userBalance);
   }
 
   function calculateVestedRewards(
@@ -125,7 +123,7 @@ library VestingLibrary {
       VestingItem memory item = items[0];
       uint256 lastTime = stakingEnd;
       while (item.endTime <= timeNow && i < items.length) {
-        reward = reward.add(FullMath.mulDiv(poolShareX128, totalRewards, FixedPoint128.Q128));
+        reward = reward + FullMath.mulDiv(poolShareX128, totalRewards, FixedPoint128.Q128);
         i++;
         if (i < items.length) {
           item = items[i];
@@ -136,9 +134,9 @@ library VestingLibrary {
       // Partial take
       if (endTime > timeNow &&
         (item.periodType == PeriodType.LinearReward || item.periodType == PeriodType.LinearBaseLinearReward)) {
-          reward = reward.add(FullMath.mulDiv(poolShareX128, totalRewards, FixedPoint128.Q128));
-          uint256 letGoReward = FullMath.mulDiv(reward, timeNow.sub(endTime), lastTime.sub(endTime));
-          reward = reward.sub(letGoReward);
+          reward = reward + FullMath.mulDiv(poolShareX128, totalRewards, FixedPoint128.Q128);
+          uint256 letGoReward = FullMath.mulDiv(reward, timeNow - endTime, lastTime-endTime);
+          reward = reward-letGoReward;
           if (item.periodType == PeriodType.LinearBaseLinearReward) { linearBase = true; }
       }
       if (maxApyRew != 0 && reward != 0 && reward > maxApyRew) {

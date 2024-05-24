@@ -10,7 +10,7 @@ import "foundry-contracts/contracts/token/ERC20/ERC20.sol";
 contract MitlChainToken2Master is ERC20, MultiChainMasterBase {
     uint256 public TOTAL_SUPPLY = 100000 * 10 ** 18;
 
-    constructor() {}
+    constructor() Ownable(msg.sender) {}
 
     function initialMint() external onlyOwner {
         require(totalSupply == 0, "Already initialized");
@@ -74,6 +74,8 @@ contract MitlChainToken2Master is ERC20, MultiChainMasterBase {
  * @notice Example multi-chain token master contract
  */
 contract MitlChainToken2Client is ERC20, MultiChainClientBase {
+    constructor() Ownable(msg.sender)  {}
+
     /**
      @notice We make sure this is only calle as part of a quantum portal transaction.
       As an extra security measure, you can pass in a signed message by the owner.

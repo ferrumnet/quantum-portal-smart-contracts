@@ -13,7 +13,7 @@ import "hardhat/console.sol";
  * @notice Basis of the QP logic for interacting with multi-chain dApps
  *     and providing relevant execution context to them
  */
-contract PortalLedger is WithAdmin {
+abstract contract PortalLedger is WithAdmin {
     address public mgr;
     QuantumPortalState public state;
     QuantumPortalLib.Context public context;
@@ -352,8 +352,10 @@ contract PortalLedger is WithAdmin {
         }
         bytes memory data;
         console.log("CALLING ", localContract);
-        (success, data) = localContract.call{gas: gas}(method);
-        // (success, data) = addr.call(method);
+        console.log("GAS ", gas);
+        console.logBytes(method);
+        // (success, data) = localContract.call{gas: gas}(method);
+        (success, data) = localContract.call(method);
         if (!success) {
             bytes32 revertReason = extractRevertReasonSingleBytes32(data);
             console.log("CALL TO CONTRACT FAILED");

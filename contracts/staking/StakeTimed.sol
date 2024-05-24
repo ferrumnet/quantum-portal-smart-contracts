@@ -6,10 +6,9 @@ import "./interfaces/IStakeV2.sol";
 import "./interfaces/IRewardPool.sol";
 
 contract StakeTimed is BaseStakingV2, IRewardPool {
-    using SafeMath for uint256;
     using StakeFlags for uint16;
     string constant VERSION = "000.001";
-    constructor() EIP712("FERRUM_STAKING_V2_TIMED", VERSION) { }
+    constructor() EIP712("FERRUM_STAKING_V2_TIMED", VERSION) Ownable(msg.sender) { }
 
     function stakeWithAllocation(
         address staker,
@@ -54,14 +53,14 @@ contract StakeTimed is BaseStakingV2, IRewardPool {
         uint256 stakedBalance = state.stakedBalance[id];
         stakeAmount = sync(tokenAddress);
         require(stakeAmount != 0, "ST: Nothing to stake");
-        require(stakingCap == 0 || stakeAmount.add(stakedBalance) <= stakingCap, "ST: Cap reached");
+        require(stakingCap == 0 || stakeAmount+(stakedBalance) <= stakingCap, "ST: Cap reached");
         emit Staked(id, tokenAddress, staker, stakeAmount);
 
         // Transfer is completed
-        uint256 userStake = state.stakes[id][staker].add(stakeAmount);
+        uint256 userStake = state.stakes[id][staker]+(stakeAmount);
         require(!info.flags.checkFlag(StakeFlags.Flag.IsAllocatable) || userStake <= allocation, "ST: Not enough allocation");
         state.stakes[id][staker] = userStake;
-        state.stakedBalance[id] = stakedBalance.add(userStake);
+        state.stakedBalance[id] = stakedBalance+(userStake);
     }
 
 		/**
@@ -86,7 +85,7 @@ contract StakeTimed is BaseStakingV2, IRewardPool {
     internal returns (uint256 rewardAmount) {
         rewardAmount = sync(rewardToken);
         if (rewardAmount == 0) { return 0; } // No need to fail the transaction
-        reward.rewardsTotal[id][rewardToken] = reward.rewardsTotal[id][rewardToken].add(rewardAmount);
+        reward.rewardsTotal[id][rewardToken] = reward.rewardsTotal[id][rewardToken]+(rewardAmount);
         emit RewardAdded(id, rewardToken, rewardAmount);
     }
 
@@ -223,8 +222,8 @@ contract StakeTimed is BaseStakingV2, IRewardPool {
             fakeRewardUser = reward.fakeRewards[id][rewardToken][to];
             fakeRewardTotal = reward.fakeRewardsTotal[id][rewardToken];
             payAmount = Math.min(
-                reward.rewardsTotal[id][rewardToken].sub(fakeRewardTotal), // staking reward balance
-                amount > fakeRewardUser ? amount.sub(fakeRewardUser) : 0); // actual reward to be paid
+                reward.rewardsTotal[id][rewardToken]-(fakeRewardTotal), // staking reward balance
+                amount > fakeRewardUser ? amount-(fakeRewardUser) : 0); // actual reward to be paid
         }
     }
 
@@ -244,11 +243,11 @@ contract StakeTimed is BaseStakingV2, IRewardPool {
 
         if (payAmount != 0) {
             if (remainingStakeRatioX128 == 0) {
-                reward.fakeRewards[id][rewardToken][staker] = fakeRewardUser.add(payAmount);
+                reward.fakeRewards[id][rewardToken][staker] = fakeRewardUser+(payAmount);
             } else {
                 // Don't store anything to save gas. We will change fakeRewards further down.
             }
-            reward.fakeRewardsTotal[id][rewardToken] = fakeRewardTotal.add(payAmount);
+            reward.fakeRewardsTotal[id][rewardToken] = fakeRewardTotal+(payAmount);
             sendToken(rewardToken, to, payAmount);
         }
 
@@ -350,7 +349,7 @@ contract StakeTimed is BaseStakingV2, IRewardPool {
     internal virtual returns (uint256 toPay, uint256[] memory rewardAmount) {
         // Calculate the reward amount, update the state, and pay the rewards
         uint256 debt= state.stakeDebts[id][staker];
-        toPay = amount.sub(debt);
+        toPay = amount-(debt);
 
         {
             uint256 userBalance = state.stakes[id][staker];
@@ -365,9 +364,9 @@ contract StakeTimed is BaseStakingV2, IRewardPool {
             if (linearBase) {
                 // Do not reduce the withdraw amount for linear base. User should get rewarded for 
                 // their full balance.
-                state.stakeDebts[id][staker] = debt.add(toPay);
+                state.stakeDebts[id][staker] = debt+(toPay);
             } else {
-                state.stakes[id][staker] = userBalance.sub(toPay);
+                state.stakes[id][staker] = userBalance-(toPay);
             }
         }
 

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.2;
+pragma solidity 0.8.25;
 
 import "./IBridgePool.sol";
 import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "../../utils/WithQp.sol";
 import "foundry-contracts/contracts/common/SafeAmount.sol";
 
@@ -17,7 +17,7 @@ contract BridgeRouterV12 is Ownable, ReentrancyGuard, WithQp {
     address public pool;
     address public stake;
 
-    constructor() {}
+    constructor() Ownable(msg.sender) {}
 
     /**
      @notice The payable receive method

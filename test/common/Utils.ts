@@ -307,3 +307,10 @@ export async function distributeTestTokensIfTest(targets: string[], amount: stri
 		}
 	}
 }
+
+export function printSeparator() {
+	console.log('--------------------------------------------------');
+	console.log('--------------------------------------------------');
+	console.log('--------------------------------------------------');
+	console.log('--------------------------------------------------');
+}

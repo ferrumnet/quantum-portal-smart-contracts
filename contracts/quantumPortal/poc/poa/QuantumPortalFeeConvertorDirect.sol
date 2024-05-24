@@ -19,6 +19,8 @@ contract QuantumPortalFeeConverterDirect is
     uint256 public feePerByte;
     mapping (uint256 => uint256) public feeTokenPriceList;
 
+    constructor() Ownable(msg.sender) {}
+
     /**
      * Restricted. Update the fee per byte number
      * Note: When updating fpb on Eth network, remember FRM has only 6 decimals there

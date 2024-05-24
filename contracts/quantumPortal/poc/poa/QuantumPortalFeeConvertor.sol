@@ -19,7 +19,7 @@ contract QuantumPortalFeeConverter is IQuantumPortalFeeConvertor, WithAdmin {
     mapping(uint256 => address) public targetNetworkFeeTokens;
     uint256 public feePerByte;
 
-    constructor() {
+    constructor() Ownable(msg.sender) {
         (
             address _networkFeeWrappedToken,
             address _qpFeeToken,

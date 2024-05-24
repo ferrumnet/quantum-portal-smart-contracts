@@ -8,8 +8,8 @@
     "postinstall": "npx hardhat compile"
   },
   "dependencies": {
-    "@openzeppelin/contracts": "^4.1.0",
-    "@openzeppelin/contracts-upgradeable": "^4.3.2",
+    "@openzeppelin/contracts": "^5.0.0",
+    "@openzeppelin/contracts-upgradeable": "^5.0.0",
     "@openzeppelin/hardhat-upgrades": "^1.10.0",
     "@types/mocha": "^8.2.2",
     "@types/node": "^15.12.4",
@@ -18,9 +18,8 @@
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "chai": "^4.3.4",
     "dotenv": "^16.0.3",
-    "ethers": "^5.0.0",
     "foundry-contracts": "git+https://github.com/ferrumnet/foundry-contracts#develop",
-    "hardhat": "^2.12.6",
+    "hardhat": "^2.22.0",
     "ts-node": "^10.0.0",
     "typescript": "^4.3.4",
     "yaml": "^2.2.1"

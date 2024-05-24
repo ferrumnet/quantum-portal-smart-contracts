@@ -23,7 +23,7 @@ contract QuantumPortalGateway is WithAdmin {
     IQuantumPortalStakeWithDelegate public quantumPortalStake;
     address public immutable WFRM;
 
-    constructor() {
+    constructor() Ownable(msg.sender) {
         bytes memory _data = IFerrumDeployer(msg.sender).initData();
         (WFRM) = abi.decode(_data, (address));
     }

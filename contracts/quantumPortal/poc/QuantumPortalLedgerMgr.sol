@@ -99,7 +99,7 @@ contract QuantumPortalLedgerMgr is
         _;
     }
 
-    constructor(uint256 overrideChainId) {
+    constructor(uint256 overrideChainId) Ownable(msg.sender) {
         CHAIN_ID = overrideChainId == 0 ? block.chainid : overrideChainId;
     }
 

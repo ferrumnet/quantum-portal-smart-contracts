@@ -29,6 +29,8 @@ contract FrmFeeManager is TokenReceivable, WithAdmin, IFrmFeeManager {
 
     address constant FEE_REPO = address(0);
 
+    constructor() Ownable(msg.sender) {}
+
     /**
      @notice Deposit fee for an account
      @param to The fee receiver

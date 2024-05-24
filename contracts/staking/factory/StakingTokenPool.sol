@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./NoDelegateCall.sol";
 import "../interfaces/IStakeInfo.sol";
@@ -9,7 +8,6 @@ import "./IStakingTokenDeployer.sol";
 // TODO: Implement "burn"...
 // Burn should also burn the underlying token
 contract StakingTokenPool is IERC20 {
-    using SafeMath for uint256;
     event Burn(address indexed sender, uint amount0, uint amount1, address indexed to);
 
     address public immutable factory;

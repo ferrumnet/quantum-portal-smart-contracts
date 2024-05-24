@@ -17,7 +17,6 @@ const getEnv = (env: string) => {
   return value;
 };
 
-
 const accounts: any = process.env.TEST_ACCOUNT_PRIVATE_KEY ? [process.env.TEST_ACCOUNT_PRIVATE_KEY] : { mnemonic: TEST_MNEMONICS };
 
 if (accounts.mnemonic) {
@@ -33,7 +32,7 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: "0.8.2",
+        version: "0.8.25",
         settings: {
           optimizer: {
             enabled: true,
@@ -46,7 +45,9 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       accounts,
-      blockGasLimit: 50000000000,
+      blockGasLimit: 3000000000,
+      // gas: 100000,
+      // gasPrice: 20000000000,
     },
     local: {
       // chainId: 97,
