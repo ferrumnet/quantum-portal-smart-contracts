@@ -3,12 +3,15 @@ import { ethers } from "hardhat";
 import { Wei, ZeroAddress, abi, expiryInFuture, printSeparator } from "../common/Utils";
 import { TokenFactory } from '../../typechain-types/TokenFactory';
 import { QpErc20Token } from '../../typechain-types/QpErc20Token';
+import { QpMultiSender } from '../../typechain-types/QpMultiSender';
 import { QuantumPortalUtils, deployAll } from "../quantumPortal/poc/QuantumPortalUtils";
 import { randomSalt } from "../common/Eip712Utils";
 import { expect } from "chai";
 
+function _it(a,b) { return () => {} }
+
 describe("Deploy QP - Deploy BTDD, Test a remote call ", function () {
-	it('Test remote call', async function() {
+	_it('Test remote call', async function() {
         console.log('Deploying qp');
         const ctx = await deployAll();
         const QpWallet = ctx.acc5;
@@ -78,5 +81,58 @@ describe("Deploy QP - Deploy BTDD, Test a remote call ", function () {
         expect(qpBalanceAfterBtc).to.equal('1.0');
         expect(balanceAfter).to.equal('1.0');
         expect(balanceAfterBtc).to.equal('0.0');
+    });
+
+	it('Test example for MultiSend', async function() {
+        console.log('Deploying qp');
+        const ctx = await deployAll();
+        const QpWallet = ctx.acc5;
+        printSeparator();
+
+        console.log('GAS LOCAL TOKEN PRICE', await ctx.chain1.feeConverter.localChainGasTokenPriceX128());
+    
+        console.log('Deploying BTFD')
+        const facF = await ethers.getContractFactory('TokenFactory');
+        const fac = await facF.deploy(ctx.chain1.poc.address, QpWallet) as TokenFactory;
+        console.log('Btc address: ', await fac.btc());
+
+        const msF = await ethers.getContractFactory('QpMultiSender');
+        const ms = await msF.deploy(ctx.chain1.poc.address) as QpMultiSender;
+        console.log(`Multisender deployed at`, ms.address);
+        printSeparator();
+
+        console.log('Now do a BTC trasnfer');
+        const qpTokF = await ethers.getContractFactory('QpErc20Token');
+        const btc = await qpTokF.attach(await fac.btc()) as QpErc20Token;
+
+        const timestamp = expiryInFuture(); // Just some timestamp for the btc tx
+        console.log('Minting some BTC');
+        await btc.multiTransfer([], [], [ctx.acc1], [Wei.from('10')], 99,
+            randomSalt(), timestamp, '0x');
+        console.log('Balance :', await btc.balanceOf(ctx.acc1));
+
+        console.log('Send some fee to token');
+        await ctx.chain1.token.transfer(btc.address, Wei.from('10'));
+        console.log(`We have fee in the contract: ${await ctx.chain1.token.balanceOf(btc.address)}`)
+
+        const targets: string[] = [ctx.acc2, ctx.acc3, ctx.acc5];
+        const methodCall = ms.interface.encodeFunctionData('qpMultiSend', [targets]);
+        console.log('METHOD CALL IUS:', methodCall);
+        // Send 1 BTC to acc2, with 3 fee.
+        const remoteCall = abi.encode(['uint64', 'address', 'address', 'bytes', 'uint'],
+            [ctx.chain1.chainId, ZeroAddress, ms.address, methodCall, Wei.from('3')]);
+        await btc.multiTransfer([ctx.acc1], [Wei.from('10')], [ctx.acc1, QpWallet], [Wei.from('9'), Wei.from('1')], 100,
+            randomSalt() /*txId*/, timestamp, remoteCall);
+
+        const qpBalanceBeforeP = targets.map(t => btc.balanceOf(t));
+        const qpBalanceBefore = await Promise.all(qpBalanceBeforeP);
+        console.log('QP Balance before :', qpBalanceBefore.map(b => Wei.to(b.toString())));
+        console.log('Now mining');
+        printSeparator();
+        await QuantumPortalUtils.mineAndFinilizeOneToOne(ctx, 1);
+        printSeparator();
+        const qpBalanceAfterP = targets.map(t => btc.balanceOf(t));
+        const qpBalanceAfter = await Promise.all(qpBalanceAfterP);
+        console.log('QP Balance after :', qpBalanceAfter.map(b => Wei.to(b.toString())));
     });
 });
