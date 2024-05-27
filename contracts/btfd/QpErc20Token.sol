@@ -6,6 +6,7 @@ import "./ITokenFactory.sol";
 import "./IQuantumPortalPoc.sol";
 import "./IWalletRegistration.sol";
 import "./IBitcoinIntent.sol";
+import "../quantumPortal/poc/utils/IQpSelfManagedToken.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 // import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
@@ -20,7 +21,7 @@ error NoBalance ();
 error NotRegisteredAsWalletOwner ();
 error TxAlreadyProcessed ();
 
-contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent {
+contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent, IQpSelfManagedToken {
     using SafeERC20 for IERC20;
     struct RemoteCall {
         uint64 targetNetwork;
@@ -68,6 +69,10 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent {
     constructor(
     ) {
         _disableInitializers();
+    }
+
+    function isQpSelfManagedToken() external pure override returns (bool) {
+        return true;
     }
 
     function tokenId() external view returns (uint) {

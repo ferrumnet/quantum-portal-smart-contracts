@@ -4,6 +4,7 @@ pragma solidity ^0.8.0;
 import "foundry-contracts/contracts/common/IVersioned.sol";
 import "./IQuantumPortalPoc.sol";
 import "./IQuantumPortalNativeFeeRepo.sol";
+import "./utils/IQpSelfManagedToken.sol";
 import "../../staking/library/TokenReceivable.sol";
 import "./PortalLedger.sol";
 import "./QuantumPortalLib.sol";
@@ -289,7 +290,7 @@ abstract contract QuantumPortalPoc is
         emit RemoteTransfer(CHAIN_ID, token, msg.sender, to, amount);
         emit LocalTransfer(token, to, amount);
         console.log('SENDING TOKENS');
-        if (token == msg.sender && token == context.transaction.token) {
+        if (isSelfManagedToken(token)) {
             // Virtual balances are managed by token contract. There is no real balance so we just 
             // use the transfer method without inventory control.
             IERC20(token).transfer(to, amount);
@@ -331,6 +332,11 @@ abstract contract QuantumPortalPoc is
         sourceNetwork = context.blockMetadata.chainId;
         sourceMsgSender = context.transaction.sourceMsgSender;
         sourceBeneficiary = context.transaction.sourceBeneficiary;
+    }
+
+    function isSelfManagedToken(address token) private returns (bool) {
+        (bool result, ) = token.staticcall(abi.encodeWithSelector(IQpSelfManagedToken.isQpSelfManagedToken.selector));
+        return result;
     }
 }
 
