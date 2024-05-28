@@ -334,7 +334,7 @@ abstract contract QuantumPortalPoc is
         sourceBeneficiary = context.transaction.sourceBeneficiary;
     }
 
-    function isSelfManagedToken(address token) private returns (bool) {
+    function isSelfManagedToken(address token) private view returns (bool) {
         (bool result, ) = token.staticcall(abi.encodeWithSelector(IQpSelfManagedToken.isQpSelfManagedToken.selector));
         return result;
     }

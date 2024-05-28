@@ -28,8 +28,11 @@ abstract contract PortalLedger is WithAdmin {
     );
 
     event ExecutionReverted(
-        uint256 remoteChainId,
+        uint64 remoteChainId,
         address localContract,
+        bytes4 methodHash, // First 4 bytes of the method hash. Can be used to compare with the method provided. Using 4 bytes to pack data
+        uint128 gasProvided,
+        uint128 gasUsed,
         bytes32 revertReason
     );
 
@@ -354,12 +357,20 @@ abstract contract PortalLedger is WithAdmin {
         console.log("CALLING ", localContract);
         console.log("GAS ", gas);
         console.logBytes(method);
+        uint gasUsed = gasleft();
         (success, data) = localContract.call{gas: gas}(method);
+        gasUsed = gasUsed - gasleft();
         if (!success) {
             bytes32 revertReason = extractRevertReasonSingleBytes32(data);
             console.log("CALL TO CONTRACT FAILED");
             console.logBytes32(revertReason);
-            emit ExecutionReverted(remoteChainId, localContract, revertReason);
+            emit ExecutionReverted(
+                uint64(remoteChainId),
+                localContract,
+                bytes4(keccak256(method)),
+                uint128(gas),
+                uint128(gasUsed),
+                revertReason);
         }
     }
 
