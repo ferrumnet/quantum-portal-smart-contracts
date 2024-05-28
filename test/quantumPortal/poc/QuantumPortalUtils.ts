@@ -172,6 +172,16 @@ export class QuantumPortalUtils {
                 ]
                 , [finalizerSk]);
             console.log("Returned from bridgeMethodCall", multiSig.hash);
+            const gas = await mgr.estimateGas.finalize(sourceChainId,
+                blockNonce,
+                invalidBlocks,
+                finalizersHash,
+                [], // TODO: Remove this parameter
+                salt,
+                expiry,
+                multiSig.signature!,
+                );
+            console.log("Gas required to finalize is:", gas.toString());
             await mgr.finalize(sourceChainId,
                 blockNonce,
                 invalidBlocks,

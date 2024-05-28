@@ -7,6 +7,10 @@ import { randomSalt } from "foundry-contracts/dist/test/common/Eip712Utils";
 import { ZeroAddress } from "foundry-contracts/dist/test/common/Utils";
 import { QuantumPortalPocTest } from "../../typechain-types/QuantumPortalPocTest";
 import { QuantumPortalWorkPoolServer } from "../../typechain-types/QuantumPortalWorkPoolServer";
+
+import {abi as MGR_ABI} from '../../artifacts/contracts/quantumPortal/poc/QuantumPortalLedgerMgr.sol/QuantumPortalLedgerMgr.json';
+import {abi as POC_ABI} from '../../artifacts/contracts/quantumPortal/poc/QuantumPortalPoc.sol/QuantumPortalPoc.json';
+
 const DEFAULT_QP_CONFIG_FILE = 'QpDeployConfig.yaml';
 const chainId = 31337;
 
@@ -89,10 +93,39 @@ async function prep(conf: QpDeployConfig) {
     // console.log('NEW BALANCE', await btc.balanceOf(acc2.address));
 }
 
+async function deocdeLogs(conf: QpDeployConfig) {
+    const abi = [...MGR_ABI, ...POC_ABI];
+    abi.push({
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": false,
+          "internalType": "string",
+          "name": "msg",
+          "type": "string"
+        }
+      ],
+      "name": "Log",
+      "type": "event"
+    },)
+    const inf = new ethers.utils.Interface(abi);
+
+
+    const receipt = await ethers.provider.getTransactionReceipt("0x49efc8f2a83fa35a7dcea0d81ebe4ba88739134fca113a02598bb886fb37e1d3");
+    console.log('PROV', receipt);
+
+    for(const log of receipt.logs) {
+        let parsed = inf.parseLog(log);
+        console.log(parsed);
+    }
+
+}
+
 async function main() {
     console.log('Make sure to deplooy QP, then deploy BTFD')
     const conf = loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
-    await prep(conf);
+    await deocdeLogs(conf);
+    // await prep(conf);
     // await inspect(conf);
     // await deployFeeToken(conf);
     // await upgradeBtc(conf);

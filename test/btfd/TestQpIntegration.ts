@@ -11,7 +11,7 @@ import { expect } from "chai";
 function _it(a,b) { return () => {} }
 
 describe("Deploy QP - Deploy BTDD, Test a remote call ", function () {
-	_it('Test remote call', async function() {
+	it('Test remote call', async function() {
         console.log('Deploying qp');
         const ctx = await deployAll();
         const QpWallet = ctx.acc5;

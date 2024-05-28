@@ -2,8 +2,8 @@ import { HardhatUserConfig } from "hardhat/types";
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
-import "@nomiclabs/hardhat-etherscan";
-import "@openzeppelin/hardhat-upgrades";
+// import "@openzeppelin/hardhat-upgrades";
+import "@nomicfoundation/hardhat-verify";
 import { TEST_MNEMONICS } from "./test/common/TestAccounts";
 import { ethers } from "ethers";
 require("dotenv").config({ path: __dirname + "/localConfig/test.env" });
@@ -131,5 +131,12 @@ const config: HardhatUserConfig = {
       polygonMumbai: getEnv("POLYGONSCAN_API_KEY"),
     },
   },
+  sourcify: {
+    // Disabled by default
+    // Doesn't need an API key
+    enabled: true,
+    apiUrl: "https://sourcify.dev/server",
+    browserUrl: "https://repo.sourcify.dev",
+  }
 };
 export default config;

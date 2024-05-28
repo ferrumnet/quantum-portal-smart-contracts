@@ -5,6 +5,7 @@ import "../../../quantumPortal/poc/utils/WithQp.sol";
 import "hardhat/console.sol";
  
 contract QpMultiSender is WithQp { 
+    event Log(string msg);
   constructor(address _portal) Ownable(msg.sender) { 
     WithQp._initializeWithQp(_portal); 
   } 

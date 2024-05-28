@@ -346,7 +346,7 @@ abstract contract PortalLedger is WithAdmin {
         address localContract,
         bytes memory method,
         uint256 gas
-    ) private returns (bool success) {
+    ) internal returns (bool success) {
         if (method.length == 0) {
             return true;
         }
@@ -366,7 +366,7 @@ abstract contract PortalLedger is WithAdmin {
     /**
      * @notice Resets a context
      */
-    function resetContext() private {
+    function resetContext() internal {
         delete context;
     }
 }
