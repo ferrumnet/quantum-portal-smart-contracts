@@ -294,6 +294,7 @@ export async function distributeTestTokensIfTest(targets: string[], amount: stri
 		const tokF = await ethers.getContractFactory('DirectMinimalErc20');
 		const tok = await tokF.deploy() as DirectMinimalErc20;
 		await tok.init(owner.address, 'Test Token', 'TST', Wei.from('1000000000'));;
+		console.log(`${owner.address} has ${await ethers.provider.getBalance(owner.address)} tokens`);
 		console.log(`Deployed a token at ${tok.address}`);
 		for(let i=0; i<targets.length; i++) {
 			if (targets[i]) {
@@ -301,10 +302,16 @@ export async function distributeTestTokensIfTest(targets: string[], amount: stri
 				await owner.sendTransaction({
 					to: targets[i],
 					value: Wei.from(amount),
+					gasLimit: 100000,
 				});
-				await tok.transfer(targets[i], Wei.from('10000'));
+				console.log('Transferred');
+				await tok.transfer(targets[i], Wei.from('10000'), {gasLimit: 200000});
 			}
 		}
+
+		return tok;
+	} else {
+		return null;
 	}
 }
 

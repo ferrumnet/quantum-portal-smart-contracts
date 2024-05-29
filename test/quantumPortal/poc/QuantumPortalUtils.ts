@@ -424,6 +424,7 @@ export class QuantumPortalUtils {
         const id = await stake.STAKE_ID();
         const tokenAddress = await stake.baseToken(id);
         const token = new ERC20(tokenAddress);
+        console.log(`Stake base token is: ${tokenAddress}`);
 
         // Instead of using a separate delegat, we use nodeOp address as delegate too
         const relationship = await stake.getDelegateForOperator(nodeOp);

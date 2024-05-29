@@ -56,6 +56,13 @@ const config: HardhatUserConfig = {
       // gas: 1000000,
       // gasPrice: 20000000000,
     },
+    btfd_ghostnet: {
+      chainId: 42,
+      url: "http://ghostnet.dev.svcs.ferrumnetwork.io:9944",
+      accounts,
+      allowUnlimitedContractSize: true,
+      //gas: 10000000, // this override is required for Substrate based evm chains
+    },
     mainnet: {
       chainId: 1,
       url: `https://eth-mainnet.alchemyapi.io/v2/${getEnv("ALCHEMY_API_KEY") || "123123123"}`,

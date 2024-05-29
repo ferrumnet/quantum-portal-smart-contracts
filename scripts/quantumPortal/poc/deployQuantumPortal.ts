@@ -64,10 +64,16 @@ function logForRecord(name: string, addr: string) {
 }
 
 async function prep(conf: QpDeployConfig) {
+    const chainId = (await ethers.provider.getNetwork()).chainId;
     const deployerWallet = !!conf.DeployerKeys.DeployerContract ? new ethers.Wallet(conf.DeployerKeys.DeployerContract, ethers.provider) : undefined;
     const qpWallet = !!conf.DeployerKeys.DeployerContract ? new ethers.Wallet(conf.DeployerKeys.Qp, ethers.provider) : undefined;
     const ownerWallet = !!conf.DeployerKeys.Owner ? new ethers.Wallet(conf.DeployerKeys.Owner, ethers.provider) : undefined;
-    await distributeTestTokensIfTest([deployerWallet.address, qpWallet.address, ownerWallet?.address], '10');
+    const tok = await distributeTestTokensIfTest([deployerWallet.address, qpWallet.address, ownerWallet?.address], '1');
+    const newToken = !!tok;
+    if (tok) {
+        conf.FRM[chainId] = tok.address;
+        console.log(`Distributed test tokens to ${tok.address}`);
+    }
     if (ownerWallet) {
         conf.Owner = await ownerWallet.getAddress();
     }
@@ -115,7 +121,6 @@ async function prep(conf: QpDeployConfig) {
     const authMgrInitData = abi.encode(['address', 'address'], [ctx.poc.address, ctx.mgr.address]);
     [ctx.auth, newAut] = await deployOrAttach(conf, conf.QuantumPortalAuthorityMgr, 'QuantumPortalAuthorityMgr', conf.Owner, authMgrInitData, qpWallet,);
 
-    const chainId = (await ethers.provider.getNetwork()).chainId;
     const weAreOnFrmChain = true; // conf.WETH[chainId] === conf.WFRM;
     if (weAreOnFrmChain) {
         [ctx.feeConvertor, newFeeConvertor] = await deployOrAttach(
@@ -195,6 +200,11 @@ async function prep(conf: QpDeployConfig) {
     if (newPoc || newLedgerMgr || newStake || newGateway) {
         console.log('Updating gateway')
         await ctx.gateway.connect(qpWallet).upgrade(ctx.poc.address, ctx.mgr.address, ctx.stake.address, { from: conf.Owner });
+    }
+    if (newToken) {
+        console.log('Updating token');
+        await ctx.poc.setFeeToken(tok.address);
+        await ctx.miner.updateBaseToken(tok.address);
     }
 
     return ctx;
