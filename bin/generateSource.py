@@ -15,8 +15,11 @@ def apply_remappings(import_path, remappings):
     return import_path
 
 def get_imports(file_content):
-    import_pattern = re.compile(r'import\s+["\']([^"\']+)["\'];')
-    return import_pattern.findall(file_content)
+    import_pattern = re.compile(r'import\s+(?:(?:["\']([^"\']+)["\'])|(?:{[^}]*}\s+from\s+["\']([^"\']+)["\']));')
+    matches = import_pattern.findall(file_content)
+    # Extract the import paths from the matches
+    imports = [match[0] if match[0] else match[1] for match in matches]
+    return imports
 
 def get_all_dependencies(contract_path, main_contract, remappings):
     def recursive_find_dependencies(file_path, sources, visited):
@@ -24,8 +27,12 @@ def get_all_dependencies(contract_path, main_contract, remappings):
             return
         visited.add(file_path)
         file_content = read_file(file_path)
-        sources[file_path] = {"content": file_content}
+        cwd = os.path.abspath(".") + "/"
+        clean_path = file_path.replace(cwd, "")
+        clean_path = clean_path.replace("node_modules/", "")
+        sources[clean_path] = {"content": file_content}
         imports = get_imports(file_content)
+        print("IMPORTS", clean_path, imports)
         for import_path in imports:
             mapped_import_path = apply_remappings(import_path, remappings)
             absolute_import_path = os.path.abspath(os.path.normpath(os.path.join(os.path.dirname(file_path), mapped_import_path)))
@@ -89,7 +96,7 @@ def generate_standard_input_json(contract_path, config_path, main_contract):
                 }
             },
             "libraries": libraries,
-            "remappings": remappings
+            #"remappings": remappings
         }
     }
 
