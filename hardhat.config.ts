@@ -2,8 +2,8 @@ import { HardhatUserConfig } from "hardhat/types";
 import "@nomiclabs/hardhat-ethers";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
-import "@nomiclabs/hardhat-etherscan";
-import "@openzeppelin/hardhat-upgrades";
+// import "@openzeppelin/hardhat-upgrades";
+import "@nomicfoundation/hardhat-verify";
 import { TEST_MNEMONICS } from "./test/common/TestAccounts";
 import { ethers } from "ethers";
 require("dotenv").config({ path: __dirname + "/localConfig/test.env" });
@@ -55,6 +55,13 @@ const config: HardhatUserConfig = {
       accounts,
       // gas: 1000000,
       // gasPrice: 20000000000,
+    },
+    btfd_ghostnet: {
+      chainId: 42,
+      url: "http://ghostnet.dev.svcs.ferrumnetwork.io:9944",
+      accounts,
+      allowUnlimitedContractSize: true,
+      //gas: 10000000, // this override is required for Substrate based evm chains
     },
     mainnet: {
       chainId: 1,
@@ -142,5 +149,12 @@ const config: HardhatUserConfig = {
     }
   ]
   },
+  sourcify: {
+    // Disabled by default
+    // Doesn't need an API key
+    enabled: true,
+    apiUrl: "https://sourcify.dev/server",
+    browserUrl: "https://repo.sourcify.dev",
+  }
 };
 export default config;

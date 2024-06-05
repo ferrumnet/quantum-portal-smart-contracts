@@ -172,6 +172,16 @@ export class QuantumPortalUtils {
                 ]
                 , [finalizerSk]);
             console.log("Returned from bridgeMethodCall", multiSig.hash);
+            const gas = await mgr.estimateGas.finalize(sourceChainId,
+                blockNonce,
+                invalidBlocks,
+                finalizersHash,
+                [], // TODO: Remove this parameter
+                salt,
+                expiry,
+                multiSig.signature!,
+                );
+            console.log("Gas required to finalize is:", gas.toString());
             await mgr.finalize(sourceChainId,
                 blockNonce,
                 invalidBlocks,
@@ -414,6 +424,7 @@ export class QuantumPortalUtils {
         const id = await stake.STAKE_ID();
         const tokenAddress = await stake.baseToken(id);
         const token = new ERC20(tokenAddress);
+        console.log(`Stake base token is: ${tokenAddress}`);
 
         // Instead of using a separate delegat, we use nodeOp address as delegate too
         const relationship = await stake.getDelegateForOperator(nodeOp);
