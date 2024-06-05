@@ -1,4 +1,4 @@
-pragma solidity 0.8.25;
+pragma solidity ^0.8.24;
 
 import "./ITokenFactory.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
@@ -8,8 +8,11 @@ import "@openzeppelin/contracts/proxy/beacon/BeaconProxy.sol";
 import "./Bitcoin.sol";
 import "./QpErc20Token.sol";
 import "./WalletRegistration.sol";
+import "./FeeStore.sol";
 
 import "hardhat/console.sol";
+
+error OnlyQpToken();
 
 contract TokenFactory is ITokenFactory, Ownable {
     address public runeImplementation;
@@ -18,26 +21,35 @@ contract TokenFactory is ITokenFactory, Ownable {
     UpgradeableBeacon public btcBeacon;
     address public btc;
     address public override portal;
+    address public override feeConvertor; // Has the price for fee VS native token
+    address public override feeStore; // Stores fee for rune transactions
     address public override qpWallet;
+    address public override qpRuneWallet;
     address public override registration;
     mapping (bytes32 => address) public runeTokens;
+    mapping (address => bytes32) public runeTokensByAddress;
 
     event Deployed(address impl, address deped, address beacon);
 
-    constructor(address _portal, address _qpWallet) Ownable(msg.sender) {
+    constructor(address _portal, address _feeConvertor, address _qpWallet, address _qpRuneWallet) Ownable(msg.sender) {
         runeImplementation = address(new QpErc20Token{salt: bytes32(0x0)}());
         runeBeacon = new UpgradeableBeacon{salt: bytes32(uint256(0x1))}(runeImplementation, address(this));
         btcImplementation = address(new Bitcoin{salt: bytes32(0x0)}());
         btcBeacon = new UpgradeableBeacon{salt: bytes32(uint256(0x2))}(btcImplementation, address(this));
         deployBitcoin();
         registration = address(new WalletRegistration{salt: bytes32(0x0)}());
+        feeStore = address(new FeeStore{salt: bytes32(0x0)}());
         portal = _portal;
+        feeConvertor = _feeConvertor;
         qpWallet = _qpWallet;
+        qpWallet = _qpRuneWallet;
     }
 
-    function updatePortal(address _portal, address _qpWallet) external onlyOwner {
+    function updatePortal(address _portal, address _feeConvertor, address _qpWallet, address _qpRuneWallet) external onlyOwner {
         portal = _portal;
+        feeConvertor = _feeConvertor;
         qpWallet = _qpWallet;
+        qpWallet = _qpRuneWallet;
     }
 
     function upgradeImplementations(address newRuneImpl, address newBtcImpl, address _registration) external onlyOwner {
@@ -81,7 +93,21 @@ contract TokenFactory is ITokenFactory, Ownable {
             deployTxId
         );
         runeTokens[salt] = address(dep);
+        runeTokensByAddress[address(dep)] = salt;
         emit Deployed(runeImplementation, address(dep), address(runeBeacon));
+    }
+
+    /**
+     * @notice Proxies runeToken call to the Fee Store
+     */
+    function feeStoreCollectFee(
+        bytes32 txId) external returns (uint) {
+        if (runeTokensByAddress[msg.sender] == 0x0) { revert OnlyQpToken(); }
+        return FeeStore(feeStore).collectFee(txId);
+    }
+
+    function feeStoreSweepToken(address token, uint amount, address to) external override {
+        FeeStore(feeStore).sweepToken(token, amount, to);
     }
 
     function deployBitcoin() internal {

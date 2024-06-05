@@ -1,9 +1,9 @@
 
-pragma solidity 0.8.25;
+pragma solidity ^0.8.24;
 
 
 import "./ITokenFactory.sol";
-import "./IQuantumPortalPoc.sol";
+import "../quantumPortal/poc/IQuantumPortalPoc.sol";
 import "./IWalletRegistration.sol";
 import "./IBitcoinIntent.sol";
 import "../quantumPortal/poc/utils/IQpSelfManagedToken.sol";
@@ -388,7 +388,7 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent, IQpS
                 _transferBtc(froms[i], address(this), inputs[i]);
                 sum_inputs += inputs[i];
             }
-            processMultiTransferOutputs(tos, values, sum_inputs, remoteCall);
+            processMultiTransferOutputs(txid, tos, values, sum_inputs, remoteCall);
         }
 
         address miner = msg.sender;
@@ -397,6 +397,7 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent, IQpS
     }
 
     function processMultiTransferOutputs(
+        bytes32 txid,
         address[] calldata tos,
         uint[] calldata values,
         uint sumInputs,
@@ -419,11 +420,20 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent, IQpS
         uint fee = sumInputs - sumOutputs;
         _burnBtc(address(this), fee);
         if (sumQpOutputs > 0) {
-            processRemoteCall(remoteCall, sumQpOutputs);
+            processRemoteCall(txid, remoteCall, sumQpOutputs);
         }
     }
 
-    function processRemoteCall(bytes memory remoteCall, uint amount) internal {
+    /**
+     * @notice Procecess the fee and updates the amount if necessary
+     */
+    function processFee(bytes32 txId, uint amount, uint /*fee*/) internal virtual returns (uint) {
+        QpErc20Storage storage $ = _getQPERC20Storage();
+        $.factory.feeStoreCollectFee(txId);
+        return amount; // Amount is unchanged, because it is different token from the fee
+    }
+
+    function processRemoteCall(bytes32 txId, bytes memory remoteCall, uint amount) internal {
         if (remoteCall.length == 0) { return; }
         QpErc20Storage storage $ = _getQPERC20Storage();
 
@@ -433,11 +443,9 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent, IQpS
         address targetContract,
         bytes memory methodCall,
         uint fee) = abi.decode(remoteCall, (uint64, address, address, bytes, uint));
+        amount = processFee(txId, amount, fee);
+
         address portal = $.factory.portal();
-        address feeToken = IQuantumPortalPoc(portal).feeToken();
-        // console.log("FEE IS ", IQuantumPortalPoc(portal).feeTarget());
-        // TODO: We assume fees are already collected. This needs to be verified separately
-        IERC20(feeToken).safeTransfer(IQuantumPortalPoc(portal).feeTarget(), fee);
         rc = RemoteCall({
             targetNetwork: targetNetwork,
             beneficiary: beneficiary,
