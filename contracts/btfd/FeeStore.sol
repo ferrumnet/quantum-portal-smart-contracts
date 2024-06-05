@@ -48,12 +48,13 @@ contract FeeStore is IFeeStore {
      */
     function swapBtcWithFee(bytes32 txId, uint btcAmount) external override {
         if (msg.sender != factory.btc()) { revert OnlyBtc(); }
-        uint256 gasPrice = IQuantumPortalFeeConvertor(factory.feeConvertor())
+        // Price of FRM based on BTC
+        uint256 gasPriceX128 = IQuantumPortalFeeConvertor(factory.feeConvertor())
             .localChainGasTokenPriceX128();
         uint256 txGas = FullMath.mulDiv(
-                gasPrice,
                 btcAmount,
-                FixedPoint128.Q128
+                FixedPoint128.Q128,
+                gasPriceX128
             );
         collectedFee[txId] = txGas;
     }
