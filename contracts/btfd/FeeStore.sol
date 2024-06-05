@@ -35,6 +35,7 @@ contract FeeStore is IFeeStore {
         if (amount != 0) {
             IQuantumPortalPoc portal = IQuantumPortalPoc(factory.portal());
             try IERC20(portal.feeToken()).transfer(portal.feeTarget(), amount) {
+                delete collectedFee[txId];
             } catch {
                 revert CouldNotSendFee(amount);
             }
