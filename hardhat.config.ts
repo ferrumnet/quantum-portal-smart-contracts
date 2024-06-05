@@ -74,9 +74,9 @@ const config: HardhatUserConfig = {
       url: getEnv("BSC_LIVE_NETWORK"),
       accounts,
     },
-    ferrum_testnet: {
-      chainId: 26100,
-      url: "http://127.0.0.1:9944",
+    btfd_ghostnet: {
+      chainId: 42,
+      url: "http://ghostnet.dev.svcs.ferrumnetwork.io:9944",
       accounts,
       allowUnlimitedContractSize: true,
       gas: 10000000, // this override is required for Substrate based evm chains
@@ -129,7 +129,18 @@ const config: HardhatUserConfig = {
     apiKey: {
       bscTestnet: getEnv("BSCSCAN_API_KEY"),
       polygonMumbai: getEnv("POLYGONSCAN_API_KEY"),
-    },
+      btfd_ghostnet: getEnv("POLYGONSCAN_API_KEY"),
+  },
+  customChains: [
+    {
+      network: "btfd_ghostnet",
+      chainId: 42,
+      urls: {
+        apiURL: "https://ghostnet.dev.svcs.ferrumnetwork.io/api/",
+        browserURL: "https://ghostnet.dev.svcs.ferrumnetwork.io/"
+      }
+    }
+  ]
   },
 };
 export default config;
