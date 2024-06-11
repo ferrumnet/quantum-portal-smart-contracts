@@ -11,6 +11,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 // import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts-upgradeable/utils/ContextUpgradeable.sol";
 import "./WalletRegistration.sol";
+import "./utils/TokenReceivableUpgradeable.sol";
 import "./BtcLib.sol";
 
 import "hardhat/console.sol";
@@ -21,7 +22,7 @@ error NoBalance ();
 error NotRegisteredAsWalletOwner ();
 error TxAlreadyProcessed ();
 
-contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent, IQpSelfManagedToken {
+contract QpErc20Token is Initializable, ContextUpgradeable, TokenReceivableUpgradeable, IBitcoinIntent, IQpSelfManagedToken {
     using SafeERC20 for IERC20;
     struct RemoteCall {
         uint64 targetNetwork;
@@ -126,6 +127,7 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent, IQpS
     ) external initializer {
         // TODO: Use pre-compile interfaces to verify metadata from the deployTxId
         __QPERC20_init(_tokenId, _version, _name, _symbol, _decimals, _totalSupply);
+        __TokenReceivable_init();
         __Context_init();
     }
 
@@ -136,7 +138,7 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent, IQpS
         string memory _symbol,
         uint8 _decimals,
         uint _totalSupply
-    ) internal {
+    ) internal onlyInitializing {
         QpErc20Storage storage $ = _getQPERC20Storage();
         $.name = _name;
         $.symbol = _symbol;
@@ -191,29 +193,28 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent, IQpS
     }
 
     /**
-     * @notice This will settle the BTC using QP.
+     * @notice This will settle the BTC using QP to a given BTC address.
      */
-    function settle(string calldata _btcAddress, uint256 btcFee) public {
-        QpErc20Storage storage $ = _getQPERC20Storage();
-        // Withdraw the qpBalance for the user
-        address addr = BtcLib.parseBtcAddress(_btcAddress);
-        uint amount = $.qpBalanceOf[addr];
-        if (amount == 0) revert NoBalance();
-        _burnQp(addr, amount);
+    function settleTo(string calldata _btcAddress, uint256 amount, uint256 btcFee) external virtual {
+        _settleTo(_btcAddress, amount, btcFee);
+    }
 
-        IERC20($.factory.btc()).transferFrom(_msgSender(), IQuantumPortalPoc($.factory.portal()).feeTarget(), btcFee);
-        BtcLib.initiateWithdrawal(_btcAddress, $.tokenId, $.version, btcFee);
-        emit SettlementInitiated(addr, _btcAddress, amount, btcFee);
+    /**
+     * @notice This will settle the BTC using QP to a given BTC address. NOTE: Fee must me sent to BTC
+     *  prior to settlement
+     */
+    function settle(string calldata _btcAddress, uint256 amount) external virtual {
+        _settleTo(_btcAddress, amount, 0);
     }
 
     /**
      * @notice This will settle the BTC using QP to a given BTC address.
      */
-    function settleTo(string calldata _btcAddress, uint256 amount, uint256 btcFee) external virtual {
+    function _settleTo(string calldata _btcAddress, uint256 amount, uint256 btcFee) internal virtual {
         QpErc20Storage storage $ = _getQPERC20Storage();
         address msgSender = _msgSender();
         _burnQp(msgSender, amount);
-        IERC20($.factory.btc()).transferFrom(msgSender, IQuantumPortalPoc($.factory.portal()).feeTarget(), btcFee);
+        btcFee = collectSettlementFee(btcFee);
         BtcLib.initiateWithdrawal(_btcAddress, $.tokenId, $.version, btcFee);
         emit SettlementInitiated(msgSender, _btcAddress, amount, btcFee);
     }
@@ -365,16 +366,18 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent, IQpS
     // TODO: Make it such that the data can be verified from the base layer.
     // so that we won't need to worry about the security
     function multiTransfer(
-        address[] calldata froms,
-        uint[] calldata inputs,
-        address[] calldata tos,
-        uint[] calldata values,
+        address[] memory froms,
+        uint[] memory inputs,
+        address[] memory tos,
+        uint[] memory values,
         uint blocknumber,
         bytes32 txid,
         uint timestamp,
         bytes memory remoteCall) public {
         QpErc20Storage storage $ = _getQPERC20Storage();
         if ($.processedTxs[txid] != 0) revert TxAlreadyProcessed();
+        inputs = preProcessValues(inputs);
+        values = preProcessValues(values);
         
         if (froms.length == 0) {
             for (uint i = 0; i < tos.length; i++) {
@@ -398,8 +401,8 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent, IQpS
 
     function processMultiTransferOutputs(
         bytes32 txid,
-        address[] calldata tos,
-        uint[] calldata values,
+        address[] memory tos,
+        uint[] memory values,
         uint sumInputs,
         bytes memory remoteCall
     ) private {
@@ -422,6 +425,10 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent, IQpS
         if (sumQpOutputs > 0) {
             processRemoteCall(txid, remoteCall, sumQpOutputs);
         }
+    }
+
+    function preProcessValues(uint[] memory values) internal virtual returns (uint[] memory) {
+        return values;
     }
 
     /**
@@ -520,5 +527,17 @@ contract QpErc20Token is Initializable, ContextUpgradeable, IBitcoinIntent, IQpS
         $.btcBalanceOf[to] += value;
         emit Transfer(from, to, value);
         emit BtcTransfer(from, to, value);
+    }
+
+    /**
+     * @notice Collect the settlemetn fee as QpBTC in the BTC contract.
+     */
+    function collectSettlementFee(uint feeToCollect) internal virtual returns (uint) {
+        QpErc20Storage storage $ = _getQPERC20Storage();
+        address btc = $.factory.btc();
+        if (feeToCollect != 0) {
+            IERC20(btc).transferFrom(_msgSender(), btc, feeToCollect);
+        }
+        return ITokenReceivable(btc).syncInventory(btc);
     }
 }
