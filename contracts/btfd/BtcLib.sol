@@ -10,7 +10,7 @@ library BtcLib {
         // TODO: Call pre-compile
     }
 
-    function initiateWithdrawal(string calldata btcAddress, uint tokenId, uint version, uint btcFee) internal {
+    function initiateWithdrawal(string calldata btcAddress, uint tokenId, uint version, uint btcFee, bytes32 settlementId) internal {
         // TODO: Call pre-compile
         // Note. Pre-compile identifies who the caller is by verifying that msg.sender mapps to the token ID
         // For example, for rune tokens, we need to check the CREATE2 formula, to come up with the same address

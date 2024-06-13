@@ -47,6 +47,7 @@ contract QpErc20Token is Initializable, ContextUpgradeable, TokenReceivableUpgra
         mapping (address=>uint) qpBalanceOf;
         mapping(address => mapping(address => uint)) allowance;
         mapping (bytes32 => uint) processedTxs;
+        uint settlementEpoch;
     }
 
     // keccak256(abi.encode(uint256(keccak256("ferrum.storage.QPERC20")) - 1)) & ~bytes32(uint256(0xff))
@@ -59,7 +60,7 @@ contract QpErc20Token is Initializable, ContextUpgradeable, TokenReceivableUpgra
     event TransactionProcessed(address indexed miner, uint blocknumber, bytes32 txid, uint timestamp);
     event RemoteCallProcessed(address indexed beneficiary, RemoteCall remoteCall, uint amount);
     event RemoteCallProcessFailed(address indexed beneficiary, RemoteCall remoteCall, uint amount);
-    event SettlementInitiated(address indexed sender, string btcAddress, uint amount, uint btcFee);
+    event SettlementInitiated(address indexed sender, string btcAddress, uint amount, uint btcFee, bytes32 settlementId);
 
     function _getQPERC20Storage() internal pure returns (QpErc20Storage storage $) {
         assembly {
@@ -195,28 +196,29 @@ contract QpErc20Token is Initializable, ContextUpgradeable, TokenReceivableUpgra
     /**
      * @notice This will settle the BTC using QP to a given BTC address.
      */
-    function settleTo(string calldata _btcAddress, uint256 amount, uint256 btcFee) external virtual {
-        _settleTo(_btcAddress, amount, btcFee);
+    function settleTo(string calldata _btcAddress, uint256 amount, uint256 btcFee) external virtual returns (bytes32) {
+        return _settleTo(_btcAddress, amount, btcFee);
     }
 
     /**
      * @notice This will settle the BTC using QP to a given BTC address. NOTE: Fee must me sent to BTC
      *  prior to settlement
      */
-    function settle(string calldata _btcAddress, uint256 amount) external virtual {
-        _settleTo(_btcAddress, amount, 0);
+    function settle(string calldata _btcAddress, uint256 amount) external virtual returns (bytes32) {
+        return _settleTo(_btcAddress, amount, 0);
     }
 
     /**
      * @notice This will settle the BTC using QP to a given BTC address.
      */
-    function _settleTo(string calldata _btcAddress, uint256 amount, uint256 btcFee) internal virtual {
+    function _settleTo(string calldata _btcAddress, uint256 amount, uint256 btcFee) internal virtual returns (bytes32 settlementId) {
         QpErc20Storage storage $ = _getQPERC20Storage();
         address msgSender = _msgSender();
         _burnQp(msgSender, amount);
         btcFee = collectSettlementFee(btcFee);
-        BtcLib.initiateWithdrawal(_btcAddress, $.tokenId, $.version, btcFee);
-        emit SettlementInitiated(msgSender, _btcAddress, amount, btcFee);
+        settlementId = getSettlementId($.tokenId, ++$.settlementEpoch);
+        BtcLib.initiateWithdrawal(_btcAddress, $.tokenId, $.version, btcFee, settlementId);
+        emit SettlementInitiated(msgSender, _btcAddress, amount, btcFee, settlementId);
     }
 
     function approve(address spender, uint value) external returns (bool) {
@@ -539,5 +541,13 @@ contract QpErc20Token is Initializable, ContextUpgradeable, TokenReceivableUpgra
             IERC20(btc).transferFrom(_msgSender(), btc, feeToCollect);
         }
         return ITokenReceivable(btc).syncInventory(btc);
+    }
+
+    function getSettlementId(uint tokenId, uint epoch) private pure returns (bytes32 res) {
+        // 128 bit for tokenId, and 128bit for epoch
+        assembly  {
+            let mask := shr(128, not(0))
+            res := or(shl(128, and(tokenId, mask)), and(epoch, mask))
+        }
     }
 }

@@ -4,7 +4,7 @@ import "./QpErc20Token.sol";
 import "./IFeeStore.sol";
 
 contract Bitcoin is QpErc20Token {
-    uint constant SATOSHI_TO_NAKAMOTO_CONVERSION = 10 ** 9;
+    uint constant SATOSHI_TO_NAKAMOTO_CONVERSION = 1 gwei;
     function initialize(
     ) external initializer {
         __QPERC20_init(0, 0, "Bitcoin", "BTC", 18, 0);
