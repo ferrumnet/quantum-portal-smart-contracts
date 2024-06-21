@@ -19,18 +19,17 @@ abstract contract QuantumPortalPoc is
     IVersioned
 {
     string public constant override VERSION = "000.001";
-    address public override feeTarget;
+    address public override feeTarget; // FeeTarget is MinerMgr contract.
     address public override feeToken;
     address public nativeFeeRepo;
 
     event LocalTransfer(address token, address to, uint256 amount);
 
     /**
-     * @notice Restricted: Set the fee target
-     * @param _feeTarget The fee target
+     * @notice Updates the fee target, in case it is changed
      */
-    function setFeeTarget(address _feeTarget) external onlyAdmin {
-        feeTarget = _feeTarget;
+    function updateFeeTarget() external {
+        feeTarget = IQuantumPortalLedgerMgrDependencies(mgr).minerMgr();
     }
 
     /**

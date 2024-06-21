@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.25;
+pragma solidity ^0.8.24;
 
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
@@ -16,7 +16,7 @@ abstract contract TokenReceivable is ReentrancyGuard {
    @param token The token address
    @return amount The changed amount
    */
-  function sync(address token) internal nonReentrant returns (uint256 amount) {
+  function sync(address token) internal returns (uint256 amount) {
     uint256 inv = inventory[token];
     uint256 balance = IERC20(token).balanceOf(address(this));
     amount = balance - inv;

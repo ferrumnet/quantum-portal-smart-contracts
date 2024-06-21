@@ -194,7 +194,7 @@ async function prep(conf: QpDeployConfig) {
     }
     if (newPoc || newMinerMgr) {
         console.log('Updating the fee target');
-        await ctx.poc.connect(qpWallet).setFeeTarget(ctx.miner.address);
+        await ctx.poc.connect(qpWallet).updateFeeTarget();
     }
     console.log('Upgrade gateway', ctx.gateway.address);
     if (newPoc || newLedgerMgr || newStake || newGateway) {
