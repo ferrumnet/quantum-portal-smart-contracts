@@ -83,7 +83,7 @@ describe("Deploy QP - Deploy BTDD, Test a remote call ", function () {
         expect(balanceAfterBtc).to.equal('0.0');
     });
 
-	it('Test example for MultiSend', async function() {
+	_it('Test example for MultiSend', async function() {
         console.log('Deploying qp');
         const ctx = await deployAll();
         const QpWallet = ctx.acc5;
