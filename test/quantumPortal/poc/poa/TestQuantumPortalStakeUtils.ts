@@ -6,6 +6,7 @@ import { QuantumPortalStakeWithDelegate } from "../../../../typechain-types/Quan
 
 export async function delpoyStake(ctx: TestContext, auth: string, gateway: string, tokenAddress?: string) {
     if (!!tokenAddress) {
+        console.log('Using token for stake', tokenAddress!);
         const tf = await ethers.getContractFactory('DummyToken');
         const tok = await tf.attach(tokenAddress!) as DummyToken;
         ctx.token = tok;

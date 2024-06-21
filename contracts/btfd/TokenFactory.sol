@@ -112,6 +112,7 @@ contract TokenFactory is ITokenFactory, Ownable {
 
     function deployBitcoin() internal {
         btc = address(new BeaconProxy{salt: bytes32(uint256(0x11011))}(address(btcBeacon), new bytes(0)));
+        runeTokensByAddress[address(btc)] = bytes32(uint256(0x11011));
         Bitcoin(btc).initialize();
     }
 }

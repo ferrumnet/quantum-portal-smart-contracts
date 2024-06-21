@@ -477,7 +477,7 @@ export async function deployAll(): Promise<PortalContext> {
     console.log('MGR LAUNCHED', await mgr1.VERSION());
     const mgr2 = await mgrFac.deploy(2) as QuantumPortalLedgerMgrTest;
 
-    const chainId1 = await mgr1.realChainId();
+    const chainId1 = (await mgr1.realChainId()).toNumber();
     const chainId2 = 2;
     console.log(`Chain IDS: ${chainId1} / ${chainId2}`);
 
@@ -539,11 +539,11 @@ export async function deployAll(): Promise<PortalContext> {
     await state2.setLedger(poc2.address);
 
     await poc1.setManager(mgr1.address, state1.address);
-    await poc1.setFeeTarget(miningMgr1.address);
+    await poc1.updateFeeTarget();
     await poc1.setFeeToken(tok1.address);
     await miningMgr1.updateBaseToken(tok1.address);
     await poc2.setManager(mgr2.address, state2.address);
-    await poc2.setFeeTarget(miningMgr2.address);
+    await poc2.updateFeeTarget();
     await poc2.setFeeToken(tok1.address);
     await miningMgr2.connect(ctx.signers.acc1).updateBaseToken(tok1.address);
     await mgr1.updateLedger(poc1.address);

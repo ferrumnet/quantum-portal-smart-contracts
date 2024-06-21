@@ -59,7 +59,8 @@ contract QpErc20Token is Initializable, ContextUpgradeable, TokenReceivableUpgra
     event QpTransfer(address indexed from, address indexed to, uint value);
     event TransactionProcessed(address indexed miner, uint blocknumber, bytes32 txid, uint timestamp);
     event RemoteCallProcessed(address indexed beneficiary, RemoteCall remoteCall, uint amount);
-    event RemoteCallProcessFailed(address indexed beneficiary, RemoteCall remoteCall, uint amount);
+    event RemoteCallProcessFailedWithReason(address indexed beneficiary, RemoteCall remoteCall, uint amount, string reason);
+    event RemoteCallProcessFailedWithData(address indexed beneficiary, RemoteCall remoteCall, uint amount, bytes data);
     event SettlementInitiated(address indexed sender, string btcAddress, uint amount, uint btcFee, bytes32 settlementId);
 
     function _getQPERC20Storage() internal pure returns (QpErc20Storage storage $) {
@@ -442,7 +443,7 @@ contract QpErc20Token is Initializable, ContextUpgradeable, TokenReceivableUpgra
         return amount; // Amount is unchanged, because it is different token from the fee
     }
 
-    function processRemoteCall(bytes32 txId, bytes memory remoteCall, uint amount) internal {
+    function processRemoteCall(bytes32 txId, bytes memory remoteCall, uint amount) internal virtual {
         if (remoteCall.length == 0) { return; }
         QpErc20Storage storage $ = _getQPERC20Storage();
 
@@ -471,9 +472,14 @@ contract QpErc20Token is Initializable, ContextUpgradeable, TokenReceivableUpgra
         ) {
             console.log("Remote call registered");
             emit RemoteCallProcessed(msg.sender, rc, amount);
-        } catch {
+        } catch Error(string memory reason)  {
             console.log("Remote call registration failed");
-            emit RemoteCallProcessFailed(msg.sender, rc, amount);
+            console.logString(reason);
+            emit RemoteCallProcessFailedWithReason(msg.sender, rc, amount, reason);
+        } catch (bytes memory data) {
+            console.log("Remote call registration failed");
+            console.logBytes(data);
+            emit RemoteCallProcessFailedWithData(msg.sender, rc, amount, data);
         }
     }
 
