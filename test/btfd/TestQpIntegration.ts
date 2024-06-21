@@ -10,6 +10,10 @@ import { expect } from "chai";
 
 function _it(a,b) { return () => {} }
 
+function sats(num: string) {
+    return ethers.utils.parseUnits(num, 'gwei');
+}
+
 describe("Deploy QP - Deploy BTDD, Test a remote call ", function () {
 	it('Test remote call', async function() {
         console.log('Deploying qp');
@@ -21,8 +25,11 @@ describe("Deploy QP - Deploy BTDD, Test a remote call ", function () {
     
         console.log('Deploying BTFD')
         const facF = await ethers.getContractFactory('TokenFactory');
-        const fac = await facF.deploy(ctx.chain1.poc.address, QpWallet) as TokenFactory;
+        const fac = await facF.deploy(ctx.chain1.poc.address, ctx.chain1.feeConverter.address, QpWallet, QpWallet) as TokenFactory;
         console.log('Btc address: ', await fac.btc());
+        console.log('Send some fee to the feeStroe');
+        await ctx.chain1.token.transfer(await fac.feeStore(), Wei.from('100'));
+        console.log(`We have fee in the fee store: ${await ctx.chain1.token.balanceOf(await fac.feeStore())}`);
         printSeparator();
 
         console.log('Now do a BTC trasnfer');
@@ -31,20 +38,16 @@ describe("Deploy QP - Deploy BTDD, Test a remote call ", function () {
 
         const timestamp = expiryInFuture(); // Just some timestamp for the btc tx
         console.log('Minting some BTC');
-        await btc.multiTransfer([], [], [ctx.acc1], [Wei.from('10')], 99,
+        await btc.multiTransfer([], [], [ctx.acc1], [sats('10')], 99,
             randomSalt(), timestamp, '0x');
-        console.log('Balance :', await btc.balanceOf(ctx.acc1));
-
-        console.log('Send some fee to token');
-        await ctx.chain1.token.transfer(btc.address, Wei.from('10'));
-        console.log(`We have fee in the contract: ${await ctx.chain1.token.balanceOf(btc.address)}`)
+        console.log('Balance :', await btc.balanceOf(ctx.acc1), ' This is supposed to be real BTC');
 
         const methodCall = btc.interface.encodeFunctionData('remoteTransfer');
         console.log('METHOD CALL IUS:', methodCall);
         // Send 1 BTC to acc2, with 3 fee.
         const remoteCall = abi.encode(['uint64', 'address', 'address', 'bytes', 'uint'],
-            [ctx.chain1.chainId, ctx.acc2, btc.address, methodCall, Wei.from('3')]);
-        await btc.multiTransfer([ctx.acc1], [Wei.from('10')], [ctx.acc1, QpWallet], [Wei.from('9'), Wei.from('1')], 100,
+            [ctx.chain1.chainId, ctx.acc2, btc.address, methodCall, sats('1')]);
+        await btc.multiTransfer([ctx.acc1], [sats('10')], [ctx.acc1, QpWallet], [sats('7'), sats('3')], 100,
             randomSalt() /*txId*/, timestamp, remoteCall);
 
         const qpBalanceBefore = Wei.to((await btc.balanceOf(QpWallet)).toString());
@@ -73,13 +76,13 @@ describe("Deploy QP - Deploy BTDD, Test a remote call ", function () {
         // User has 0 real BTC, 0 QP BTC
         // After transfer we mint 1 QP BTC to the user, but there is no change
         // in the real BTC balance.
-        expect(qpBalanceBefore).to.equal('1.0');
-        expect(qpBalanceBeforeBtc).to.equal('1.0');
+        expect(qpBalanceBefore).to.equal('3.0');
+        expect(qpBalanceBeforeBtc).to.equal('3.0');
         expect(balanceBefore).to.equal('0.0');
         expect(balanceBeforeBtc).to.equal('0.0');
-        expect(qpBalanceAfter).to.equal('1.0');
-        expect(qpBalanceAfterBtc).to.equal('1.0');
-        expect(balanceAfter).to.equal('1.0');
+        expect(qpBalanceAfter).to.equal('3.0');
+        expect(qpBalanceAfterBtc).to.equal('3.0');
+        expect(balanceAfter).to.equal('2.0');
         expect(balanceAfterBtc).to.equal('0.0');
     });
 

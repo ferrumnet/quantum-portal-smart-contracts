@@ -443,7 +443,7 @@ contract QpErc20Token is Initializable, ContextUpgradeable, TokenReceivableUpgra
         return amount; // Amount is unchanged, because it is different token from the fee
     }
 
-    function processRemoteCall(bytes32 txId, bytes memory remoteCall, uint amount) internal {
+    function processRemoteCall(bytes32 txId, bytes memory remoteCall, uint amount) internal virtual {
         if (remoteCall.length == 0) { return; }
         QpErc20Storage storage $ = _getQPERC20Storage();
 
