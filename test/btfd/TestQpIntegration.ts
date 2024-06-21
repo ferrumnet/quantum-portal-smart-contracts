@@ -47,8 +47,23 @@ describe("Deploy QP - Deploy BTDD, Test a remote call ", function () {
         // Send 1 BTC to acc2, with 3 fee.
         const remoteCall = abi.encode(['uint64', 'address', 'address', 'bytes', 'uint'],
             [ctx.chain1.chainId, ctx.acc2, btc.address, methodCall, sats('1')]);
+
+        const btcBalanceBeforeFeeStore = Wei.to((await btc.balanceOf(await fac.feeStore())).toString());
+        const frmBalanceBeforeFeeStore = Wei.to((await ctx.chain1.token.balanceOf(await fac.feeStore())).toString());
+        console.log('QPBTC balance for fee store :', btcBalanceBeforeFeeStore);
+        console.log('FRM balance for fee store :', frmBalanceBeforeFeeStore);
+
         await btc.multiTransfer([ctx.acc1], [sats('10')], [ctx.acc1, QpWallet], [sats('7'), sats('3')], 100,
             randomSalt() /*txId*/, timestamp, remoteCall);
+
+        const btcBalanceAfterFeeStore = Wei.to((await btc.balanceOf(await fac.feeStore())).toString());
+        const frmBalanceAfterFeeStore = Wei.to((await ctx.chain1.token.balanceOf(await fac.feeStore())).toString());
+        console.log('QPBTC balance for fee store after :', btcBalanceAfterFeeStore);
+        console.log('FRM balance for fee store after :', frmBalanceAfterFeeStore);
+        expect(btcBalanceBeforeFeeStore).to.equal('0.0');
+        expect(btcBalanceAfterFeeStore).to.equal('1.0');
+        expect(frmBalanceBeforeFeeStore).to.equal('100.0');
+        expect(frmBalanceAfterFeeStore).to.equal('99.0');
 
         const qpBalanceBefore = Wei.to((await btc.balanceOf(QpWallet)).toString());
         const qpBalanceBeforeBtc = Wei.to((await btc.balanceOf(QpWallet)).toString());
