@@ -69,25 +69,18 @@ const config: HardhatUserConfig = {
       accounts,
       gasPrice: 18000000000,
     },
-    bsctestnet: {
-      chainId: 97,
-      url: getEnv("BSC_TESTNET_LIVE_NETWORK"),
-      accounts,
-      gas: 1000000,
-      // gasPrice: 20000000000,
-    },
-    bsc: {
-      chainId: 56,
-      url: getEnv("BSC_LIVE_NETWORK"),
-      accounts,
-    },
-    btfd_ghostnet: {
-      chainId: 42,
-      url: "http://ghostnet.dev.svcs.ferrumnetwork.io:9944",
-      accounts,
-      allowUnlimitedContractSize: true,
-      gas: 10000000, // this override is required for Substrate based evm chains
-    },
+    // bsctestnet: {
+    //   chainId: 97,
+    //   url: getEnv("BSC_TESTNET_LIVE_NETWORK"),
+    //   accounts,
+    //   gas: 1000000,
+    //   // gasPrice: 20000000000,
+    // },
+    // bsc: {
+    //   chainId: 56,
+    //   url: getEnv("BSC_LIVE_NETWORK"),
+    //   accounts,
+    // },
     moonbeam: {
       chainId: 1287,
       url: "https://rpc.api.moonbase.moonbeam.network",

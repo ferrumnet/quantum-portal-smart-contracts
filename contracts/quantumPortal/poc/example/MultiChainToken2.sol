@@ -2,7 +2,7 @@
 
 pragma solidity ^0.8.0;
 import "./MultiChainBase.sol";
-import "foundry-contracts/contracts/token/ERC20/ERC20.sol";
+import "foundry-contracts/contracts/contracts/token/ERC20/ERC20.sol";
 
 /**
  * @notice Example multi-chain token master contract

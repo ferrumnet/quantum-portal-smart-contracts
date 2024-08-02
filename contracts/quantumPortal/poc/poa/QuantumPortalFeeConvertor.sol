@@ -2,9 +2,9 @@
 pragma solidity ^0.8.0;
 import "./IQuantumPortalFeeConvertor.sol";
 import "../../../fee/IPriceOracle.sol";
-import "foundry-contracts/contracts/common/WithAdmin.sol";
-import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
-import "foundry-contracts/contracts/math/FixedPoint128.sol";
+import "foundry-contracts/contracts/contracts/common/WithAdmin.sol";
+import "foundry-contracts/contracts/contracts/common/IFerrumDeployer.sol";
+import "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
 
 import "hardhat/console.sol";
 

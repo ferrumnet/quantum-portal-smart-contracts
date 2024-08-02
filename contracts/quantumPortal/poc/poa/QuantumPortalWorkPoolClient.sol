@@ -2,9 +2,9 @@
 pragma solidity ^0.8.0;
 
 import "./IQuantumPortalWorkPoolClient.sol";
-import "foundry-contracts/contracts/math/FullMath.sol";
-import "foundry-contracts/contracts/common/SafeAmount.sol";
-import "foundry-contracts/contracts/math/FixedPoint128.sol";
+import "foundry-contracts/contracts/contracts/math/FullMath.sol";
+import "foundry-contracts/contracts/contracts/common/SafeAmount.sol";
+import "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
 import "../utils/WithQp.sol";
 import "../utils/WithRemotePeers.sol";
 import "../utils/WithLedgerMgr.sol";

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 import "./IQuantumPortalLedgerMgr.sol";
 import "./QuantumPortalLib.sol";
-import "foundry-contracts/contracts/common/WithAdmin.sol";
+import "foundry-contracts/contracts/contracts/common/WithAdmin.sol";
 
 contract QuantumPortalState is WithAdmin {
     string public constant VERSION = "0.0.1";

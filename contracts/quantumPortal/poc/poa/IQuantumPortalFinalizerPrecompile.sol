@@ -8,7 +8,7 @@ address constant QUANTUM_PORTAL_PRECOMPILE = 0x000000000000000000000000000000000
  * @title QuantumPortalFinalizerPrecompile Interface
  * @dev Interface for managing finalizers in the Quantum Portal system.
  */
-interface QuantumPortalFinalizerPrecompile {
+interface IQuantumPortalFinalizerPrecompile {
 
     /**
      * @notice Register Finalizer

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-import "foundry-contracts/contracts/common/WithAdmin.sol";
+import "foundry-contracts/contracts/contracts/common/WithAdmin.sol";
 
 pragma solidity ^0.8.0;
 

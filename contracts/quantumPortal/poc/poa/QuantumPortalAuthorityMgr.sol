@@ -2,10 +2,10 @@
 pragma solidity ^0.8.0;
 
 import "./IQuantumPortalAuthorityMgr.sol";
-import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
+import "foundry-contracts/contracts/contracts/common/IFerrumDeployer.sol";
 import "./QuantumPortalWorkPoolServer.sol";
 import "./QuantumPortalWorkPoolClient.sol";
-import "foundry-contracts/contracts/signature/MultiSigCheckable.sol";
+import "foundry-contracts/contracts/contracts/signature/MultiSigCheckable.sol";
 import "./IQuantumPortalFinalizerPrecompile.sol";
 import "../utils/LibChainCheck.sol";
 
@@ -100,12 +100,12 @@ contract QuantumPortalAuthorityMgr is
     ) external {
         
         // first initialize the quorom
-        initialize(quorumId, groupId, minSignatures, ownerGroupId, addresses);
+        initializeQuorum(quorumId, groupId, minSignatures, ownerGroupId, addresses);
 
         // if QPN testnet or mainnet, ensure the precompile is called
         if (LibChainCheck.isFerrumChain()) {
             for (uint i=0; i<addresses.length; i++) {
-                QuantumPortalFinalizerPrecompile(QUANTUM_PORTAL_PRECOMPILE).registerFinalizer(block.chainid, addresses[i]);
+                IQuantumPortalFinalizerPrecompile(QUANTUM_PORTAL_PRECOMPILE).registerFinalizer(block.chainid, addresses[i]);
             }
         }
     }

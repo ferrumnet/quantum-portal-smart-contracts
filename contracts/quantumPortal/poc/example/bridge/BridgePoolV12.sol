@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import "./IBridgePool.sol";
 import "./IBridgeRoutingTable.sol";
-import "foundry-contracts/contracts/taxing/IGeneralTaxDistributor.sol";
+import "foundry-contracts/contracts/contracts/taxing/IGeneralTaxDistributor.sol";
 import "../../../../staking/library/TokenReceivable.sol";
 import "../../utils/WithQp.sol";
 import "../../utils/WithRemotePeers.sol";
