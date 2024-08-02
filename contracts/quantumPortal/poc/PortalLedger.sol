@@ -2,7 +2,7 @@
 pragma solidity ^0.8.2;
 
 import "./IQuantumPortalLedgerMgr.sol";
-import "foundry-contracts/contracts/common/WithAdmin.sol";
+import "foundry-contracts/contracts/contracts/common/WithAdmin.sol";
 import "./QuantumPortalLib.sol";
 import "./QuantumPortalState.sol";
 import "@openzeppelin/contracts/utils/Strings.sol";

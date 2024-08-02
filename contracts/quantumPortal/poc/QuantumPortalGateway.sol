@@ -7,9 +7,9 @@ import "./poa/stake/IQuantumPortalStakeWithDelegate.sol";
 import "../../staking/interfaces/IStakeV2.sol";
 import "../../uniswap/IWETH.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
-import "foundry-contracts/contracts/common/WithAdmin.sol";
-import "foundry-contracts/contracts/common/SafeAmount.sol";
+import "foundry-contracts/contracts/contracts/common/IFerrumDeployer.sol";
+import "foundry-contracts/contracts/contracts/common/WithAdmin.sol";
+import "foundry-contracts/contracts/contracts/common/SafeAmount.sol";
 
 /**
  * @notice Quantum portal gateway. This is the entry point allowing

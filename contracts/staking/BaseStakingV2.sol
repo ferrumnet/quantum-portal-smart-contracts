@@ -9,8 +9,8 @@ import "./vesting/VestingLibrary.sol";
 import "./library/TokenReceivable.sol";
 import "./library/StakingV2CommonSignatures.sol";
 import "./factory/IStakingFactory.sol";
-import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
-import "foundry-contracts/contracts/taxing/IGeneralTaxDistributor.sol";
+import "foundry-contracts/contracts/contracts/common/IFerrumDeployer.sol";
+import "foundry-contracts/contracts/contracts/taxing/IGeneralTaxDistributor.sol";
 
 abstract contract BaseStakingV2 is IStakeV2, IStakeInfo, TokenReceivable, Admined,
   StakingV2CommonSignatures {

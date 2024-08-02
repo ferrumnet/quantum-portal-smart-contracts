@@ -5,8 +5,8 @@ import "./IFeeStore.sol";
 import "../quantumPortal/poc/IQuantumPortalPoc.sol";
 import "../quantumPortal/poc/poa/IQuantumPortalFeeConvertor.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "foundry-contracts/contracts/math/FullMath.sol";
-import "foundry-contracts/contracts/math/FixedPoint128.sol";
+import "foundry-contracts/contracts/contracts/math/FullMath.sol";
+import "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
 
 error OnlyFactory();
 error OnlyBtc();

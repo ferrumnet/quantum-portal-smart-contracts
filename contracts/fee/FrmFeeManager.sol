@@ -4,9 +4,9 @@ pragma solidity ^0.8.0;
 import "./IFrmFeeManager.sol";
 import "./IPriceOracle.sol";
 import "../staking/library/TokenReceivable.sol";
-import "foundry-contracts/contracts/common/WithAdmin.sol";
-import "foundry-contracts/contracts/math/FullMath.sol";
-import "foundry-contracts/contracts/math/FixedPoint128.sol";
+import "foundry-contracts/contracts/contracts/common/WithAdmin.sol";
+import "foundry-contracts/contracts/contracts/math/FullMath.sol";
+import "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
 
 /**
  @notice Fee manager allows other "trusted" contracts to pay fees on their user's behalf.
