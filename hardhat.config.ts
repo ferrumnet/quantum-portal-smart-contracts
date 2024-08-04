@@ -1,9 +1,6 @@
-import { HardhatUserConfig } from "hardhat/types";
-import "@nomiclabs/hardhat-ethers";
-import "@nomiclabs/hardhat-waffle";
-import "@typechain/hardhat";
-// import "@openzeppelin/hardhat-upgrades";
-import "@nomicfoundation/hardhat-verify";
+import { HardhatUserConfig } from "hardhat/config";
+import "@nomicfoundation/hardhat-toolbox";
+import "@nomicfoundation/hardhat-ignition-ethers";
 import { TEST_MNEMONICS } from "./test/common/TestAccounts";
 import { ethers } from "ethers";
 require("dotenv").config({ path: __dirname + "/localConfig/test.env" });
@@ -20,7 +17,7 @@ const getEnv = (env: string) => {
 const accounts: any = process.env.TEST_ACCOUNT_PRIVATE_KEY ? [process.env.TEST_ACCOUNT_PRIVATE_KEY] : { mnemonic: TEST_MNEMONICS };
 
 if (accounts.mnemonic) {
-    let mnemonicWallet = ethers.Wallet.fromMnemonic(TEST_MNEMONICS);
+    let mnemonicWallet = ethers.HDNodeWallet.fromPhrase(TEST_MNEMONICS);
     console.log('Test account used from MNEMONIC', mnemonicWallet.privateKey, mnemonicWallet.address);
 } else {
     let wallet = new ethers.Wallet(accounts[0]);
@@ -46,6 +43,7 @@ const config: HardhatUserConfig = {
     hardhat: {
       accounts,
       blockGasLimit: 3000000000,
+      allowUnlimitedContractSize: true,
       // gas: 100000,
       // gasPrice: 20000000000,
     },

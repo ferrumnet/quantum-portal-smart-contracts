@@ -27,7 +27,6 @@ contract QuantumPortalStakeWithDelegate is
     OperatorRelation,
     IQuantumPortalStakeWithDelegate
 {
-
     uint64 constant WITHDRAW_LOCK = 30 days;
     bytes32 constant SLASH_STAKE = keccak256("SlashStake(address user,uint256 amount, bytes32 salt, uint64 expiry)");
     bytes32 constant ALLOW_STAKE = keccak256("AllowStake(address to,address delegate,uint256 allocation, bytes32 salt, uint64 expiry)");
@@ -35,7 +34,6 @@ contract QuantumPortalStakeWithDelegate is
     /// @custom:storage-location erc7201:ferrum.storage.quantumportalstakewithdelegate.001
     struct QuantumPortalStakeWithDelegateStorageV001 {
         address STAKE_ID;
-        address gateway;
         address slashTarget;
         IQuantumPortalAuthorityMgr auth;
         IQuantumPortalAuthorityMgr stakeVerifyer;
@@ -63,13 +61,12 @@ contract QuantumPortalStakeWithDelegate is
     }
 
     function initialize(
-        address _factory,
         address token,
         address authority,
         address _stakeVerifyer,
         address _gateway
     ) public initializer {
-        super.initialize(_factory); // initialize() from StakeOpen
+        super.initialize(_gateway); // initialize() from StakeOpen
         address[] memory tokens = new address[](1);
         tokens[0] = token;
         _init(token, "QP Stake", tokens);
@@ -77,20 +74,12 @@ contract QuantumPortalStakeWithDelegate is
         QuantumPortalStakeWithDelegateStorageV001 storage $ = _getQuantumPortalStakeWithDelegateStorageV001();
         $.STAKE_ID = token;
         $.auth = IQuantumPortalAuthorityMgr(authority);
-        $.gateway = _gateway;
         $.stakeVerifyer = IQuantumPortalAuthorityMgr(_stakeVerifyer);
     }
-
-    function _authorizeUpgrade(address newImplementation) internal override(StakeOpen, UUPSUpgradeable) onlyOwner {}
 
     function STAKE_ID() external view returns (address) {
         QuantumPortalStakeWithDelegateStorageV001 storage $ = _getQuantumPortalStakeWithDelegateStorageV001();
         return $.STAKE_ID;
-    }
-
-    function gateway() external view returns (address) {
-        QuantumPortalStakeWithDelegateStorageV001 storage $ = _getQuantumPortalStakeWithDelegateStorageV001();
-        return $.gateway;
     }
 
     function slashTarget() external view returns (address) {
@@ -166,9 +155,8 @@ contract QuantumPortalStakeWithDelegate is
         address delegate,
         address delegator
     ) external override {
-        QuantumPortalStakeWithDelegateStorageV001 storage $ = _getQuantumPortalStakeWithDelegateStorageV001();
         // Can only be called by the staker or the gateway. Gateway in part ensures being called by the staker
-        require(msg.sender == delegator || msg.sender == $.gateway, "QPS: unauthorized");
+        require(msg.sender == delegator || msg.sender == gateway(), "QPS: unauthorized");
         _setDelegation(delegate, delegator);
     }
 

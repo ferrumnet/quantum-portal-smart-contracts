@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
+import {UUPSUpgradeable, Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {IVersioned} from "foundry-contracts/contracts/contracts/common/IVersioned.sol";
+import {FullMath} from "foundry-contracts/contracts/contracts/math/FullMath.sol";
+import {FixedPoint128} from "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
+import {WithAdmin} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdmin.sol";
 import {IQuantumPortalLedgerMgr} from "../../../quantumPortal/poc/IQuantumPortalLedgerMgr.sol";
 import {IQuantumPortalMinerMgr} from "../../../quantumPortal/poc/poa/IQuantumPortalMinerMgr.sol";
 import {IQuantumPortalAuthorityMgr} from "../../../quantumPortal/poc/poa/IQuantumPortalAuthorityMgr.sol";
@@ -9,16 +14,11 @@ import {IQuantumPortalMinerMembership} from "../../../quantumPortal/poc/poa/IQua
 import {IQuantumPortalStakeWithDelegate} from "../../../quantumPortal/poc/poa/stake/IQuantumPortalStakeWithDelegate.sol";
 import {IQuantumPortalWorkPoolClient} from "../../../quantumPortal/poc/poa/IQuantumPortalWorkPoolClient.sol";
 import {IQuantumPortalWorkPoolServer} from "../../../quantumPortal/poc/poa/IQuantumPortalWorkPoolServer.sol";
-import {IVersioned} from "foundry-contracts/contracts/contracts/common/IVersioned.sol";
-import {FullMath} from "foundry-contracts/contracts/contracts/math/FullMath.sol";
-import {FixedPoint128} from "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
-
-import {UUPSUpgradeable, Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {WithAdmin} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdmin.sol";
 import {QuantumPortalMinerMgr} from "../../../quantumPortal/poc/poa/QuantumPortalMinerMgr.sol";
 import {QuantumPortalLib} from "../../../quantumPortal/poc/QuantumPortalLib.sol";
 import {PortalLedger} from "./PortalLedger.sol";
 import {QuantumPortalState} from "../../../quantumPortal/poc/QuantumPortalState.sol";
+import {WithGateway} from "./utils/WithGateway.sol";
 
 
 /**
@@ -27,7 +27,7 @@ import {QuantumPortalState} from "../../../quantumPortal/poc/QuantumPortalState.
  Local blocks are virtual, meaning, they do not need to be implicitly generate.
  However, they are completely deterministic and updated as transactions are being added.
 */
-contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, WithAdmin, IVersioned {
+contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, WithAdmin, WithGateway, IVersioned {
     uint256 constant FIX_TX_SIZE = 9 * 32;
     uint256 constant FIXED_REJECT_SIZE = 9 * 32;
     uint256 constant BLOCK_PERIOD = 2 minutes; // One block per two minutes?
@@ -116,13 +116,14 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         CHAIN_ID = overrideChainId == 0 ? block.chainid : overrideChainId;
     }
 
-    function initialize(address initialOwner, address initialAdmin) public initializer {
+    function initialize(address initialOwner, address initialAdmin, address gateway) public initializer {
         __WithAdmin_init(initialOwner, initialAdmin);
+        __WithGateway_init_unchained(gateway);
         QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
         $.minerMinimumStake = 1_000_000 ether;
     }
 
-    function _authorizeUpgrade(address) internal override onlyAdmin {}
+    function _authorizeUpgrade(address) internal override onlyGateway {}
 
     function state() public view returns (QuantumPortalState) {
         QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
@@ -494,7 +495,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
             (
                 IQuantumPortalMinerMgr.ValidationResult validationResult,
                 address miner
-            ) = IQuantumPortalMinerMgr(_minerMgr()).verifyMinerSignature(
+            ) = IQuantumPortalMinerMgr(minerMgr()).verifyMinerSignature(
                     blockHash,
                     salt,
                     expiry,
@@ -508,7 +509,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
                     transactions.length - 1
                 ].timestamp;
                 require(
-                    IQuantumPortalMinerMembership(_minerMgr()).selectMiner(
+                    IQuantumPortalMinerMembership(minerMgr()).selectMiner(
                         miner,
                         blockHash,
                         remoteBlockTimestamp
@@ -533,7 +534,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
                 revert("QPLM: miner signature cannot be verified");
             }
 
-            IQuantumPortalWorkPoolClient(_minerMgr()).registerWork(
+            IQuantumPortalWorkPoolClient(minerMgr()).registerWork(
                 remoteChainId,
                 miner,
                 FIX_TX_SIZE * transactions.length + totalSize,
@@ -784,7 +785,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
             finalizedKey
         );
 
-        IQuantumPortalWorkPoolClient(_minerMgr()).registerWork(
+        IQuantumPortalWorkPoolClient(minerMgr()).registerWork(
             remoteChainId,
             msg.sender,
             totalMinedWork,
@@ -987,12 +988,12 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         if (b.blockHash == blockHash) {
             // Block is indeed mined
             // First extract the miner address from the signature
-            address fradulentMiner = IQuantumPortalMinerMgr(_minerMgr())
+            address fradulentMiner = IQuantumPortalMinerMgr(minerMgr())
                 .extractMinerAddress(b.blockHash, salt, expiry, multiSignature);
 
             // Slash fradulent miner's funds
             // And pay the reward to tx.benefciary
-            IQuantumPortalMinerMgr(_minerMgr()).slashMinerForFraud(
+            IQuantumPortalMinerMgr(minerMgr()).slashMinerForFraud(
                 fradulentMiner,
                 blockHash,
                 t.sourceBeneficiary
@@ -1076,11 +1077,11 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         );
     }
 
-    function _minerMgr() private view returns (address) {
+    function minerMgr() public view returns (address) {
         return  _getQuantumPortalLedgerMgrStorageV001().minerMgr;
     }
 
-    function _minerMinimumStake() private view returns (uint256) {
+    function _minerMinimumStake() public view returns (uint256) {
         return _getQuantumPortalLedgerMgrStorageV001().minerMinimumStake;
     }
 

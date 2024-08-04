@@ -4,13 +4,14 @@ pragma solidity ^0.8.24;
 import {Initializable, UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {FixedPoint128} from "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
 import {WithAdmin} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdmin.sol";
+import {WithGateway} from "../utils/WithGateway.sol";
 import {IQuantumPortalFeeConvertor} from "../../../../quantumPortal/poc/poa/IQuantumPortalFeeConvertor.sol";
 
 
 /**
  * @notice Direct fee convertor for QP. The fee should be update by a trusted third party regularly
  */
-contract QuantumPortalFeeConverterDirect is IQuantumPortalFeeConvertor, Initializable, UUPSUpgradeable, WithAdmin {
+contract QuantumPortalFeeConverterDirect is IQuantumPortalFeeConvertor, Initializable, UUPSUpgradeable, WithAdmin, WithGateway {
     string public constant VERSION = "0.0.1";
     uint constant DEFAULT_PRICE = 0x100000000000000000000000000000000; //FixedPoint128.Q128;
 
@@ -24,7 +25,7 @@ contract QuantumPortalFeeConverterDirect is IQuantumPortalFeeConvertor, Initiali
     // keccak256(abi.encode(uint256(keccak256("ferrum.storage.quantumportalfeeconverterdirect.001")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant QuantumPortalFeeConverterDirectStorageV001Location = 0x1bb5efccb3fe848156cfca94d479e33ae6d3f05bb5c87d9f9eee341398fc7500;
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyGateway {}
 
     function qpFeeToken() external view returns (address) {
         QuantumPortalFeeConverterDirectStorageV001 storage $ = _getQuantumPortalFeeConverterDirectStorageV001();
@@ -39,8 +40,9 @@ contract QuantumPortalFeeConverterDirect is IQuantumPortalFeeConvertor, Initiali
         return _getQuantumPortalFeeConverterDirectStorageV001().feeTokenPriceList[chainId];
     }
 
-    function initialize() public initializer {
+    function initialize(address gateway) public initializer {
         __WithAdmin_init(msg.sender, msg.sender);
+        __WithGateway_init_unchained(gateway);
         __UUPSUpgradeable_init();
     }
 

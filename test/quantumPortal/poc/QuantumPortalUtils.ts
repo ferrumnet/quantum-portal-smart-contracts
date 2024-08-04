@@ -7,16 +7,16 @@ import { randomSalt } from "foundry-contracts/dist/test/common/Eip712Utils";
 import { abi, deployWithOwner, expiryInFuture, getCtx, isAllZero, Salt, TestContext, Wei, ZeroAddress} from 
     'foundry-contracts/dist/test/common/Utils';
 import { getBridgeMethodCall } from 'foundry-contracts/dist/test/common/Eip712Utils';
-import { keccak256 } from "ethers/lib/utils";
 import { delpoyStake, deployMinerMgr } from "./poa/TestQuantumPortalStakeUtils";
 import { QuantumPortalStakeWithDelegate } from "../../../typechain-types/QuantumPortalStakeWithDelegate";
 import { ERC20 } from "foundry-contracts/dist/test/common/UniswapV2";
-import { Signer } from "ethers";
+import { keccak256, Signer } from "ethers";
 import { QuantumPortalMinerMgr } from "../../../typechain-types/QuantumPortalMinerMgr";
 import { QuantumPortalFeeConverterDirect } from "../../../typechain-types/QuantumPortalFeeConverterDirect";
 import { QuantumPortalState } from '../../../typechain-types/QuantumPortalState';
 import { advanceTimeAndBlock } from "../../common/TimeTravel";
 import { deployUsingDeployer } from "../../common/Utils";
+
 
 export const FERRUM_TOKENS = {
     26000: '0x00',
@@ -436,7 +436,7 @@ export class QuantumPortalUtils {
             console.log('Operator after', await stake.getDelegateForOperator(nodeOp));
         }
 
-        await (await token.token()).connect(signer).transfer(stake.address, await token.amountToMachine(amount));
+        await (await token.token()).connect(signer).transfer(stake, await token.amountToMachine(amount));
         await stake.connect(signer).stakeToDelegate(staker, nodeOp);
         console.log(`- Staked ${amount} for ${staker}`)
         console.log('Registering miner...');
@@ -471,13 +471,13 @@ export interface PortalContext extends TestContext {
 
 export async function deployAll(): Promise<PortalContext> {
 	const ctx = await getCtx();
-	const mgrFac = await ethers.getContractFactory("QuantumPortalLedgerMgrTest");
+	const mgrFac = await ethers.getContractFactory("contracts/quantumPortal/poc/test/QuantumPortalLedgerMgrTest.sol:QuantumPortalLedgerMgrTest");
 	console.log('About to deploy the ledger managers');
     const mgr1 = await mgrFac.deploy(26000, {gasLimit: 8000000}) as QuantumPortalLedgerMgrTest;
     console.log('MGR LAUNCHED', await mgr1.VERSION());
     const mgr2 = await mgrFac.deploy(2) as QuantumPortalLedgerMgrTest;
 
-    const chainId1 = (await mgr1.realChainId()).toNumber();
+    const chainId1 = 31337 // (await mgr1.realChainId()).toNumber();
     const chainId2 = 2;
     console.log(`Chain IDS: ${chainId1} / ${chainId2}`);
 
@@ -485,19 +485,19 @@ export async function deployAll(): Promise<PortalContext> {
     await mgr1.updateMinerMinimumStake(Wei.from('10'));
     await mgr2.updateMinerMinimumStake(Wei.from('10'));
 
-	const pocFac = await ethers.getContractFactory("QuantumPortalPocTest");
+	const pocFac = await ethers.getContractFactory("contracts/quantumPortal/poc/test/QuantumPortalPocTest.sol:QuantumPortalPocTest");
 	console.log('About to deploy the pocs');
     const poc1 = await pocFac.deploy(26000) as QuantumPortalPocTest;
     const poc2 = await pocFac.deploy(2) as QuantumPortalPocTest;
 
     // By default, both test ledger mgrs use the same authority mgr.
-    const authInitData1 = abi.encode(['address', 'address'], [poc1.address, mgr1.address]);
-    const authInitData2 = abi.encode(['address', 'address'], [poc2.address, mgr2.address]);
+    const authInitData1 = abi.encode(['address', 'address'], [poc1.target, mgr1.target]);
+    const authInitData2 = abi.encode(['address', 'address'], [poc2.target, mgr2.target]);
 	console.log('About to deploy the authority managers');
-    const autorityMgr1 = await deployUsingDeployer('QuantumPortalAuthorityMgr', ctx.signers.acc1.address,
-        authInitData1, ctx.deployer.address, randomSalt(), ctx.signers.acc1) as QuantumPortalAuthorityMgr;
-    const autorityMgr2 = await deployUsingDeployer('QuantumPortalAuthorityMgr', ctx.signers.acc2.address,
-        authInitData2, ctx.deployer.address, randomSalt(), ctx.signers.acc2) as QuantumPortalAuthorityMgr;
+    const autorityMgr1 = await deployUsingDeployer('contracts/quantumPortal/poc/poa/QuantumPortalAuthorityMgr.sol:QuantumPortalAuthorityMgr', ctx.signers.acc1.address,
+        authInitData1, ctx.deployer, randomSalt(), ctx.signers.acc1) as QuantumPortalAuthorityMgr;
+    const autorityMgr2 = await deployUsingDeployer('contracts/quantumPortal/poc/poa/QuantumPortalAuthorityMgr.sol:QuantumPortalAuthorityMgr', ctx.signers.acc2.address,
+        authInitData2, ctx.deployer, randomSalt(), ctx.signers.acc2) as QuantumPortalAuthorityMgr;
 
     console.log('Deploying some tokens');
 	const tokenData = abi.encode(['address'], [ctx.owner]);

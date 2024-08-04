@@ -5,9 +5,10 @@ import {UUPSUpgradeable, Initializable} from "@openzeppelin/contracts-upgradeabl
 import {IQuantumPortalLedgerMgr} from "../../../quantumPortal/poc/IQuantumPortalLedgerMgr.sol";
 import {QuantumPortalLib} from "../../../quantumPortal/poc/QuantumPortalLib.sol";
 import {WithAdmin} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdmin.sol";
+import {WithGateway} from "./utils/WithGateway.sol";
 
 
-contract QuantumPortalStateUpgradeable is Initializable, UUPSUpgradeable, WithAdmin {
+contract QuantumPortalStateUpgradeable is Initializable, UUPSUpgradeable, WithAdmin, WithGateway {
     string public constant VERSION = "0.0.1";
 
     /// @custom:storage-location erc7201:ferrum.storage.quantumportalstate.001
@@ -29,8 +30,9 @@ contract QuantumPortalStateUpgradeable is Initializable, UUPSUpgradeable, WithAd
     // keccak256(abi.encode(uint256(keccak256("ferrum.storage.quantumportalstate.001")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant QuantumPortalStateStorageV001Location = 0x7ba18bc35c5bacc21dc6f03ccda4966cecb4a5730aa5a27939f833100d9a6400;
 
-    function initialize(address initialOwner, address initialAdmin) public initializer {
+    function initialize(address initialOwner, address initialAdmin, address gateway) public initializer {
         __WithAdmin_init(initialOwner, initialAdmin);
+        __WithGateway_init_unchained(gateway);
     }
 
     function _getQuantumPortalStateStorageV001() private pure returns (QuantumPortalStateStorageV001 storage $) {
@@ -39,7 +41,7 @@ contract QuantumPortalStateUpgradeable is Initializable, UUPSUpgradeable, WithAd
         }
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyGateway {}
 
     /**
      * @notice Only allow the QP ledger manager to call

@@ -3,14 +3,14 @@ pragma solidity ^0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {UUPSUpgradeable, Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
+import {WithAdmin} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdmin.sol";
+import {SafeAmount} from "foundry-contracts/contracts/contracts/common/SafeAmount.sol";
 import {IQuantumPortalLedgerMgr, IQuantumPortalLedgerMgrDependencies} from "../../../quantumPortal/poc/IQuantumPortalLedgerMgr.sol";
 import {IQuantumPortalStakeWithDelegate} from "../../../quantumPortal/poc/poa/stake/IQuantumPortalStakeWithDelegate.sol";
 import {IQuantumPortalPoc} from "../../../quantumPortal/poc/IQuantumPortalPoc.sol";
 import {IStakeV2} from "../../../staking/interfaces/IStakeV2.sol";
 import {IWETH} from "../../../uniswap/IWETH.sol";
-import "foundry-contracts/contracts/contracts/common/IFerrumDeployer.sol";
-import "foundry-contracts/contracts/contracts-upgradeable/common/WithAdmin.sol";
-import "foundry-contracts/contracts/contracts/common/SafeAmount.sol";
+import {IUUPSUpgradeable} from "./utils/IUUPSUpgradeable.sol";
 
 
 /**
@@ -42,7 +42,7 @@ contract QuantumPortalGatewayUpgradeable is Initializable, UUPSUpgradeable, With
         __WithAdmin_init(initialOwner, initialAdmin);
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyOwner {}
 
     function _getQuantumPortalGatewayStorageV001() internal pure returns (QuantumPortalGatewayStorageV001 storage $) {
         assembly {
@@ -83,6 +83,14 @@ contract QuantumPortalGatewayUpgradeable is Initializable, UUPSUpgradeable, With
         return
             IQuantumPortalLedgerMgrDependencies(address($.quantumPortalLedgerMgr))
                 .minerMgr();
+    }
+
+    function upgradeQpComponentAndCall(
+        address target,
+        address newImplementation,
+        bytes calldata data
+    ) external onlyOwner {
+        IUUPSUpgradeable(target).upgradeToAndCall(newImplementation, data);
     }
 
     /**

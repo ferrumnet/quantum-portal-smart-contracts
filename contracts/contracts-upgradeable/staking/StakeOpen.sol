@@ -9,6 +9,7 @@ import {IRewardPool} from "../../staking/interfaces/IRewardPool.sol";
 import {StakeFlags, StakingBasics} from "../../staking/library/StakingBasics.sol";
 import {VestingLibrary} from "../../staking/vesting/VestingLibrary.sol";
 import {BaseStakingV2} from "./BaseStakingV2.sol";
+import {WithGateway} from "../quantumPortal/poc/utils/WithGateway.sol";
 
 
 /**
@@ -18,7 +19,7 @@ import {BaseStakingV2} from "./BaseStakingV2.sol";
  * Supports min lock.
  * Cannot be tokenizable.
  */
-contract StakeOpen is Initializable, UUPSUpgradeable, Sweepable, BaseStakingV2, IRewardPool {
+contract StakeOpen is Initializable, UUPSUpgradeable, Sweepable, BaseStakingV2, WithGateway, IRewardPool {
     using StakeFlags for uint16;
     string constant public NAME = "FERRUM_STAKING_V2_OPEN";
     string constant public VERSION = "000.001";
@@ -31,13 +32,14 @@ contract StakeOpen is Initializable, UUPSUpgradeable, Sweepable, BaseStakingV2, 
     // keccak256(abi.encode(uint256(keccak256("ferrum.storage.stakeopen.001")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant StakeOpenStorageV001Location = 0xd1e594e328d6b9dce40c5be8d3fbae8ce305ff69cc672a339e247103e00d4f00;
 
-    function initialize(address _factory) public initializer {
+    function initialize(address _gateway) public initializer {
         __EIP712_init(NAME, VERSION);
         __Ownable_init(msg.sender);
-        __BaseStakingV2_init(_factory);
+        __WithGateway_init_unchained(_gateway);
+        __BaseStakingV2_init();
     }
 
-    function _authorizeUpgrade(address newImplementation) internal virtual override onlyOwner {}
+    function _authorizeUpgrade(address newImplementation) internal virtual override onlyGateway {}
 
     function initDefault(address token) external nonZeroAddress(token) {
         BaseStakingV2StorageV001 storage $b = _getBaseStakingV2StorageV001();

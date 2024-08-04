@@ -9,6 +9,7 @@ import {IQuantumPortalFinalizerPrecompile, QUANTUM_PORTAL_PRECOMPILE} from "../.
 import {QuantumPortalWorkPoolServer, IQuantumPortalWorkPoolServer} from "./QuantumPortalWorkPoolServer.sol";
 import {QuantumPortalWorkPoolClient} from "./QuantumPortalWorkPoolClient.sol";
 import {LibChainCheck} from "../../../../quantumPortal/poc/utils/LibChainCheck.sol";
+import {WithGateway} from "../utils/WithGateway.sol";
 
 
 /**
@@ -22,6 +23,7 @@ contract QuantumPortalAuthorityMgr is
     QuantumPortalWorkPoolClient,
     QuantumPortalWorkPoolServer,
     MultiSigCheckable,
+    WithGateway,
     IQuantumPortalAuthorityMgr
 {
     string public constant NAME = "FERRUM_QUANTUM_PORTAL_AUTHORITY_MGR";
@@ -35,14 +37,16 @@ contract QuantumPortalAuthorityMgr is
         address ledgerMgr,
         address _portal,
         address initialOwner,
-        address initialAdmin
+        address initialAdmin,
+        address gateway
     ) public initializer {
         __EIP712_init(NAME, VERSION);
-        __QuantimPortalWorkPoolServer_init(ledgerMgr, _portal, initialOwner, initialAdmin);        
+        __QuantimPortalWorkPoolServer_init(ledgerMgr, _portal, initialOwner, initialAdmin);
+        __WithGateway_init_unchained(gateway);        
         __UUPSUpgradeable_init();
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyGateway {}
     
     /**
      * @notice Validates the authority signature

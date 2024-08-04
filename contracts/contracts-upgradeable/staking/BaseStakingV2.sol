@@ -24,7 +24,6 @@ abstract contract BaseStakingV2 is
 	using StakeFlags for uint16;
 	/// @custom:storage-location erc7201:ferrum.storage.basestakingv2.001
 	struct BaseStakingV2StorageV001 {
-		address factory;
 		address creationSigner;
 		StakingBasics.StakeExtraInfo extraInfo;
 		StakingBasics.StakeBaseInfo baseInfo;
@@ -52,18 +51,9 @@ abstract contract BaseStakingV2 is
 		_;
 	}
 
-	function __BaseStakingV2_init(address _factory) internal onlyInitializing {
+	function __BaseStakingV2_init() internal onlyInitializing {
 		// __EIP712Upgradeable_init(); // This needs to be called from child contract!
 		__TokenReceivable_init();
-		__BaseStakingV2_init_unchained(_factory);
-	}
-
-	function __BaseStakingV2_init_unchained(address _factory) internal onlyInitializing {
-		_getBaseStakingV2StorageV001().factory = _factory;
-	}
-
-	function factory() public view returns (address) {
-		return _getBaseStakingV2StorageV001().factory;
 	}
 
 	function creationSigner() public view returns (address) {

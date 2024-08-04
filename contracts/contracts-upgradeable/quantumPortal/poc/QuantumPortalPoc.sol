@@ -13,6 +13,7 @@ import {IQuantumPortalLedgerMgr} from "../../../quantumPortal/poc/IQuantumPortal
 import {TokenReceivable} from "../../staking/library/TokenReceivable.sol";
 import {PortalLedger} from "./PortalLedger.sol";
 import {QuantumPortalLib} from "../../../quantumPortal/poc/QuantumPortalLib.sol";
+import {WithGateway} from "./utils/WithGateway.sol";
 
 
 /**
@@ -22,6 +23,7 @@ abstract contract QuantumPortalPoc is
     Initializable, 
     UUPSUpgradeable,
     TokenReceivable,
+    WithGateway,
     PortalLedger,
     IQuantumPortalPoc,
     IVersioned
@@ -38,12 +40,13 @@ abstract contract QuantumPortalPoc is
     // keccak256(abi.encode(uint256(keccak256("ferrum.storage.quantumportalpoc.001")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant QuantumPortalPocStorageV001Location = 0x3efde86585235858ed707e4bfec31c6043b9cbe60e54ce19376b9c89b48f7600;
 
-    function initialize(address initialOwner, address initialAdmin) public initializer {
+    function initialize(address initialOwner, address initialAdmin, address gateway) public initializer {
         __PortalLedger_init(initialOwner, initialAdmin);
+        __WithGateway_init_unchained(gateway);
         __TokenReceivable_init();
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyGateway {}
 
     function _getQuantumPortalPocStorageV001() internal pure returns (QuantumPortalPocStorageV001 storage $) {
         assembly {

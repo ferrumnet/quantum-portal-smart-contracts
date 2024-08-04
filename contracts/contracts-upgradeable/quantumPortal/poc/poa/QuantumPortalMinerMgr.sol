@@ -8,6 +8,7 @@ import {MultiSigLib} from "foundry-contracts/contracts/contracts/signature/Multi
 import {IQuantumPortalMinerMgr} from "../../../../quantumPortal/poc/poa/IQuantumPortalMinerMgr.sol";
 import {IQuantumPortalStakeWithDelegate} from "../../../../quantumPortal/poc/poa/stake/IQuantumPortalStakeWithDelegate.sol";
 import {IDelegator} from "../../../../quantumPortal/poc/poa/IDelegator.sol";
+import {WithGateway} from "../utils/WithGateway.sol";
 import {QuantumPortalWorkPoolClient, IQuantumPortalWorkPoolClient} from "./QuantumPortalWorkPoolClient.sol";
 import {QuantumPortalWorkPoolServer, IQuantumPortalWorkPoolServer} from "./QuantumPortalWorkPoolServer.sol";
 import {QuantumPortalMinerMembership, IQuantumPortalMinerMembership} from "./QuantumPortalMinerMembership.sol";
@@ -26,6 +27,7 @@ contract QuantumPortalMinerMgr is
     Initializable,
     UUPSUpgradeable,
     EIP712Upgradeable,
+    WithGateway,
     QuantumPortalWorkPoolServer,
     QuantumPortalWorkPoolClient,
     QuantumPortalMinerMembership
@@ -64,16 +66,18 @@ contract QuantumPortalMinerMgr is
     function initialize(
         address _miningStake,
         address _portal,
-        address _mgr
+        address _mgr,
+        address _gateway
     ) public initializer {
         QuantumPortalMinerMgrStorageV001 storage $ = _getQuantumPortalMinerMgrStorageV001();
         $.miningStake = _miningStake;
         __EIP712_init(NAME, VERSION);
         __QuantimPortalWorkPoolServer_init(_mgr, _portal, msg.sender, msg.sender);
+        __WithGateway_init_unchained(_gateway);
         __UUPSUpgradeable_init();
     }
     
-    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyGateway {}
 
     function miningStake() public view returns (address) {
         return _getQuantumPortalMinerMgrStorageV001().miningStake;

@@ -9,7 +9,7 @@ import { IVersioned } from "../../typechain/IVersioned";
 export const ZeroAddress = '0x' + '0'.repeat(40);
 export const Salt = '0x' + '12'.repeat(32);
 
-export const abi = ethers.utils.defaultAbiCoder;
+export const abi = new ethers.AbiCoder();
 
 export const _WETH: {[k: number]: string} = {
 	4: '0xc778417e063141139fce010982780140aa0cd5ab',
