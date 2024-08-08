@@ -2,16 +2,16 @@
 pragma solidity ^0.8.24;
 
 import {Initializable, UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {WithAdmin} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdmin.sol";
 import {FixedPoint128} from "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
-import {WithGateway} from "../utils/WithGateway.sol";
+import {WithAdminUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdminUpgradeable.sol";
+import {WithGatewayUpgradeable} from "../utils/WithGatewayUpgradeable.sol";
 import {IPriceOracle} from "../../../../fee/IPriceOracle.sol";
 
 
 /**
  * @notice Fee convertor utility for QP. Used for gas calculations
  */
-contract QuantumPortalFeeConverter is Initializable, UUPSUpgradeable, WithAdmin, WithGateway {
+contract QuantumPortalFeeConverterUpgradeable is Initializable, UUPSUpgradeable, WithAdminUpgradeable, WithGatewayUpgradeable {
     string public constant VERSION = "0.0.1";
 
     /// @custom:storage-location erc7201:ferrum.storage.quantumportalfeeconverter.001

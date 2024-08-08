@@ -2,13 +2,13 @@
 pragma solidity ^0.8.24;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {WithAdmin} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdmin.sol";
+import {WithAdminUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdminUpgradeable.sol";
 
 
 /**
  * @notice Inherit this contract to acces basic QP behaviours
  */
-abstract contract WithLedgerMgr is Initializable, WithAdmin {
+abstract contract WithLedgerMgrUpgradeable is Initializable, WithAdminUpgradeable {
     /// @custom:storage-location erc7201:ferrum.storage.withledgermgr.001
     struct WithLedgerMgrStorageV001 {
         address qpLedgerMgr;

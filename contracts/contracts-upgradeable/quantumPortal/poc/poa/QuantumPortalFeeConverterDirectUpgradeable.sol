@@ -3,15 +3,21 @@ pragma solidity ^0.8.24;
 
 import {Initializable, UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {FixedPoint128} from "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
-import {WithAdmin} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdmin.sol";
-import {WithGateway} from "../utils/WithGateway.sol";
 import {IQuantumPortalFeeConvertor} from "../../../../quantumPortal/poc/poa/IQuantumPortalFeeConvertor.sol";
+import {WithAdminUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdminUpgradeable.sol";
+import {WithGatewayUpgradeable} from "../utils/WithGatewayUpgradeable.sol";
 
 
 /**
  * @notice Direct fee convertor for QP. The fee should be update by a trusted third party regularly
  */
-contract QuantumPortalFeeConverterDirect is IQuantumPortalFeeConvertor, Initializable, UUPSUpgradeable, WithAdmin, WithGateway {
+contract QuantumPortalFeeConverterDirectUpgradeable is
+    IQuantumPortalFeeConvertor,
+    Initializable,
+    UUPSUpgradeable,
+    WithAdminUpgradeable,
+    WithGatewayUpgradeable
+{
     string public constant VERSION = "0.0.1";
     uint constant DEFAULT_PRICE = 0x100000000000000000000000000000000; //FixedPoint128.Q128;
 

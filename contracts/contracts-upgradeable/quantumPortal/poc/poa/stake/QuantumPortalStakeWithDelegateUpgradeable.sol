@@ -5,10 +5,9 @@ import {Initializable, UUPSUpgradeable} from "@openzeppelin/contracts-upgradeabl
 import {FullMath} from "foundry-contracts/contracts/contracts/math/FullMath.sol";
 import {FixedPoint128} from "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
 import {IQuantumPortalStakeWithDelegate} from "../../../../../quantumPortal/poc/poa/stake/IQuantumPortalStakeWithDelegate.sol";
-import {IQuantumPortalAuthorityMgr, QuantumPortalAuthorityMgr} from "../QuantumPortalAuthorityMgr.sol";
-import {Delegator} from "../Delegator.sol";
-import {IOperatorRelation, OperatorRelation} from "./OperatorRelation.sol";
-import {StakeOpen} from "../../../../staking/StakeOpen.sol";
+import {IQuantumPortalAuthorityMgr, QuantumPortalAuthorityMgrUpgradeable} from "../QuantumPortalAuthorityMgrUpgradeable.sol";
+import {IOperatorRelation, OperatorRelationUpgradeable} from "./OperatorRelationUpgradeable.sol";
+import {StakeOpenUpgradeable} from "../../../../staking/StakeOpenUpgradeable.sol";
 
 
 /**
@@ -20,11 +19,11 @@ import {StakeOpen} from "../../../../staking/StakeOpen.sol";
     3 - Slash will be applied to a whole group of stakers that delegated to an address.
     4 - Once someone is slashed, the group cannot stake any more.
  */
-contract QuantumPortalStakeWithDelegate is
+contract QuantumPortalStakeWithDelegateUpgradeable is
     Initializable,
     UUPSUpgradeable,
-    StakeOpen,
-    OperatorRelation,
+    StakeOpenUpgradeable,
+    OperatorRelationUpgradeable,
     IQuantumPortalStakeWithDelegate
 {
     uint64 constant WITHDRAW_LOCK = 30 days;
@@ -61,19 +60,19 @@ contract QuantumPortalStakeWithDelegate is
     }
 
     function initialize(
-        address token,
-        address authority,
+        address _token,
+        address _authority,
         address _stakeVerifyer,
         address _gateway
     ) public initializer {
         super.initialize(_gateway); // initialize() from StakeOpen
         address[] memory tokens = new address[](1);
-        tokens[0] = token;
-        _init(token, "QP Stake", tokens);
+        tokens[0] = _token;
+        _init(_token, "QP Stake", tokens);
 
         QuantumPortalStakeWithDelegateStorageV001 storage $ = _getQuantumPortalStakeWithDelegateStorageV001();
-        $.STAKE_ID = token;
-        $.auth = IQuantumPortalAuthorityMgr(authority);
+        $.STAKE_ID = _token;
+        $.auth = IQuantumPortalAuthorityMgr(_authority);
         $.stakeVerifyer = IQuantumPortalAuthorityMgr(_stakeVerifyer);
     }
 
@@ -289,7 +288,7 @@ contract QuantumPortalStakeWithDelegate is
         address delegate = $.delegations[to];
         require(delegate != address(0), "QPS: no delegate assigned");
         require($.delegateSlash[delegate] == 0, "QPS: delegate is slashed");
-        uint256 amount = StakeOpen._stake(to, id, 0);
+        uint256 amount = StakeOpenUpgradeable._stake(to, id, 0);
         require(address($.stakeVerifyer) == address(0) || allocation >= amount, "QPS: not enough allocation");
         $.delegateStake[delegate] = $.delegateStake[delegate] + amount;
         return amount;

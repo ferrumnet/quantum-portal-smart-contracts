@@ -5,7 +5,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 import {StakingBasics} from "../../../staking/library/StakingBasics.sol";
 
 
-abstract contract Admined is OwnableUpgradeable {
+abstract contract AdminedUpgradeable is OwnableUpgradeable {
 	/// @custom:storage-location erc7201:ferrum.storage.admined.001
 	struct AdminedStorageV001 {
 		mapping(address => mapping(address => StakingBasics.AdminRole)) admins;

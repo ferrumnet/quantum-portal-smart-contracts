@@ -7,7 +7,7 @@ import {IVersioned} from "foundry-contracts/contracts/contracts/common/IVersione
 import {FullMath} from "foundry-contracts/contracts/contracts/math/FullMath.sol";
 import {FixedPoint128} from "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
 import {SafeAmount} from "foundry-contracts/contracts/contracts/common/SafeAmount.sol";
-import {WithAdmin} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdmin.sol";
+import {WithAdminUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdminUpgradeable.sol";
 import {IQuantumPortalPoc} from "../../../quantumPortal/poc/IQuantumPortalPoc.sol";
 import {IWETH} from "../../../uniswap/IWETH.sol";
 import {IQuantumPortalFeeConvertor} from "../../../quantumPortal/poc/poa/IQuantumPortalFeeConvertor.sol";
@@ -17,11 +17,11 @@ import {IQuantumPortalNativeFeeRepo} from "../../../quantumPortal/poc/IQuantumPo
 /**
  * @notice The quantum portal main contract for multi-chain dApps
  */
-abstract contract QuantumPortalNativeFeeRepo is
+abstract contract QuantumPortalNativeFeeRepoUpgradeable is
     IQuantumPortalNativeFeeRepo,
     IQuantumPortalPoc,
     IVersioned,
-    WithAdmin
+    WithAdminUpgradeable
 {
     using SafeERC20 for IERC20;
     string public constant override VERSION = "000.001";

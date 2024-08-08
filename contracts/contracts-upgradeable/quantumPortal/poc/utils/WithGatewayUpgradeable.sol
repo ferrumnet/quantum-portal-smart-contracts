@@ -8,7 +8,7 @@ import {OwnableUpgradeable} from "@openzeppelin/contracts-upgradeable/access/Own
 /**
  * @notice Contract for gateway access control
  */
-abstract contract WithGateway is Initializable, OwnableUpgradeable {
+abstract contract WithGatewayUpgradeable is Initializable, OwnableUpgradeable {
     /// @custom:storage-location erc7201:ferrum.storage.withgateway.001
     struct WithGatewayStorageV001 {
         address gateway;

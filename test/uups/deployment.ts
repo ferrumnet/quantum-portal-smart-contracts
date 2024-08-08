@@ -82,8 +82,70 @@ describe("Proxy version", function () {
             await QuantumPortalUtils.stakeAndDelegate(ctx.chain2.ledgerMgr, ctx.chain2.stake, '10', ctx.owner, ctx.wallets[0], ctx.signers.owner, ctx.sks[0]);
             console.log('- Staked and delegated....');
             
-            console.log('WIP')
-            // .... Add remaining unit test from /test/quantumPortal/poc/TestQuantumPortalBasics.ts
+            const txs = [{
+                token: tx.token.toString(),
+                amount: tx.amount.toString(),
+                gas: tx.gas.toString(),
+                fixedFee: tx.fixedFee.toString(),
+                methods: tx.methods.length ? [tx.methods[0].toString()] : [],
+                remoteContract: tx.remoteContract.toString(),
+                sourceBeneficiary: tx.sourceBeneficiary.toString(),
+                sourceMsgSender: tx.sourceMsgSender.toString(),
+                timestamp: tx.timestamp.toString(),
+            }];
+            const [salt, expiry, signature] = await QuantumPortalUtils.generateSignatureForMining(
+                ctx.chain2.ledgerMgr,
+                ctx.chain1.chainId.toString(),
+                '1',
+                txs,
+                ctx.sks[0], // Miner...
+            );
+            console.log('Mining remote block');
+            await ctx.chain2.ledgerMgr.mineRemoteBlock(
+                ctx.chain1.chainId,
+                '1',
+                txs,
+                salt,
+                expiry,
+                signature,
+            );
+            console.log('Mined');
+            let minedBlock = await ctx.chain2.ledgerMgr.minedBlockByNonce(ctx.chain1.chainId, 1);
+            console.log('Mined block is ', JSON.stringify(Number(minedBlock), undefined, 2));
+
+            console.log('Now checking the work done');
+            let workDone = await ctx.chain2.minerMgr.totalWork(ctx.chain1.chainId);
+            let myWork = await ctx.chain2.minerMgr.works(ctx.chain1.chainId, ctx.wallets[0]);
+            console.log(`Toral work is ${workDone} - vs mine: ${myWork} - ${ctx.wallets[0]}`);
+            expect(workDone.toString()).to.be.equal('288');
+            expect(myWork.toString()).to.be.equal('288');
+            console.log('Now finalizing on chain2');
+            await QuantumPortalUtils.finalize(
+                ctx.chain1.chainId,
+                ctx.chain2.ledgerMgr,
+                ctx.chain2.state,
+                ctx.sks[0],
+            );
+    
+            console.log('Now checking the work done - after finalization');
+            workDone = await ctx.chain2.minerMgr.totalWork(ctx.chain1.chainId);
+            myWork = await ctx.chain2.minerMgr.works(ctx.chain1.chainId, ctx.owner);
+            console.log(`Toral work is ${workDone} - vs mine: ${myWork} - ${ctx.owner}`); // Finalizer work is registered to the owner
+            expect(workDone.toString()).to.be.equal('576');
+            expect(myWork.toString()).to.be.equal('288');
+
+            console.log('Checking the variable work done registered by authority mgr');
+            workDone = await ctx.chain2.autorityMgr.totalWork(ctx.chain1.chainId);
+            myWork = await ctx.chain2.autorityMgr.works(ctx.chain1.chainId, ctx.owner);
+            console.log(`Work done by authority is ${workDone} - vs mine: ${myWork} - ${ctx.owner}`); // Finalizer work is registered to the owner
+            expect(workDone.toString()).to.be.equal('30138');
+            expect(myWork.toString()).to.be.equal('30138');
+
+            let remoteBalance = Wei.to((await ctx.chain2.poc.remoteBalanceOf(ctx.chain1.chainId, ctx.chain1.token.target, tx.remoteContract.toString())).toString());
+            console.log('Remote balance for acc1, token1 is', remoteBalance.toString());
+            expect(remoteBalance).to.be.equal('20.0');
+
+            console.log(ctx.chain1.token.target)
         });
     });
 });

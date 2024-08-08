@@ -2,15 +2,15 @@
 pragma solidity ^0.8.0;
 
 import {UUPSUpgradeable, Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {WithAdmin} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdmin.sol";
-import {WithGateway} from "../utils/WithGateway.sol";
+import {WithAdminUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdminUpgradeable.sol";
+import {WithGatewayUpgradeable} from "../utils/WithGatewayUpgradeable.sol";
 import {IDelegator} from "../../../../quantumPortal/poc/poa/IDelegator.sol";
 
 
 /**
  * @notice A delegator allows delegation.
  */
-contract Delegator is Initializable, UUPSUpgradeable, WithAdmin, WithGateway {
+contract DelegatorUpgradeable is Initializable, UUPSUpgradeable, WithAdminUpgradeable, WithGatewayUpgradeable {
     /// @custom:storage-location erc7201:ferrum.storage.delegator.001
     struct DelegatorStorageV001 {
         mapping(address => address) delegation;

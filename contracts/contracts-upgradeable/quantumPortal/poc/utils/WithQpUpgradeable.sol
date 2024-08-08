@@ -2,14 +2,14 @@
 pragma solidity ^0.8.24;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {WithAdmin} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdmin.sol";
+import {WithAdminUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdminUpgradeable.sol";
 import {IQuantumPortalPoc} from "../../../../quantumPortal/poc/IQuantumPortalPoc.sol";
 
 
 /**
  * @notice Inherit this contract to acces basic QP behaviours
  */
-abstract contract WithQp is Initializable, WithAdmin {
+abstract contract WithQpUpgradeable is Initializable, WithAdminUpgradeable {
     /// @custom:storage-location erc7201:ferrum.storage.withqp.001
     struct WithQpStorageV001 {
         IQuantumPortalPoc portal;

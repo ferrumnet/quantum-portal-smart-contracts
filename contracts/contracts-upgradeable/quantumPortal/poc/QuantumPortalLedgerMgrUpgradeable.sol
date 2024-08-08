@@ -5,7 +5,7 @@ import {UUPSUpgradeable, Initializable} from "@openzeppelin/contracts-upgradeabl
 import {IVersioned} from "foundry-contracts/contracts/contracts/common/IVersioned.sol";
 import {FullMath} from "foundry-contracts/contracts/contracts/math/FullMath.sol";
 import {FixedPoint128} from "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
-import {WithAdmin} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdmin.sol";
+import {WithAdminUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdminUpgradeable.sol";
 import {IQuantumPortalLedgerMgr} from "../../../quantumPortal/poc/IQuantumPortalLedgerMgr.sol";
 import {IQuantumPortalMinerMgr} from "../../../quantumPortal/poc/poa/IQuantumPortalMinerMgr.sol";
 import {IQuantumPortalAuthorityMgr} from "../../../quantumPortal/poc/poa/IQuantumPortalAuthorityMgr.sol";
@@ -16,9 +16,8 @@ import {IQuantumPortalWorkPoolClient} from "../../../quantumPortal/poc/poa/IQuan
 import {IQuantumPortalWorkPoolServer} from "../../../quantumPortal/poc/poa/IQuantumPortalWorkPoolServer.sol";
 import {QuantumPortalMinerMgr} from "../../../quantumPortal/poc/poa/QuantumPortalMinerMgr.sol";
 import {QuantumPortalLib} from "../../../quantumPortal/poc/QuantumPortalLib.sol";
-import {PortalLedger} from "./PortalLedger.sol";
-import {QuantumPortalState} from "../../../quantumPortal/poc/QuantumPortalState.sol";
-import {WithGateway} from "./utils/WithGateway.sol";
+import {PortalLedgerUpgradeable} from "./PortalLedgerUpgradeable.sol";
+import {WithGatewayUpgradeable} from "./utils/WithGatewayUpgradeable.sol";
 
 
 /**
@@ -27,7 +26,7 @@ import {WithGateway} from "./utils/WithGateway.sol";
  Local blocks are virtual, meaning, they do not need to be implicitly generate.
  However, they are completely deterministic and updated as transactions are being added.
 */
-contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, WithAdmin, WithGateway, IVersioned {
+contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, WithAdminUpgradeable, WithGatewayUpgradeable, IVersioned {
     uint256 constant FIX_TX_SIZE = 9 * 32;
     uint256 constant FIXED_REJECT_SIZE = 9 * 32;
     uint256 constant BLOCK_PERIOD = 2 minutes; // One block per two minutes?
@@ -40,14 +39,13 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
     /// @custom:storage-location erc7201:ferrum.storage.quantumportalledgermgr.001
     struct QuantumPortalLedgerMgrStorageV001 {
         uint256 minerMinimumStake;
-        QuantumPortalState state;
-        address ledger;
         address minerMgr;
         address authorityMgr;
         address feeConvertor;
         address varFeeTarget;
         address fixedFeeTarget;
         address stakes;
+        PortalLedgerUpgradeable ledger;
     }
 
     // keccak256(abi.encode(uint256(keccak256("ferrum.storage.quantumportalledgermgr.001")) - 1)) & ~bytes32(uint256(0xff))
@@ -108,7 +106,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
      * @notice Can only be called by ledger 
      */
     modifier onlyLedger() {
-        require(msg.sender == ledger(), "QPLM: Not allowed");
+        require(msg.sender == address(ledger()), "QPLM: Not allowed");
         _;
     }
 
@@ -116,33 +114,14 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         CHAIN_ID = overrideChainId == 0 ? block.chainid : overrideChainId;
     }
 
-    function initialize(address initialOwner, address initialAdmin, address gateway) public initializer {
+    function initialize(address initialOwner, address initialAdmin, uint256 _minerMinimumStake, address gateway) public initializer {
         __WithAdmin_init(initialOwner, initialAdmin);
         __WithGateway_init_unchained(gateway);
         QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
-        $.minerMinimumStake = 1_000_000 ether;
+        $.minerMinimumStake = _minerMinimumStake;
     }
 
     function _authorizeUpgrade(address) internal override onlyGateway {}
-
-    function state() public view returns (QuantumPortalState) {
-        QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
-        return $.state;
-    }
-
-    function ledger() public view returns (address) {
-        QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
-        return $.ledger;
-    }
-
-    /**
-     * @notice Restricted: Update the state contract
-     * @param _state The state contract
-     */
-    function updateState(address _state) external onlyAdmin {
-        QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
-        $.state = QuantumPortalState(_state);
-    }
 
     /**
      * @notice Restricted: Update ledger address
@@ -150,7 +129,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
      */
     function updateLedger(address _ledger) external onlyAdmin {
         QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
-        $.ledger = _ledger;
+        $.ledger = PortalLedgerUpgradeable(_ledger);
     }
 
     /**
@@ -290,7 +269,6 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         bytes memory multiSignature,
         address rewardReceiver
     ) external {
-        QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
         // We don't know the MinerMgr contract address on the remote chain, so we cannot extract that the
         // fragulent block is signed by the claimed "fradulentMiner".
         // This is not a problem because we will check this before accepting the fraud proof tx on the other side
@@ -301,7 +279,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         bytes32 blockHash;
         {
             uint256 key = blockIdx(uint64(CHAIN_ID), localBlockNonce);
-            QuantumPortalLib.Block memory _block = $.state
+            QuantumPortalLib.Block memory _block = ledger()
                 .getLocalBlocks(key)
                 .metadata;
             fraudDetected =
@@ -309,7 +287,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
                 _block.nonce != localBlockNonce ||
                 _block.timestamp != localBlockTimestamp ||
                 transactions.length !=
-                $.state.getLocalBlockTransactionLength(key);
+                ledger().getLocalBlockTransactionLength(key);
             blockHash = _calculateBlockHash(
                 uint64(CHAIN_ID),
                 localBlockNonce,
@@ -324,7 +302,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
             );
             if (!fraudDetected) {
                 for (uint i = 0; i < transactions.length; i++) {
-                    QuantumPortalLib.RemoteTransaction memory t = $.state
+                    QuantumPortalLib.RemoteTransaction memory t = ledger()
                         .getLocalBlockTransaction(key, i);
                     fraudDetected =
                         fraudDetected ||
@@ -353,8 +331,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
      @param chainId The chain ID.
      */
     function isLocalBlockReady(uint64 chainId) external view returns (bool) {
-        QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
-        return _isLocalBlockReady($.state.getLastLocalBlock(chainId));
+        return _isLocalBlockReady(ledger().getLastLocalBlock(chainId));
     }
 
     /**
@@ -364,8 +341,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
     function lastRemoteMinedBlock(
         uint64 chainId
     ) external view returns (QuantumPortalLib.Block memory _block) {
-        QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
-        _block = $.state.getLastMinedBlock(chainId);
+        _block = ledger().getLastMinedBlock(chainId);
     }
 
     /**
@@ -386,10 +362,9 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
             QuantumPortalLib.RemoteTransaction[] memory txs
         )
     {
-        QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
         uint256 key = blockIdx(chainId, blockNonce);
-        b = $.state.getMinedBlock(key);
-        txs = $.state.getMinedBlockTransactions(key);
+        b = ledger().getMinedBlock(key);
+        txs = ledger().getMinedBlockTransactions(key);
     }
 
     /**
@@ -410,11 +385,10 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
             QuantumPortalLib.RemoteTransaction[] memory
         )
     {
-        QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
         uint256 key = blockIdx(chainId, blockNonce);
         return (
-            $.state.getLocalBlocks(key),
-            $.state.getLocalBlockTransactions(key)
+            ledger().getLocalBlocks(key),
+            ledger().getLocalBlockTransactions(key)
         );
     }
 
@@ -460,8 +434,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         
         require(remoteChainId != 0, "QPLM: remoteChainId required");
         {
-            QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
-            uint256 lastNonce = $.state.getLastMinedBlock(remoteChainId).nonce;
+            uint256 lastNonce = ledger().getLastMinedBlock(remoteChainId).nonce;
             require(
                 blockNonce == lastNonce + 1,
                 "QPLM: cannot jump or retrace nonce"
@@ -501,7 +474,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
                     expiry,
                     multiSignature,
                     totalValue,
-                    _minerMinimumStake()
+                    minerMinimumStake()
                 );
 
             {
@@ -520,7 +493,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
 
             {
                 uint256 stake = stakeOf(miner);
-                require(stake >= _minerMinimumStake(), "QPLM: not enough stake");
+                require(stake >= minerMinimumStake(), "QPLM: not enough stake");
             }
             if (
                 validationResult !=
@@ -546,7 +519,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
                     nonce: blockNonce,
                     timestamp: uint64(block.timestamp)
                 });
-            state().setLastMinedBlock(remoteChainId, blockMetadata);
+            ledger().setLastMinedBlock(remoteChainId, blockMetadata);
             uint256 minerStake = stakeOf(miner);
             mb = IQuantumPortalLedgerMgr.MinedBlock({
                 blockHash: blockHash,
@@ -565,10 +538,9 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
             );
         } // Stack depth
         uint256 key = blockIdx(remoteChainId, blockNonce);
-        QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
-        $.state.setMinedBlock(key, mb);
+        ledger().setMinedBlock(key, mb);
         for (uint i = 0; i < transactions.length; i++) {
-            $.state.pushMinedBlockTransactions(key, transactions[i]);
+            ledger().pushMinedBlockTransactions(key, transactions[i]);
         }
     }
 
@@ -676,7 +648,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
         // We can allow self chain mining
         // require(remoteChainId != CHAIN_ID, "QPLM: bad remoteChainId");
-        QuantumPortalLib.Block memory b = $.state.getLastLocalBlock(
+        QuantumPortalLib.Block memory b = ledger().getLastLocalBlock(
             remoteChainId
         );
         uint256 key = blockIdx(remoteChainId, b.nonce);
@@ -699,9 +671,9 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
             b.nonce++;
             b.timestamp = uint64(block.timestamp);
             b.chainId = remoteChainId;
-            $.state.setLastLocalBlock(remoteChainId, b);
+            ledger().setLastLocalBlock(remoteChainId, b);
             key = blockIdx(remoteChainId, b.nonce);
-            $.state.setLocalBlocks(
+            ledger().setLocalBlocks(
                 key,
                 IQuantumPortalLedgerMgr.LocalBlock({metadata: b})
             );
@@ -714,7 +686,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
             fixedFee
         );
         remoteTx.gas = varFee;
-        $.state.pushLocalBlockTransactions(key, remoteTx);
+        ledger().pushLocalBlockTransactions(key, remoteTx);
         emit RemoteTransactionRegistered(
             remoteTx.timestamp,
             remoteTx.remoteContract,
@@ -744,14 +716,14 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         address[] memory finalizers
     ) internal {
         {
-            QuantumPortalLib.Block memory lastMinedB = state().getLastMinedBlock(
+            QuantumPortalLib.Block memory lastMinedB = ledger().getLastMinedBlock(
                 remoteChainId
             );
             require(lastMinedB.chainId != 0, "QPLM: No block is mined");
             require(blockNonce <= lastMinedB.nonce, "QPLM: nonce not mined");
         }
 
-        QuantumPortalLib.Block memory lastFinB = state().getLastFinalizedBlock(
+        QuantumPortalLib.Block memory lastFinB = ledger().getLastFinalizedBlock(
             remoteChainId
         );
         require(
@@ -791,7 +763,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
             totalMinedWork,
             blockNonce
         );
-        IQuantumPortalWorkPoolClient(_authorityMgr()).registerWork(
+        IQuantumPortalWorkPoolClient(authorityMgr()).registerWork(
             remoteChainId,
             msg.sender,
             totalVarWork,
@@ -799,7 +771,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         );
 
         for (uint i = 0; i < finalizers.length; i++) {
-            state().pushFinalizationStake(
+            ledger().pushFinalizationStake(
                 finalizedKey,
                 IQuantumPortalLedgerMgr.FinalizerStake({
                     finalizer: finalizers[i],
@@ -807,7 +779,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
                 })
             );
         }
-        state().setLastFinalizedBlock(
+        ledger().setLastFinalizedBlock(
             remoteChainId,
             QuantumPortalLib.Block({
                 chainId: uint64(remoteChainId),
@@ -851,8 +823,8 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
             // We are XOR ing the block hashes. AS the hashes are random, this will not be theoretically secure
             // but as we have a small finite list of items that can be played with, (e.g. block hashes form a range of epocs)
             // a simple xor is enough. The finHash is only used for sanity check offline, so it is not critical information
-            finHash = finHash ^ state().getMinedBlock(bkey).blockHash;
-            totalBlockStake += state().getMinedBlock(bkey).stake;
+            finHash = finHash ^ ledger().getMinedBlock(bkey).blockHash;
+            totalBlockStake += ledger().getMinedBlock(bkey).stake;
             if (
                 invalids.length != 0 &&
                 i == invalids[invalidIdx] &&
@@ -882,7 +854,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
                 finalizersHash: finalizersHash,
                 totalBlockStake: totalBlockStake
             });
-        state().setFinalization(finalizedKey, fin);
+        ledger().setFinalization(finalizedKey, fin);
     }
 
     /**
@@ -894,11 +866,11 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         uint256 key
     ) internal returns (uint256 totalMineWork, uint256 totalVarWork) {
         QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
-        IQuantumPortalLedgerMgr.MinedBlock memory b = $.state.getMinedBlock(key);
-        PortalLedger qp = PortalLedger($.ledger);
+        IQuantumPortalLedgerMgr.MinedBlock memory b = ledger().getMinedBlock(key);
+        PortalLedgerUpgradeable qp = PortalLedgerUpgradeable($.ledger);
         uint256 gasPrice = IQuantumPortalFeeConvertor($.feeConvertor)
             .localChainGasTokenPriceX128();
-        QuantumPortalLib.RemoteTransaction[] memory transactions = $.state
+        QuantumPortalLib.RemoteTransaction[] memory transactions = ledger()
             .getMinedBlockTransactions(key);
         for (uint i = 0; i < transactions.length; i++) {
             QuantumPortalLib.RemoteTransaction memory t = transactions[i];
@@ -940,12 +912,12 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
      */
     function rejectBlock(uint256 key) internal returns (uint256 totalMineWork) {
         QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
-        $.state.setMinedBlockAsInvalid(key);
-        IQuantumPortalLedgerMgr.MinedBlock memory b = $.state.getMinedBlock(key);
-        PortalLedger qp = PortalLedger($.ledger);
+        ledger().setMinedBlockAsInvalid(key);
+        IQuantumPortalLedgerMgr.MinedBlock memory b = ledger().getMinedBlock(key);
+        PortalLedgerUpgradeable qp = PortalLedgerUpgradeable($.ledger);
         uint256 gasPrice = IQuantumPortalFeeConvertor($.feeConvertor)
             .localChainGasTokenPriceX128();
-        QuantumPortalLib.RemoteTransaction[] memory transactions = $.state
+        QuantumPortalLib.RemoteTransaction[] memory transactions = ledger()
             .getMinedBlockTransactions(key);
         for (uint i = 0; i < transactions.length; i++) {
             QuantumPortalLib.RemoteTransaction memory t = transactions[i];
@@ -984,7 +956,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
             bytes memory multiSignature
         ) = abi.decode(t.methods[0], (bytes32, uint256, bytes32, uint64, bytes));
         uint256 key = blockIdx(sourceChainId, uint64(nonce));
-        IQuantumPortalLedgerMgr.MinedBlock memory b = state().getMinedBlock(key);
+        IQuantumPortalLedgerMgr.MinedBlock memory b = ledger().getMinedBlock(key);
         if (b.blockHash == blockHash) {
             // Block is indeed mined
             // First extract the miner address from the signature
@@ -1081,15 +1053,35 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         return  _getQuantumPortalLedgerMgrStorageV001().minerMgr;
     }
 
-    function _minerMinimumStake() public view returns (uint256) {
+    function minerMinimumStake() public view returns (uint256) {
         return _getQuantumPortalLedgerMgrStorageV001().minerMinimumStake;
     }
 
-    function _authorityMgr() private view returns (address) {
+    function authorityMgr() public view returns (address) {
         return _getQuantumPortalLedgerMgrStorageV001().authorityMgr;
+    }
+
+    function ledger() public view returns (PortalLedgerUpgradeable) {
+        return _getQuantumPortalLedgerMgrStorageV001().ledger;
+    }
+
+    function feeConverter() public view returns (address) {
+        return _getQuantumPortalLedgerMgrStorageV001().feeConvertor;
+    }
+
+    function varFeeTarget() public view returns (address) {
+        return _getQuantumPortalLedgerMgrStorageV001().varFeeTarget;
+    }
+
+    function fixedFeeTarget() public view returns (address) {
+        return _getQuantumPortalLedgerMgrStorageV001().fixedFeeTarget;
+    }
+
+    function stakes() public view returns (address) {
+        return _getQuantumPortalLedgerMgrStorageV001().stakes;
     }
 }
 
-contract QuantumPortalLedgerMgrImpl is QuantumPortalLedgerMgrUpgradeable {
+contract QuantumPortalLedgerMgrImplUpgradeable is QuantumPortalLedgerMgrUpgradeable {
     constructor() QuantumPortalLedgerMgrUpgradeable(0) {}
 }

@@ -7,7 +7,7 @@ import {IOperatorRelation} from "../../../../../quantumPortal/poc/poa/stake/IOpe
  * @notice This contract maintains relationship between an delegate and a nodeOperator.
  * delegate is used for stakes, and nodeOperator does the work.
  */
-abstract contract OperatorRelation is IOperatorRelation {
+abstract contract OperatorRelationUpgradeable is IOperatorRelation {
     /// @custom:storage-location erc7201:ferrum.storage.operatorrelation.001
     struct OperatorRelationStorageV001 {
         mapping(address => address) nodeOperator;

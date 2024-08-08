@@ -5,17 +5,17 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUP
 import {FullMath} from "foundry-contracts/contracts/contracts/math/FullMath.sol";
 import {SafeAmount} from "foundry-contracts/contracts/contracts/common/SafeAmount.sol";
 import {FixedPoint128} from "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
-import {WithQp} from "../utils/WithQp.sol";
-import {WithRemotePeers} from "../utils/WithRemotePeers.sol";
-import {WithLedgerMgr} from "../utils/WithLedgerMgr.sol";
 import {IQuantumPortalWorkPoolClient} from "../../../../quantumPortal/poc/poa/IQuantumPortalWorkPoolClient.sol";
+import {WithQpUpgradeable} from "../utils/WithQpUpgradeable.sol";
+import {WithRemotePeersUpgradeable} from "../utils/WithRemotePeersUpgradeable.sol";
+import {WithLedgerMgrUpgradeable} from "../utils/WithLedgerMgrUpgradeable.sol";
 
 
 /**
  * @notice Record amount of work done, and distribute rewards accordingly.
  */
-abstract contract QuantumPortalWorkPoolClient is
-    Initializable, IQuantumPortalWorkPoolClient, WithQp, WithLedgerMgr, WithRemotePeers
+abstract contract QuantumPortalWorkPoolClientUpgradeable is
+    Initializable, IQuantumPortalWorkPoolClient, WithQpUpgradeable, WithLedgerMgrUpgradeable, WithRemotePeersUpgradeable
 {
     /// @custom:storage-location erc721:ferrum.storage.quantumportalworkpoolclient.001
     struct QuantumPortalWorkPoolClientStorageV001 {

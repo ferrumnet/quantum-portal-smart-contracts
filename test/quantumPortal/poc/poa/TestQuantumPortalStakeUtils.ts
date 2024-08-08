@@ -14,7 +14,7 @@ export async function delpoyStake(ctx: TestContext, auth: string, gateway: strin
         await deployDummyToken(ctx);
     }
     const initData = abi.encode(['address', 'address', 'address', 'address'],
-        [ctx.token.address, auth, ZeroAddress, gateway]);
+        [ctx.token.target, auth, ZeroAddress, gateway]);
     console.log("INIT", initData);
     const stk = await deployWithOwner(ctx, 'QuantumPortalStakeWithDelegate', ZeroAddress, initData
         ) as QuantumPortalStakeWithDelegate;
@@ -25,7 +25,7 @@ export async function delpoyStake(ctx: TestContext, auth: string, gateway: strin
 }
 
 export async function  deployMinerMgr(ctx: TestContext, stk: QuantumPortalStakeWithDelegate, portal: string, mgr: string, owner: string) {
-    const initData = abi.encode(['address', 'address', 'address'], [stk.address, portal, mgr]);
+    const initData = abi.encode(['address', 'address', 'address'], [stk.target, portal, mgr]);
     console.log("INIT for QuantumPortalMinerMgr", initData)
     const min = await deployWithOwner(ctx, 'QuantumPortalMinerMgr', owner, initData
         ) as QuantumPortalMinerMgr;

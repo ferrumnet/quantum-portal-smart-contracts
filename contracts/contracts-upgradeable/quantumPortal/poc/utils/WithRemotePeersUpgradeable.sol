@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.24;
 
-import {WithAdmin} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdmin.sol";
+import {WithAdminUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdminUpgradeable.sol";
 
 
-abstract contract WithRemotePeers is WithAdmin {
+abstract contract WithRemotePeersUpgradeable is WithAdminUpgradeable {
     /// @custom:storage-location erc7201:ferrum.storage.withremotepeers.001
     struct WithRemotePeersStorageV001 {
         mapping(uint256 => address) remotePeers;

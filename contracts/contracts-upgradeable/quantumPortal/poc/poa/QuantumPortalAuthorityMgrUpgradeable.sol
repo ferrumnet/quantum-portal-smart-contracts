@@ -3,27 +3,27 @@ pragma solidity ^0.8.24;
 
 import {UUPSUpgradeable, Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
-import {MultiSigCheckable} from "foundry-contracts/contracts/contracts-upgradeable/signature/MultiSigCheckable.sol";
+import {MultiSigCheckableUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/signature/MultiSigCheckableUpgradeable.sol";
 import {IQuantumPortalAuthorityMgr} from "../../../../quantumPortal/poc/poa/IQuantumPortalAuthorityMgr.sol";
 import {IQuantumPortalFinalizerPrecompile, QUANTUM_PORTAL_PRECOMPILE} from "../../../../quantumPortal/poc/poa/IQuantumPortalFinalizerPrecompile.sol";
-import {QuantumPortalWorkPoolServer, IQuantumPortalWorkPoolServer} from "./QuantumPortalWorkPoolServer.sol";
-import {QuantumPortalWorkPoolClient} from "./QuantumPortalWorkPoolClient.sol";
 import {LibChainCheck} from "../../../../quantumPortal/poc/utils/LibChainCheck.sol";
-import {WithGateway} from "../utils/WithGateway.sol";
+import {QuantumPortalWorkPoolServerUpgradeable, IQuantumPortalWorkPoolServer} from "./QuantumPortalWorkPoolServerUpgradeable.sol";
+import {QuantumPortalWorkPoolClientUpgradeable} from "./QuantumPortalWorkPoolClientUpgradeable.sol";
+import {WithGatewayUpgradeable} from "../utils/WithGatewayUpgradeable.sol";
 
 
 /**
  @notice Authority manager, provides authority signature verification, for 
     different actions.
  */
-contract QuantumPortalAuthorityMgr is
+contract QuantumPortalAuthorityMgrUpgradeable is
     Initializable,
     UUPSUpgradeable,
     EIP712Upgradeable,
-    QuantumPortalWorkPoolClient,
-    QuantumPortalWorkPoolServer,
-    MultiSigCheckable,
-    WithGateway,
+    QuantumPortalWorkPoolClientUpgradeable,
+    QuantumPortalWorkPoolServerUpgradeable,
+    MultiSigCheckableUpgradeable,
+    WithGatewayUpgradeable,
     IQuantumPortalAuthorityMgr
 {
     string public constant NAME = "FERRUM_QUANTUM_PORTAL_AUTHORITY_MGR";
@@ -34,14 +34,14 @@ contract QuantumPortalAuthorityMgr is
         );
 
     function initialize(
-        address ledgerMgr,
+        address _ledgerMgr,
         address _portal,
         address initialOwner,
         address initialAdmin,
         address gateway
     ) public initializer {
         __EIP712_init(NAME, VERSION);
-        __QuantimPortalWorkPoolServer_init(ledgerMgr, _portal, initialOwner, initialAdmin);
+        __QuantimPortalWorkPoolServer_init(_ledgerMgr, _portal, initialOwner, initialAdmin);
         __WithGateway_init_unchained(gateway);        
         __UUPSUpgradeable_init();
     }

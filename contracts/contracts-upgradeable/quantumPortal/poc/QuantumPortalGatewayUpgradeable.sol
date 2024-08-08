@@ -3,7 +3,7 @@ pragma solidity ^0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {UUPSUpgradeable, Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {WithAdmin} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdmin.sol";
+import {WithAdminUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdminUpgradeable.sol";
 import {SafeAmount} from "foundry-contracts/contracts/contracts/common/SafeAmount.sol";
 import {IQuantumPortalLedgerMgr, IQuantumPortalLedgerMgrDependencies} from "../../../quantumPortal/poc/IQuantumPortalLedgerMgr.sol";
 import {IQuantumPortalStakeWithDelegate} from "../../../quantumPortal/poc/poa/stake/IQuantumPortalStakeWithDelegate.sol";
@@ -18,7 +18,7 @@ import {IUUPSUpgradeable} from "./utils/IUUPSUpgradeable.sol";
  *     upate of QP contract logics. Always use this contract to interact
  *     with QP
  */
-contract QuantumPortalGatewayUpgradeable is Initializable, UUPSUpgradeable, WithAdmin {
+contract QuantumPortalGatewayUpgradeable is Initializable, UUPSUpgradeable, WithAdminUpgradeable {
     string public constant VERSION = "000.010";
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable WFRM;
@@ -108,14 +108,6 @@ contract QuantumPortalGatewayUpgradeable is Initializable, UUPSUpgradeable, With
         $.quantumPortalPoc = IQuantumPortalPoc(poc);
         $.quantumPortalLedgerMgr = IQuantumPortalLedgerMgr(ledgerMgr);
         $.quantumPortalStake = IQuantumPortalStakeWithDelegate(qpStake);
-    }
-
-    /**
-     * @notice The state contract
-     */
-    function state() external returns (address) {
-        QuantumPortalGatewayStorageV001 storage $ = _getQuantumPortalGatewayStorageV001();
-        return address($.quantumPortalLedgerMgr.state());
     }
 
     /**

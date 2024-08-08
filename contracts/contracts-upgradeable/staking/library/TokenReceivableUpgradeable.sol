@@ -9,7 +9,7 @@ import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/ut
 /**
  * @notice Library for handling safe token transactions including fee per transaction tokens.
  */
-abstract contract TokenReceivable is Initializable, ReentrancyGuardUpgradeable {
+abstract contract TokenReceivableUpgradeable is Initializable, ReentrancyGuardUpgradeable {
     using SafeERC20 for IERC20;
 	/// @custom:storage-location erc7201:ferrum.storage.tokenreceivable.001
 	struct TokenReceivableStorageV001 {

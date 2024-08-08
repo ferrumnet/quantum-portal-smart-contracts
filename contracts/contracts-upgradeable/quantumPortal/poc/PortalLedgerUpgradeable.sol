@@ -3,35 +3,37 @@ pragma solidity ^0.8.24;
 
 import {Strings} from "@openzeppelin/contracts/utils/Strings.sol";
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
-import {WithAdmin} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdmin.sol";
+import {WithAdminUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdminUpgradeable.sol";
 import {IQuantumPortalLedgerMgr} from "../../../quantumPortal/poc/IQuantumPortalLedgerMgr.sol";
 import {QuantumPortalLib} from "../../../quantumPortal/poc/QuantumPortalLib.sol";
-import {QuantumPortalStateUpgradeable} from "./QuantumPortalStateUpgradeable.sol";
 
 
 /**
  * @notice Basis of the QP logic for interacting with multi-chain dApps
  *     and providing relevant execution context to them
  */
-abstract contract PortalLedger is Initializable, WithAdmin {
+abstract contract PortalLedgerUpgradeable is Initializable, WithAdminUpgradeable {
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     uint256 internal immutable CHAIN_ID; // To support override
     
     /// @custom:storage-location erc7201:ferrum.storage.portalledger.001
     struct PortalLedgerStorageV001 {
         address mgr;
-        QuantumPortalStateUpgradeable state;
+        mapping(uint256 => IQuantumPortalLedgerMgr.LocalBlock) localBlocks;
+        mapping(uint256 => QuantumPortalLib.RemoteTransaction[]) localBlockTransactions;
+        mapping(uint256 => IQuantumPortalLedgerMgr.MinedBlock) minedBlocks;
+        mapping(uint256 => QuantumPortalLib.RemoteTransaction[]) minedBlockTransactions;
+        mapping(uint256 => QuantumPortalLib.Block) lastLocalBlock; // One block nonce per remote chain. txs local, to be run remotely
+        mapping(uint256 => QuantumPortalLib.Block) lastMinedBlock; // One block nonce per remote chain. txs remote, to be run on here
+        mapping(uint256 => QuantumPortalLib.Block) lastFinalizedBlock;
+        mapping(uint256 => IQuantumPortalLedgerMgr.FinalizationMetadata) finalizations;
+        mapping(uint256 => IQuantumPortalLedgerMgr.FinalizerStake[]) finalizationStakes;
+        mapping(uint256 => mapping(address => mapping(address => uint256))) remoteBalances;
         QuantumPortalLib.Context context;
     }
 
     // keccak256(abi.encode(uint256(keccak256("ferrum.storage.portalledger.001")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant PortalLedgerStorageV001Location = 0x542baf08946399af511ba7e329098e2628664bf184e260b4bffda9bdaa3af700;
-
-    function _getPortalLedgerStorageV001() internal pure returns (PortalLedgerStorageV001 storage $) {
-        assembly {
-            $.slot := PortalLedgerStorageV001Location
-        }
-    }
 
     function __PortalLedger_init(address initialOwner, address initialAdmin) internal onlyInitializing {
         __WithAdmin_init(initialOwner, initialAdmin);
@@ -42,18 +44,6 @@ abstract contract PortalLedger is Initializable, WithAdmin {
     /// @custom:oz-upgrades-unsafe-allow constructor
     constructor(uint256 overrideChainId) {
         CHAIN_ID = overrideChainId == 0 ? block.chainid : overrideChainId;
-    }
-
-    function mgr() public view returns (address) {
-        return _getPortalLedgerStorageV001().mgr;
-    }
-
-    function state() public view returns (QuantumPortalStateUpgradeable) {
-        return _getPortalLedgerStorageV001().state;
-    }
-
-    function context() public view returns (QuantumPortalLib.Context memory) {
-        return _getPortalLedgerStorageV001().context;
     }
 
     event RemoteTransfer(
@@ -81,9 +71,255 @@ abstract contract PortalLedger is Initializable, WithAdmin {
         _;
     }
 
-    // constructor(uint256 overrideChainId) {
-    //     CHAIN_ID = overrideChainId == 0 ? block.chainid : overrideChainId;
-    // }
+    function mgr() public view returns (address) {
+        return _getPortalLedgerStorageV001().mgr;
+    }
+
+    function context() public view returns (QuantumPortalLib.Context memory) {
+        return _getPortalLedgerStorageV001().context;
+    }
+
+    /**
+     * @notice Get the local block
+     * @param key The key
+     */
+    function getLocalBlocks(
+        uint256 key
+    ) external view returns (IQuantumPortalLedgerMgr.LocalBlock memory) {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        return $.localBlocks[key];
+    }
+
+    /**
+     * @notice Sets the local block
+     * @param key The key
+     * @param value The block
+     */
+    function setLocalBlocks(
+        uint256 key,
+        IQuantumPortalLedgerMgr.LocalBlock calldata value
+    ) external onlyMgr {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        $.localBlocks[key] = value;
+    }
+
+    /**
+     * @notice Push local block transactions
+     * @param key The key
+     * @param value The remote transaction
+     */
+    function pushLocalBlockTransactions(
+        uint256 key,
+        QuantumPortalLib.RemoteTransaction memory value
+    ) external onlyMgr {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        $.localBlockTransactions[key].push(value);
+    }
+
+    /**
+     * @notice Get the local block transaction length
+     * @param key The key
+     */
+    function getLocalBlockTransactionLength(
+        uint256 key
+    ) external view returns (uint256) {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        return $.localBlockTransactions[key].length;
+    }
+
+    /**
+     * @notice Get the local block transaction
+     * @param key They key
+     * @param idx The tx index
+     */
+    function getLocalBlockTransaction(
+        uint256 key,
+        uint256 idx
+    ) external view returns (QuantumPortalLib.RemoteTransaction memory) {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        return $.localBlockTransactions[key][idx];
+    }
+
+    /**
+     * @notice Get all local block transactions
+     * @param key The key
+     */
+    function getLocalBlockTransactions(
+        uint256 key
+    ) external view returns (QuantumPortalLib.RemoteTransaction[] memory value) {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        value = $.localBlockTransactions[key];
+    }
+
+    /**
+     * @notice Get the mined block
+     * @param key The key
+     */
+    function getMinedBlock(
+        uint256 key
+    ) external view returns (IQuantumPortalLedgerMgr.MinedBlock memory) {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        return $.minedBlocks[key];
+    }
+
+    /**
+     * @notice Set the mined block
+     * @param key The key
+     * @param value The block
+     */
+    function setMinedBlock(
+        uint256 key,
+        IQuantumPortalLedgerMgr.MinedBlock calldata value
+    ) external onlyMgr {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        $.minedBlocks[key] = value;
+    }
+
+    /**
+     * @notice Set the mined block as invalid
+     * @param key The block key
+     */
+    function setMinedBlockAsInvalid(uint256 key) external onlyMgr {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        $.minedBlocks[key].invalidBlock = 1;
+    }
+
+    /**
+     * @notice Get the mined block transactinos
+     * @param key The block key
+     */
+    function getMinedBlockTransactions(
+        uint256 key
+    ) external view returns (QuantumPortalLib.RemoteTransaction[] memory value) {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        value = $.minedBlockTransactions[key];
+    }
+
+    /**
+     * @notice Push the mined block transactions
+     * @param key The block key
+     * @param value The retmoe transaction
+     */
+    function pushMinedBlockTransactions(
+        uint256 key,
+        QuantumPortalLib.RemoteTransaction memory value
+    ) external onlyMgr {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        $.minedBlockTransactions[key].push(value);
+    }
+
+    /**
+     * @notice Get the last local block
+     * @param key The block key
+     */
+    function getLastLocalBlock(
+        uint256 key
+    ) external view returns (QuantumPortalLib.Block memory) {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        return $.lastLocalBlock[key];
+    }
+
+    /**
+     * @notice Set the last local block
+     * @param key The block key
+     * @param value The block
+     */
+    function setLastLocalBlock(
+        uint256 key,
+        QuantumPortalLib.Block calldata value
+    ) external onlyMgr {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        $.lastLocalBlock[key] = value;
+    }
+
+    /**
+     * @notice Get the last mined block
+     * @param key The block key
+     */
+    function getLastMinedBlock(
+        uint256 key
+    ) external view returns (QuantumPortalLib.Block memory) {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        return $.lastMinedBlock[key];
+    }
+
+    /**
+     * @notice Sets the last mined block
+     * @param key The key
+     * @param value The block
+     */
+    function setLastMinedBlock(
+        uint256 key,
+        QuantumPortalLib.Block calldata value
+    ) external onlyMgr {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        $.lastMinedBlock[key] = value;
+    }
+
+    /**
+     * @notice Get the last finalized block
+     * @param key The block key
+     */
+    function getLastFinalizedBlock(
+        uint256 key
+    ) external view returns (QuantumPortalLib.Block memory) {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        return $.lastFinalizedBlock[key];
+    }
+
+    /**
+     * @notice Sets the last finalized block
+     * @param key The block key
+     * @param value The block
+     */
+    function setLastFinalizedBlock(
+        uint256 key,
+        QuantumPortalLib.Block calldata value
+    ) external onlyMgr {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        $.lastFinalizedBlock[key] = value;
+    }
+
+    /**
+     * @notice Set the finalization
+     * @param key the block key
+     * @param value The finalization metadata
+     */
+    function setFinalization(
+        uint256 key,
+        IQuantumPortalLedgerMgr.FinalizationMetadata memory value
+    ) external onlyMgr {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        $.finalizations[key] = value;
+    }
+
+    /**
+     * @notice Push the finalization stake
+     * @param key The key
+     * @param value The stake
+     */
+    function pushFinalizationStake(
+        uint256 key,
+        IQuantumPortalLedgerMgr.FinalizerStake memory value
+    ) external onlyMgr {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        $.finalizationStakes[key].push(value);
+    }
+
+    /**
+     * @notice Get the remote balances
+     * @param chainId The chain ID
+     * @param token The token
+     * @param remoteContract The remote contract
+     */
+    function getRemoteBalances(
+        uint256 chainId,
+        address token,
+        address remoteContract
+    ) public view returns (uint256) {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        return $.remoteBalances[chainId][token][remoteContract];
+    }
 
     /**
      @notice Restricted: Executes a transaction within a remote block context
@@ -108,11 +344,11 @@ abstract contract PortalLedger is Initializable, WithAdmin {
             // either an issue with the token, which we cannot do anything about,
             // or not enough balance, which should never happen.
             if (t.amount != 0) {
-                $.state.setRemoteBalances(
+                _setRemoteBalances(
                     uint256(b.chainId),
                     t.token,
                     t.remoteContract,
-                    $.state.getRemoteBalances(
+                    getRemoteBalances(
                         uint256(b.chainId),
                         t.token,
                         t.remoteContract
@@ -125,7 +361,7 @@ abstract contract PortalLedger is Initializable, WithAdmin {
                     index: uint64(blockIndex),
                     blockMetadata: b,
                     transaction: t,
-                    uncommitedBalance: $.state.getRemoteBalances(
+                    uncommitedBalance: getRemoteBalances(
                         b.chainId,
                         t.token,
                         t.remoteContract
@@ -144,12 +380,12 @@ abstract contract PortalLedger is Initializable, WithAdmin {
             );
             if (success) {
                 // Commit the uncommitedBalance. This could have been changed during callRemoteMehod
-                uint256 oldBal = $.state.getRemoteBalances(
+                uint256 oldBal = getRemoteBalances(
                     uint256(b.chainId),
                     t.token,
                     t.remoteContract
                 );
-                $.state.setRemoteBalances(
+                _setRemoteBalances(
                     b.chainId,
                     t.token,
                     t.remoteContract,
@@ -236,7 +472,7 @@ abstract contract PortalLedger is Initializable, WithAdmin {
             index: uint64(1),
             blockMetadata: b,
             transaction: t,
-            uncommitedBalance: $.state.getRemoteBalances(
+            uncommitedBalance: getRemoteBalances(
                 b.chainId,
                 t.token,
                 t.remoteContract
@@ -270,7 +506,7 @@ abstract contract PortalLedger is Initializable, WithAdmin {
         if (addr == t.remoteContract && token == t.token) {
             return $.context.uncommitedBalance;
         }
-        return $.state.getRemoteBalances(chainId, token, addr);
+        return getRemoteBalances(chainId, token, addr);
     }
 
     /**
@@ -283,12 +519,10 @@ abstract contract PortalLedger is Initializable, WithAdmin {
     /**
      * @notice Restricted: sets the manager
      * @param _mgr The ledger manager
-     * @param _state The state contract
      */
-    function setManager(address _mgr, address _state) external onlyAdmin {
+    function setManager(address _mgr) external onlyAdmin {
         PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
         $.mgr = _mgr;
-        $.state = QuantumPortalStateUpgradeable(_state);
     }
 
     function _rejectRemoteTransaction(
@@ -297,12 +531,11 @@ abstract contract PortalLedger is Initializable, WithAdmin {
     ) internal {
         //Refund the remote value to the beneficiary
         if (t.amount != 0) {
-            PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
-            $.state.setRemoteBalances(
+            _setRemoteBalances(
                 sourceChainId,
                 t.token,
                 t.sourceBeneficiary,
-                $.state.getRemoteBalances(
+                getRemoteBalances(
                     sourceChainId,
                     t.token,
                     t.sourceBeneficiary
@@ -398,6 +631,29 @@ abstract contract PortalLedger is Initializable, WithAdmin {
                 uint128(gas),
                 uint128(gasUsed),
                 revertReason);
+        }
+    }
+
+    /**
+     * @notice Set the remote balances
+     * @param chainId the chain ID
+     * @param token The token
+     * @param remoteContract The remote contract
+     * @param value The balances
+     */
+    function _setRemoteBalances(
+        uint256 chainId,
+        address token,
+        address remoteContract,
+        uint256 value
+    ) internal {
+        PortalLedgerStorageV001 storage $ = _getPortalLedgerStorageV001();
+        $.remoteBalances[chainId][token][remoteContract] = value;
+    }
+
+    function _getPortalLedgerStorageV001() internal pure returns (PortalLedgerStorageV001 storage $) {
+        assembly {
+            $.slot := PortalLedgerStorageV001Location
         }
     }
 

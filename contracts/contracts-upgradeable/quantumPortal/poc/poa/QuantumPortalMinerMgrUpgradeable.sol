@@ -8,10 +8,10 @@ import {MultiSigLib} from "foundry-contracts/contracts/contracts/signature/Multi
 import {IQuantumPortalMinerMgr} from "../../../../quantumPortal/poc/poa/IQuantumPortalMinerMgr.sol";
 import {IQuantumPortalStakeWithDelegate} from "../../../../quantumPortal/poc/poa/stake/IQuantumPortalStakeWithDelegate.sol";
 import {IDelegator} from "../../../../quantumPortal/poc/poa/IDelegator.sol";
-import {WithGateway} from "../utils/WithGateway.sol";
-import {QuantumPortalWorkPoolClient, IQuantumPortalWorkPoolClient} from "./QuantumPortalWorkPoolClient.sol";
-import {QuantumPortalWorkPoolServer, IQuantumPortalWorkPoolServer} from "./QuantumPortalWorkPoolServer.sol";
-import {QuantumPortalMinerMembership, IQuantumPortalMinerMembership} from "./QuantumPortalMinerMembership.sol";
+import {WithGatewayUpgradeable} from "../utils/WithGatewayUpgradeable.sol";
+import {QuantumPortalWorkPoolClientUpgradeable, IQuantumPortalWorkPoolClient} from "./QuantumPortalWorkPoolClientUpgradeable.sol";
+import {QuantumPortalWorkPoolServerUpgradeable, IQuantumPortalWorkPoolServer} from "./QuantumPortalWorkPoolServerUpgradeable.sol";
+import {QuantumPortalMinerMembershipUpgradeable, IQuantumPortalMinerMembership} from "./QuantumPortalMinerMembershipUpgradeable.sol";
 
 
 /**
@@ -22,15 +22,15 @@ import {QuantumPortalMinerMembership, IQuantumPortalMinerMembership} from "./Qua
          Anybody can become a miner with staking. But there are rules of minimum stake
          and lock amount.
  */
-contract QuantumPortalMinerMgr is
+contract QuantumPortalMinerMgrUpgradeable is
     IQuantumPortalMinerMgr,
     Initializable,
     UUPSUpgradeable,
     EIP712Upgradeable,
-    WithGateway,
-    QuantumPortalWorkPoolServer,
-    QuantumPortalWorkPoolClient,
-    QuantumPortalMinerMembership
+    WithGatewayUpgradeable,
+    QuantumPortalWorkPoolServerUpgradeable,
+    QuantumPortalWorkPoolClientUpgradeable,
+    QuantumPortalMinerMembershipUpgradeable
 {
     uint32 constant WEEK = 7 days;
     string public constant NAME = "FERRUM_QUANTUM_PORTAL_MINER_MGR";
@@ -160,7 +160,7 @@ contract QuantumPortalMinerMgr is
      * @param fee The fee in FRM for the multi-chain transaction
      */
     function withdraw(uint256 remoteChain, address to, address worker, uint fee) external {
-        QuantumPortalWorkPoolClient.withdraw(
+        QuantumPortalWorkPoolClientUpgradeable.withdraw(
             IQuantumPortalWorkPoolServer.withdrawFixedRemote.selector,
             remoteChain,
             to,

@@ -1,12 +1,5 @@
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules"
-import {Wei} from 'foundry-contracts/dist/test/common/Utils';
-import pocTestArtifact from "../../artifacts/contracts/contracts-upgradeable/quantumPortal/poc/test/QuantumPortalPocTest.sol/QuantumPortalPocTest.json"
-import ledgerMgrTestArtifact from "../../artifacts/contracts/contracts-upgradeable/quantumPortal/poc/test/QuantumPortalLedgerMgrTest.sol/QuantumPortalLedgerMgrTest.json"
-import authMgrArtifact from "../../artifacts/contracts/contracts-upgradeable/quantumPortal/poc/poa/QuantumPortalAuthorityMgr.sol/QuantumPortalAuthorityMgr.json"
-import feeConverterArtifact from "../../artifacts/contracts/contracts-upgradeable/quantumPortal/poc/poa/QuantumPortalFeeConverterDirect.sol/QuantumPortalFeeConverterDirect.json"
-import stakingArtifact from "../../artifacts/contracts/contracts-upgradeable/quantumPortal/poc/poa/stake/QuantumPortalStakeWithDelegate.sol/QuantumPortalStakeWithDelegate.json"
-import minerMgrArtifact from "../../artifacts/contracts/contracts-upgradeable/quantumPortal/poc/poa/QuantumPortalMinerMgr.sol/QuantumPortalMinerMgr.json"
-
+import { Wei } from 'foundry-contracts/dist/test/common/Utils';
 import { ZeroAddress } from "ethers";
 
 const TEST_PKS = [
@@ -34,10 +27,10 @@ const deployModule = buildModule("DeployModule", (m) => {
 	const acc2 = m.getAccount(2)
 	
 	//------------- LedgerManagerTest ----------------//
-    const mgr1Impl = m.contract("QuantumPortalLedgerMgrTest", ledgerMgrTestArtifact, [26000], { id: "QPLedgerMgr1"})
-	const mgr2Impl = m.contract("QuantumPortalLedgerMgrTest", ledgerMgrTestArtifact, [2], { id: "QPLedgerMgr2"})
+    const mgr1Impl = m.contract("QuantumPortalLedgerMgrUpgradeableTest", [26000], { id: "QPLedgerMgr1"})
+	const mgr2Impl = m.contract("QuantumPortalLedgerMgrUpgradeableTest", [2], { id: "QPLedgerMgr2"})
 
-	let initializeCalldata = m.encodeFunctionCall(mgr1Impl, "initialize", [
+	let initializeCalldata: any = m.encodeFunctionCall(mgr1Impl, "initialize", [
 		owner,
 		owner,
 		testGatewayAddress
@@ -46,8 +39,8 @@ const deployModule = buildModule("DeployModule", (m) => {
 	const mgr1Proxy = m.contract("ERC1967Proxy", [mgr1Impl, initializeCalldata], { id: "Mgr1Proxy"})
 	const mgr2Proxy = m.contract("ERC1967Proxy", [mgr2Impl, initializeCalldata], { id: "Mgr2Proxy"})
 
-	const mgr1 = m.contractAt("QuantumPortalLedgerMgrTest", ledgerMgrTestArtifact, mgr1Proxy, { id: "Mgr1"})
-	const mgr2 = m.contractAt("QuantumPortalLedgerMgrTest", ledgerMgrTestArtifact, mgr2Proxy, { id: "Mgr2"})
+	const mgr1 = m.contractAt("QuantumPortalLedgerMgrUpgradeableTest", mgr1Proxy, { id: "Mgr1"})
+	const mgr2 = m.contractAt("QuantumPortalLedgerMgrUpgradeableTest", mgr2Proxy, { id: "Mgr2"})
 
 	const chainId1 = m.call(mgr1Impl, "realChainId")
     const chainId2 = 2;
@@ -56,17 +49,17 @@ const deployModule = buildModule("DeployModule", (m) => {
 	m.call(mgr2, "updateMinerMinimumStake", [Wei.from('10')])
 
 	//------------- QuantumPortalPoc -------------------//
-	const poc1Impl = m.contract("QuantumPortalPocTest", pocTestArtifact, [26000], { id: "QPPoc1"})
-	const poc2Impl = m.contract("QuantumPortalPocTest", pocTestArtifact, [2], { id: "QPPoc2"})
+	const poc1Impl = m.contract("QuantumPortalPocUpgradeableTest", [26000], { id: "QPPoc1"})
+	const poc2Impl = m.contract("QuantumPortalPocUpgradeableTest", [2], { id: "QPPoc2"})
 
 	const poc1Proxy = m.contract("ERC1967Proxy", [poc1Impl, initializeCalldata], { id: "Poc1Proxy"})
 	const poc2Proxy = m.contract("ERC1967Proxy", [poc2Impl, initializeCalldata], { id: "Poc2Proxy"})
 
-	const poc1 = m.contractAt("QuantumPortalPocTest", pocTestArtifact, poc1Proxy, { id: "Poc1"})
-	const poc2 = m.contractAt("QuantumPortalPocTest", pocTestArtifact, poc2Proxy, { id: "Poc2"})
+	const poc1 = m.contractAt("QuantumPortalPocUpgradeableTest", poc1Proxy, { id: "Poc1"})
+	const poc2 = m.contractAt("QuantumPortalPocUpgradeableTest", poc2Proxy, { id: "Poc2"})
 
 	//-------------- Authority Managers ----------------//
-	const authMgrImpl = m.contract("QuantumPortalAuthorityMgr", authMgrArtifact, [], { id: "QPAuthorityMgr1"})
+	const authMgrImpl = m.contract("QuantumPortalAuthorityMgrUpgradeable", [], { id: "QPAuthorityMgr1"})
 
 	initializeCalldata = m.encodeFunctionCall(authMgrImpl, "initialize", [
 		mgr1,
@@ -86,24 +79,24 @@ const deployModule = buildModule("DeployModule", (m) => {
 	], { id: "AuthMgr2Initialize"});
 	const authMgr2Proxy = m.contract("ERC1967Proxy", [authMgrImpl, initializeCalldata], { id: "AuthMgr2Proxy"})
 
-	const authMgr1 = m.contractAt("QuantumPortalAuthorityMgr", authMgrArtifact, authMgr1Proxy, { id: "AuthMgr1"}, )
-	const authMgr2 = m.contractAt("QuantumPortalAuthorityMgr", authMgrArtifact, authMgr2Proxy, { id: "AuthMgr2"})
+	const authMgr1 = m.contractAt("QuantumPortalAuthorityMgrUpgradeable", authMgr1Proxy, { id: "AuthMgr1"}, )
+	const authMgr2 = m.contractAt("QuantumPortalAuthorityMgrUpgradeable", authMgr2Proxy, { id: "AuthMgr2"})
 
 	//-------------- TestToken ----------------//
 	const testFeeToken = m.contract("TestToken", [])
 
 	// ------ Fee Converter Direct ------------//
-	const feeConverterImpl = m.contract("QuantumPortalFeeConverterDirect", feeConverterArtifact, [], { id: "FeeConverterImpl"})
+	const feeConverterImpl = m.contract("QuantumPortalFeeConverterDirectUpgradeable", [], { id: "FeeConverterImpl"})
 	initializeCalldata = m.encodeFunctionCall(feeConverterImpl, "initialize", [
 		testGatewayAddress
 	]);
 	const feeConverterProxy = m.contract("ERC1967Proxy", [feeConverterImpl, initializeCalldata], { id: "FeeConverterProxy"})
-	const feeConverter = m.contractAt("QuantumPortalFeeConverterDirect", feeConverterArtifact, feeConverterProxy, { id: "FeeConverter"})
+	const feeConverter = m.contractAt("QuantumPortalFeeConverterDirectUpgradeable", feeConverterProxy, { id: "FeeConverter"})
 
 	m.call(feeConverter, "updateFeePerByte", [Wei.from('0.001')])
 
 	// -------------- Staking -----------------//
-	const stakingImpl = m.contract("QuantumPortalStakeWithDelegate", stakingArtifact, [], { id: "StakingImpl"})
+	const stakingImpl = m.contract("QuantumPortalStakeWithDelegateUpgradeable", [], { id: "StakingImpl"})
 	let stakinginitializeCalldata = m.encodeFunctionCall(stakingImpl, "initialize(address,address,address,address)", [
 		testFeeToken,
 		authMgr1,
@@ -111,10 +104,10 @@ const deployModule = buildModule("DeployModule", (m) => {
 		testGatewayAddress
 	]);
 	const stakingProxy = m.contract("ERC1967Proxy", [stakingImpl, stakinginitializeCalldata], { id: "StakingProxy"})
-	const staking = m.contractAt("QuantumPortalStakeWithDelegate", stakingArtifact, stakingProxy, { id: "Staking"})
+	const staking = m.contractAt("QuantumPortalStakeWithDelegateUpgradeable", stakingProxy, { id: "Staking"})
 
 	// ----------- Mining Manager --------------//
-	const minerMgrImpl = m.contract("QuantumPortalMinerMgr", minerMgrArtifact, [], { id: "MinerMgrImpl"})
+	const minerMgrImpl = m.contract("QuantumPortalMinerMgrUpgradeable", [], { id: "MinerMgrImpl"})
 	initializeCalldata = m.encodeFunctionCall(minerMgrImpl, "initialize", [
 		staking,
 		poc1,
@@ -130,8 +123,8 @@ const deployModule = buildModule("DeployModule", (m) => {
 	], { id: "MinerMgrInitialize2"});
 	const minerMgr2Proxy = m.contract("ERC1967Proxy", [minerMgrImpl, initializeCalldata], { id: "MinerMgrProxy2"})
 
-	const minerMgr1 = m.contractAt("QuantumPortalMinerMgr", minerMgrArtifact, minerMgr1Proxy, { id: "MinerMgr1"})
-	const minerMgr2 = m.contractAt("QuantumPortalMinerMgr", minerMgrArtifact, minerMgr2Proxy, { id: "MinerMgr2"})
+	const minerMgr1 = m.contractAt("QuantumPortalMinerMgrUpgradeable", minerMgr1Proxy, { id: "MinerMgr1"})
+	const minerMgr2 = m.contractAt("QuantumPortalMinerMgrUpgradeable", minerMgr2Proxy, { id: "MinerMgr2"})
 
 	// --------- Authority Setup ------------//
 	m.call(authMgr1, "initializeQuorum", [owner, 1, 1, 0, [TEST_WALLETS[0]]], {from: acc1})

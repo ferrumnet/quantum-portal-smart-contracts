@@ -10,21 +10,21 @@ import {IQpSelfManagedToken} from "../../../quantumPortal/poc/utils/IQpSelfManag
 import {IQuantumPortalLedgerMgrDependencies} from "../../../quantumPortal/poc/IQuantumPortalLedgerMgr.sol";
 import {IQuantumPortalLedgerMgr} from "../../../quantumPortal/poc/IQuantumPortalLedgerMgr.sol";
 
-import {TokenReceivable} from "../../staking/library/TokenReceivable.sol";
-import {PortalLedger} from "./PortalLedger.sol";
+import {TokenReceivableUpgradeable} from "../../staking/library/TokenReceivableUpgradeable.sol";
+import {PortalLedgerUpgradeable} from "./PortalLedgerUpgradeable.sol";
 import {QuantumPortalLib} from "../../../quantumPortal/poc/QuantumPortalLib.sol";
-import {WithGateway} from "./utils/WithGateway.sol";
+import {WithGatewayUpgradeable} from "./utils/WithGatewayUpgradeable.sol";
 
 
 /**
  * @notice The quantum portal main contract for multi-chain dApps
  */
-abstract contract QuantumPortalPoc is
+abstract contract QuantumPortalPocUpgradeable is
     Initializable, 
     UUPSUpgradeable,
-    TokenReceivable,
-    WithGateway,
-    PortalLedger,
+    TokenReceivableUpgradeable,
+    WithGatewayUpgradeable,
+    PortalLedgerUpgradeable,
     IQuantumPortalPoc,
     IVersioned
 {
@@ -251,11 +251,11 @@ abstract contract QuantumPortalPoc is
         uint256 amount
     ) external override {
         require(remoteChainId != CHAIN_ID, "Remote cannot be self");
-        state().setRemoteBalances(
+        _setRemoteBalances(
             remoteChainId,
             token,
             msg.sender,
-            state().getRemoteBalances(remoteChainId, token, msg.sender) - amount
+            getRemoteBalances(remoteChainId, token, msg.sender) - amount
         );
         IQuantumPortalLedgerMgr(mgr()).registerTransaction(
             remoteChainId,
@@ -287,18 +287,18 @@ abstract contract QuantumPortalPoc is
         ) {
             context().uncommitedBalance -= amount;
         } else {
-            state().setRemoteBalances(
+            _setRemoteBalances(
                 chainId,
                 token,
                 msg.sender,
-                state().getRemoteBalances(chainId, token, msg.sender) - amount
+                getRemoteBalances(chainId, token, msg.sender) - amount
             );
         }
-        state().setRemoteBalances(
+        _setRemoteBalances(
             chainId,
             token,
             to,
-            state().getRemoteBalances(chainId, token, to) + amount
+            getRemoteBalances(chainId, token, to) + amount
         );
         emit RemoteTransfer(chainId, token, msg.sender, to, amount);
     }
@@ -321,11 +321,11 @@ abstract contract QuantumPortalPoc is
             context().uncommitedBalance -= amount;
         } else {
             // TODO: What if the tx failed? Make sure this will be reverted
-            state().setRemoteBalances(
+            _setRemoteBalances(
                 CHAIN_ID,
                 token,
                 msg.sender,
-                state().getRemoteBalances(CHAIN_ID, token, msg.sender) - amount
+                getRemoteBalances(CHAIN_ID, token, msg.sender) - amount
             );
         }
         // Instead of updating the remoteBalcne for `to`, we just send them tokens
@@ -350,9 +350,9 @@ abstract contract QuantumPortalPoc is
             context().blockMetadata.chainId == 0,
             "QPP: cannot be called within a mining context"
         );
-        uint256 bal = state().getRemoteBalances(CHAIN_ID, token, msg.sender);
+        uint256 bal = getRemoteBalances(CHAIN_ID, token, msg.sender);
         require(bal >= amount, "QPP: Not enough balance");
-        state().setRemoteBalances(CHAIN_ID, token, msg.sender, bal - amount);
+        _setRemoteBalances(CHAIN_ID, token, msg.sender, bal - amount);
         sendToken(token, msg.sender, amount);
         emit LocalTransfer(token, msg.sender, amount);
     }
@@ -381,6 +381,6 @@ abstract contract QuantumPortalPoc is
     }
 }
 
-contract QuantumPortalPocImpl is QuantumPortalPoc {
-    constructor() PortalLedger(0) {}
+contract QuantumPortalPocImpl is QuantumPortalPocUpgradeable {
+    constructor() PortalLedgerUpgradeable(0) {}
 }

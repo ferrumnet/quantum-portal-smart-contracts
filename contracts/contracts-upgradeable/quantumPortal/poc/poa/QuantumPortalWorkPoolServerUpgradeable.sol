@@ -5,23 +5,23 @@ import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUP
 import {FullMath} from "foundry-contracts/contracts/contracts/math/FullMath.sol";
 import {IQuantumPortalWorkPoolServer} from "../../../../quantumPortal/poc/poa/IQuantumPortalWorkPoolServer.sol";
 import {FixedPoint128} from "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
-import {WithAdmin} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdmin.sol";
-import {TokenReceivable} from "../../../staking/library/TokenReceivable.sol";
-import {WithLedgerMgr} from "../utils/WithLedgerMgr.sol";
-import {WithQp} from "../utils/WithQp.sol";
-import {WithRemotePeers} from "../utils/WithRemotePeers.sol";
+import {WithAdminUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdminUpgradeable.sol";
+import {TokenReceivableUpgradeable} from "../../../staking/library/TokenReceivableUpgradeable.sol";
+import {WithLedgerMgrUpgradeable} from "../utils/WithLedgerMgrUpgradeable.sol";
+import {WithQpUpgradeable} from "../utils/WithQpUpgradeable.sol";
+import {WithRemotePeersUpgradeable} from "../utils/WithRemotePeersUpgradeable.sol";
 
 
 /**
  * @notice Collect and distribute rewards
  */
-abstract contract QuantumPortalWorkPoolServer is
+abstract contract QuantumPortalWorkPoolServerUpgradeable is
     Initializable,
     IQuantumPortalWorkPoolServer,
-    TokenReceivable,
-    WithQp,
-    WithLedgerMgr,
-    WithRemotePeers
+    TokenReceivableUpgradeable,
+    WithQpUpgradeable,
+    WithLedgerMgrUpgradeable,
+    WithRemotePeersUpgradeable
 {
     /// @custom:storage-location erc7201:ferrum.storage.quantumportalworkpoolserver.001
     struct QuantumPortalWorkPoolServerStorageV001 {

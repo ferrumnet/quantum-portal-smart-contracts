@@ -10,34 +10,34 @@ const _it = (a: any, b: any) => () => {};
 
 function blockMetadata(m: any): { chainId: number,  nonce: number, timestamp: number } {
     return {
-        chainId: m.chainId.toNumber(),
-        nonce: m.nonce.toNumber(),
-        timestamp: m.timestamp.toNumber(),
+        chainId: m.chainId,
+        nonce: m.nonce,
+        timestamp: m.timestamp,
     }
 }
 
 describe("Test qp", function () {
 	it('Create an x-chain tx, mine and finalize!', async function() {
         const ctx = await deployAll();
-        await ctx.chain1.token.transfer(ctx.chain1.poc.address, Wei.from('20'));
+        await ctx.chain1.token.transfer(ctx.chain1.poc.target, Wei.from('20'));
         console.log(`Calling run without fee. this should fail!`);
         await throws(ctx.chain1.poc.runWithValue(
             ctx.chain2.chainId,
             ctx.acc1,
             ZeroAddress,
-            ctx.chain1.token.address,
+            ctx.chain1.token.target,
             '0x'), 'QPWPS: Not enough fee');
 
         const feeTarget = await ctx.chain1.poc.feeTarget();
         let feeAmount = await ctx.chain1.feeConverter.targetChainFixedFee(ctx.chain2.chainId, QuantumPortalUtils.FIXED_FEE_SIZE + 0 /* No method call*/)
-        feeAmount = feeAmount.add(Wei.from('0.00001')); // plus some var fee
+        feeAmount = feeAmount + 10_000_000_000_000n // plus some var fee
         await ctx.chain1.token.transfer(feeTarget, feeAmount);
         console.log(`Sent fee to ${feeTarget} - Worth ${feeAmount}. Now we can register the tx`);
         await ctx.chain1.poc.runWithValue(
             ctx.chain2.chainId,
             ctx.acc1,
             ZeroAddress,
-            ctx.chain1.token.address,
+            ctx.chain1.token.target,
             '0x');
         // Check the block
         let lastLocalBlock = await ctx.chain1.state.getLastLocalBlock(ctx.chain2.chainId);
@@ -102,7 +102,7 @@ describe("Test qp", function () {
         );
         console.log('Mined');
         let minedBlock = await ctx.chain2.ledgerMgr.minedBlockByNonce(ctx.chain1.chainId, 1);
-        console.log('Mined block is ', JSON.stringify(minedBlock, undefined, 2));
+        console.log('Mined block is ', JSON.stringify(Number(minedBlock), undefined, 2));
 
         console.log('Now checking the work done');
         let workDone = await ctx.chain2.minerMgr.totalWork(ctx.chain1.chainId);
@@ -130,12 +130,12 @@ describe("Test qp", function () {
         workDone = await ctx.chain2.autorityMgr.totalWork(ctx.chain1.chainId);
         myWork = await ctx.chain2.autorityMgr.works(ctx.chain1.chainId, ctx.owner);
         console.log(`Work done by authority is ${workDone} - vs mine: ${myWork} - ${ctx.owner}`); // Finalizer work is registered to the owner
-        expect(workDone.toString()).to.be.equal('33056');
-        expect(myWork.toString()).to.be.equal('33056');
+        expect(workDone.toString()).to.be.equal('32909');
+        expect(myWork.toString()).to.be.equal('32909');
 
         // await ctx.chain2.ledgerMgr.finalize(ctx.chain1.chainId, 1, Salt, [], salt0x(), expiryInFuture(), '0x');
-        // let remoteBalance = Wei.to((await ctx.chain2.poc.remoteBalanceOf(ctx.chain1.chainId, ctx.chain1.token.address, ctx.acc1)).toString());
-        let remoteBalance = Wei.to((await ctx.chain2.poc.remoteBalanceOf(ctx.chain1.chainId, ctx.chain1.token.address, tx.remoteContract.toString())).toString());
+        // let remoteBalance = Wei.to((await ctx.chain2.poc.remoteBalanceOf(ctx.chain1.chainId, ctx.chain1.token.target, ctx.acc1)).toString());
+        let remoteBalance = Wei.to((await ctx.chain2.poc.remoteBalanceOf(ctx.chain1.chainId, ctx.chain1.token.target, tx.remoteContract.toString())).toString());
         console.log('Remote balance for acc1, token1 is', remoteBalance.toString());
         expect(remoteBalance).to.be.equal('20.0');
     });
@@ -143,22 +143,22 @@ describe("Test qp", function () {
     it('Miners can claim their rewards.', async function() {
         // Run some txs to collect rewards.
         const ctx = await deployAll();
-        await ctx.chain1.token.transfer(ctx.chain1.poc.address, Wei.from('20'));
+        await ctx.chain1.token.transfer(ctx.chain1.poc.target, Wei.from('20'));
         const feeTarget = await ctx.chain1.poc.feeTarget();
         let feeAmount = await ctx.chain1.feeConverter.targetChainFixedFee(ctx.chain2.chainId, QuantumPortalUtils.FIXED_FEE_SIZE + 0 /* No method call*/)
-        feeAmount = feeAmount.add(Wei.from('0.00001')); // plus some var fee
+        feeAmount = feeAmount + 10_000_000_000_000n // plus some var fee
         await ctx.chain1.token.transfer(feeTarget, feeAmount);
         await ctx.chain1.poc.runWithValue(
             ctx.chain2.chainId,
             ctx.acc1,
             ZeroAddress,
-            ctx.chain1.token.address,
+            ctx.chain1.token.target,
             '0x');
         await QuantumPortalUtils.mineAndFinilizeOneToTwo(ctx, 1);
         console.log('Mined and finalized');
         console.log("Now lets check our miner's balance");
         feeAmount = await ctx.chain2.feeConverter.targetChainFixedFee(ctx.chain1.chainId, QuantumPortalUtils.FIXED_FEE_SIZE + 300 /* withdraw call estimate */);
-        await ctx.chain2.token.approve(ctx.chain2.minerMgr.address, feeAmount);
+        await ctx.chain2.token.approve(ctx.chain2.minerMgr.target, feeAmount);
         await ctx.chain2.minerMgr.withdraw(ctx.chain1.chainId, ctx.wallets[0], ctx.owner, feeAmount);
         console.log('Called withdraw. Now we need to mine and finalize');
         console.log(`Current balance is: ${(await ctx.chain2.token.balanceOf(ctx.acc1)).toString()}`);
@@ -172,7 +172,7 @@ describe("Test qp", function () {
     it('Can estimate gas', async function() {
         const ctx = await deployAll();
         const estimageGasTestF = await ethers.getContractFactory('EstimateGasExample');
-        const estimageGasTest = await estimageGasTestF.deploy(ctx.chain2.poc.address) as EstimateGasExample;
+        const estimageGasTest = await estimageGasTestF.deploy(ctx.chain2.poc.target) as EstimateGasExample;
 
         let methodCall = estimageGasTest.interface.encodeFunctionData('setNumber', ['1']);
         await estimageGasTest.setNumber('6');
@@ -186,14 +186,14 @@ describe("Test qp", function () {
             'estimateGasForRemoteTransaction',
             [ctx.chain1.chainId,
             ZeroAddress,
-            estimageGasTest.address,
+            estimageGasTest.target,
             ZeroAddress,
             methodCall,
             ZeroAddress,
             '0']
         );
 
-        const gasUsed = await estimateGasUsingEthCall(ctx.chain2.poc.address, estimateMethodCall);
+        const gasUsed = await estimateGasUsingEthCall(ctx.chain2.poc.target, estimateMethodCall);
         console.log('Gas used: ', gasUsed);
         expect(gasUsed).to.be.greaterThan(26000);
     });
@@ -202,7 +202,7 @@ describe("Test qp", function () {
         const ctx = await deployAll();
 
         const estimageGasTestF = await ethers.getContractFactory('EstimateGasExample');
-        const estimageGasTest = await estimageGasTestF.deploy(ctx.chain2.poc.address) as EstimateGasExample;
+        const estimageGasTest = await estimageGasTestF.deploy(ctx.chain2.poc.target) as EstimateGasExample;
 
         await estimageGasTest.setNumber('6');
         const ensureNumberIs6 = async () => {
@@ -212,10 +212,10 @@ describe("Test qp", function () {
         }
 
         console.log('Estimating the gas needed to run setNumber(1)');
-        const estim = (method: string) => ctx.chain2.poc.estimateGas.estimateGasForRemoteTransaction(
+        const estim = (method: string) => ctx.chain2.poc.estimateGasForRemoteTransaction.estimateGas(
             ctx.chain1.chainId,
             ZeroAddress,
-            estimageGasTest.address,
+            estimageGasTest.target,
             ZeroAddress,
             method,
             ZeroAddress,

@@ -3,13 +3,13 @@ pragma solidity ^0.8.24;
 
 import {Initializable, UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {EIP712Upgradeable} from "@openzeppelin/contracts-upgradeable/utils/cryptography/EIP712Upgradeable.sol";
-import {Sweepable} from "foundry-contracts/contracts/contracts-upgradeable/common/Sweepable.sol";
+import {SweepableUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/common/SweepableUpgradeable.sol";
 import {IStakeV2, Staking} from "../../staking/interfaces/IStakeV2.sol";
 import {IRewardPool} from "../../staking/interfaces/IRewardPool.sol";
 import {StakeFlags, StakingBasics} from "../../staking/library/StakingBasics.sol";
 import {VestingLibrary} from "../../staking/vesting/VestingLibrary.sol";
-import {BaseStakingV2} from "./BaseStakingV2.sol";
-import {WithGateway} from "../quantumPortal/poc/utils/WithGateway.sol";
+import {BaseStakingV2Upgradeable} from "./BaseStakingV2Upgradeable.sol";
+import {WithGatewayUpgradeable} from "../quantumPortal/poc/utils/WithGatewayUpgradeable.sol";
 
 
 /**
@@ -19,7 +19,7 @@ import {WithGateway} from "../quantumPortal/poc/utils/WithGateway.sol";
  * Supports min lock.
  * Cannot be tokenizable.
  */
-contract StakeOpen is Initializable, UUPSUpgradeable, Sweepable, BaseStakingV2, WithGateway, IRewardPool {
+contract StakeOpenUpgradeable is Initializable, UUPSUpgradeable, SweepableUpgradeable, BaseStakingV2Upgradeable, WithGatewayUpgradeable, IRewardPool {
     using StakeFlags for uint16;
     string constant public NAME = "FERRUM_STAKING_V2_OPEN";
     string constant public VERSION = "000.001";

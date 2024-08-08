@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 import {Staking, IStakeV2} from "../../../staking/interfaces/IStakeV2.sol";
-import "foundry-contracts/contracts/contracts-upgradeable/signature/SigCheckable.sol";
+import {SigCheckableUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/signature/SigCheckableUpgradeable.sol";
 
 
 // Todo: Use multisig checkable...
-abstract contract StakingV2CommonSignatures is SigCheckable {
+abstract contract StakingV2CommonSignaturesUpgradeable is SigCheckableUpgradeable {
     bytes32 constant SIGNATURE_FOR_ID_METHOD =
         keccak256("SignatureForId(address id,uint8 stakeType,uint32 signatureLifetime,bytes32 salt)");
 

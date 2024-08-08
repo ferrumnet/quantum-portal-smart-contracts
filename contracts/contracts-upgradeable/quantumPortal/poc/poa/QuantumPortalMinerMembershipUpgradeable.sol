@@ -13,10 +13,11 @@ import {IQuantumPortalMinerMembership} from "../../../../quantumPortal/poc/poa/I
  *         passed. In this case the miner is allowed to be selected, and it will drop out the replaced miner.
  *         The replaced miner has to register again.
  */
-abstract contract QuantumPortalMinerMembership is IQuantumPortalMinerMembership {
+abstract contract QuantumPortalMinerMembershipUpgradeable is IQuantumPortalMinerMembership {
+    uint256 public constant timeBlockSize = 3 minutes; // Three minutes for a miner to react
+
     /// @custom:storage-location erc7201:ferrum.storage.quantumportalminermembership.001
     struct QuantumPortalMinerMembershipStorageV001 {
-        uint256 timeBlockSize;
         address[] miners;
         mapping(address => uint256) minerIdxsPlusOne;
     }
@@ -28,10 +29,6 @@ abstract contract QuantumPortalMinerMembership is IQuantumPortalMinerMembership 
         assembly {
             $.slot := QuantumPortalMinerMembershipStorageV001Location
         }
-    }
-
-    function timeBlockSize() public view returns (uint256) {
-        return _getQuantumPortalMinerMembershipStorageV001().timeBlockSize;
     }
 
     function miners() public view returns (address[] memory) {
@@ -68,7 +65,7 @@ abstract contract QuantumPortalMinerMembership is IQuantumPortalMinerMembership 
         uint256 chainTimestamp
     ) public view override returns (address) {
         uint256 offset = (chainTimestamp - blockTimestamp) %
-            (timeBlockSize() * 2);
+            (timeBlockSize * 2);
         uint256 registeredMinerIdx = minerIdx(
             blockHash,
             blockTimestamp,
@@ -91,7 +88,7 @@ abstract contract QuantumPortalMinerMembership is IQuantumPortalMinerMembership 
     ) internal returns (bool) {
         QuantumPortalMinerMembershipStorageV001 storage $ = _getQuantumPortalMinerMembershipStorageV001();
         uint256 offset = (block.timestamp - blockTimestamp) %
-            (timeBlockSize() * 2);
+            (timeBlockSize * 2);
         uint256 registeredMinerIdx = minerIdx(
             blockHash,
             blockTimestamp,
@@ -123,7 +120,7 @@ abstract contract QuantumPortalMinerMembership is IQuantumPortalMinerMembership 
         uint256 blockTimestamp,
         uint256 offset
     ) internal view returns (uint256) {
-        uint256 blockEpoch = blockTimestamp / timeBlockSize();
+        uint256 blockEpoch = blockTimestamp / timeBlockSize;
         uint256 idx = uint256(blockHash) << (64 + blockEpoch + offset);
         return idx % miners().length;
     }

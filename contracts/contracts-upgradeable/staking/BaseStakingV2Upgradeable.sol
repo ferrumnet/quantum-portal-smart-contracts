@@ -6,20 +6,20 @@ import {IGeneralTaxDistributor} from "foundry-contracts/contracts/contracts/taxi
 import {Staking, IStakeV2} from "../../staking/interfaces/IStakeV2.sol";
 import {IStakeInfo} from "../../staking/interfaces/IStakeInfo.sol";
 import {StakingBasics, StakeFlags} from "../../staking/library/StakingBasics.sol";
-import {Admined} from "./library/Admined.sol";
+import {AdminedUpgradeable} from "./library/AdminedUpgradeable.sol";
 import {VestingLibrary} from "../../staking/vesting/VestingLibrary.sol";
-import {TokenReceivable} from "./library/TokenReceivable.sol";
-import {StakingV2CommonSignatures} from "./library/StakingV2CommonSignatures.sol";
+import {TokenReceivableUpgradeable} from "./library/TokenReceivableUpgradeable.sol";
+import {StakingV2CommonSignaturesUpgradeable} from "./library/StakingV2CommonSignaturesUpgradeable.sol";
 import {IStakingFactory} from "../../staking/factory/IStakingFactory.sol";
 
 
-abstract contract BaseStakingV2 is 
+abstract contract BaseStakingV2Upgradeable is 
 	Initializable,
 	IStakeV2,
 	IStakeInfo,
-	TokenReceivable,
-	Admined,
-	StakingV2CommonSignatures
+	TokenReceivableUpgradeable,
+	AdminedUpgradeable,
+	StakingV2CommonSignaturesUpgradeable
 {
 	using StakeFlags for uint16;
 	/// @custom:storage-location erc7201:ferrum.storage.basestakingv2.001
