@@ -5,7 +5,7 @@ import "hardhat-contract-sizer"
 
 import { TEST_MNEMONICS } from "./test/common/TestAccounts";
 import { ethers } from "ethers";
-require("dotenv").config({ path: __dirname + "/localConfig/test.env" });
+require("dotenv").config();
 
 const getEnv = (env: string) => {
   const value = process.env[env];

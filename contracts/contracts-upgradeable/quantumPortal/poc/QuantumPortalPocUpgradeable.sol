@@ -381,6 +381,6 @@ abstract contract QuantumPortalPocUpgradeable is
     }
 }
 
-contract QuantumPortalPocImpl is QuantumPortalPocUpgradeable {
+contract QuantumPortalPocImplUpgradeable is QuantumPortalPocUpgradeable {
     constructor() PortalLedgerUpgradeable(0) {}
 }

@@ -39,12 +39,8 @@ contract UniswapOracle is IPriceOracle {
     mapping(bytes32 => uint256[]) public emas;
     mapping(bytes32 => EmaTimes) public emaTimes;
 
-    constructor() {
-        address factory = abi.decode(
-            IFerrumDeployer(msg.sender).initData(),
-            (address)
-        );
-        uniV2Factory = IUniswapV2Factory(factory);
+    constructor(address _factory) {
+        uniV2Factory = IUniswapV2Factory(_factory);
     }
 
     /**

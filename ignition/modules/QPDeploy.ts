@@ -1,23 +1,23 @@
 import hre from "hardhat"
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules"
-import { Wei } from 'foundry-contracts/dist/test/common/Utils';
 import { ZeroAddress } from "ethers";
 import { loadQpDeployConfig, QpDeployConfig } from "../../scripts/utils/DeployUtils";
 const DEFAULT_QP_CONFIG_FILE = 'QpDeployConfig.yaml';
 
 
 const deployModule = buildModule("DeployModule", (m) => {
-    const currentChainId = hre.network.config.chainId;
+    const currentChainId = 31337 // hre.network.config.chainId;
     const conf: QpDeployConfig = loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
     const owner = m.getAccount(0)
 
     //--------------- Gateway ----------------//
-    const gatewayImpl = m.contract("QuantumPortalGatewayUpgradeableTest", [conf.FRM[currentChainId!]], { id: "QPGatewayImpl"})
+    const gatewayImpl = m.contract("QuantumPortalGatewayUpgradeable", [conf.FRM[currentChainId!]], { id: "QPGatewayImpl"})
     let initializeCalldata: any = m.encodeFunctionCall(gatewayImpl, "initialize", [
 		owner,
 		owner
 	]);
-    const gateway = m.contract("ERC1967Proxy", [gatewayImpl, initializeCalldata], { id: "Gateway"})
+    const gatewayProxy = m.contract("ERC1967Proxy", [gatewayImpl, initializeCalldata], { id: "GatewayProxy"})
+    const gateway = m.contractAt("QuantumPortalGatewayUpgradeable", gatewayProxy, { id: "Gateway"})
 
     //--------------- LedgerManager -----------//
     const ledgerMgrImpl = m.contract("QuantumPortalLedgerMgrImplUpgradeable", [], { id: "LedgerMgrImpl"})
@@ -27,7 +27,8 @@ const deployModule = buildModule("DeployModule", (m) => {
         conf.QuantumPortalMinStake!,
         gateway
     ]);
-    const ledgerMgr = m.contract("ERC1967Proxy", [ledgerMgrImpl, initializeCalldata], { id: "LedgerMgr"})
+    const ledgerMgrProxy = m.contract("ERC1967Proxy", [ledgerMgrImpl, initializeCalldata], { id: "LedgerMgrProxy"})
+    const ledgerMgr = m.contractAt("QuantumPortalLedgerMgrImplUpgradeable", ledgerMgrProxy, { id: "LedgerMgr"})
 
     //--------------- Poc ---------------------//
     const pocImpl = m.contract("QuantumPortalPocImplUpgradeable", [], { id: "PocImpl"})
@@ -36,7 +37,8 @@ const deployModule = buildModule("DeployModule", (m) => {
         owner,
         gateway
     ]);
-    const poc = m.contract("ERC1967Proxy", [pocImpl, initializeCalldata], { id: "Poc"})
+    const pocProxy = m.contract("ERC1967Proxy", [pocImpl, initializeCalldata], { id: "PocProxy"})
+    const poc = m.contractAt("QuantumPortalPocImplUpgradeable", pocProxy, { id: "Poc"})
 
     //--------------- AuthorityManager --------//
     const authMgrImpl = m.contract("QuantumPortalAuthorityMgrUpgradeable", [], { id: "AuthMgrImpl"})
@@ -47,7 +49,8 @@ const deployModule = buildModule("DeployModule", (m) => {
         owner,
         gateway
     ]);
-    const authMgr = m.contract("ERC1967Proxy", [authMgrImpl, initializeCalldata], { id: "AuthMgr"})
+    const authMgrProxy = m.contract("ERC1967Proxy", [authMgrImpl, initializeCalldata], { id: "AuthMgrProxy"})
+    const authMgr = m.contractAt("QuantumPortalAuthorityMgrUpgradeable", authMgrProxy, { id: "AuthMgr"})
 
     //--------------- Oracle ------------------//
     const oracle = m.contract("UniswapOracle", [conf.UniV2Factory[currentChainId!]], { id: "Oracle"})
@@ -60,17 +63,19 @@ const deployModule = buildModule("DeployModule", (m) => {
         oracle,
         gateway
     ]);
-    const feeConverter = m.contract("ERC1967Proxy", [feeConverterImpl, initializeCalldata], { id: "FeeConverter"})
+    const feeConverterProxy = m.contract("ERC1967Proxy", [feeConverterImpl, initializeCalldata], { id: "FeeConverterProxy"})
+    const feeConverter = m.contractAt("QuantumPortalFeeConverterUpgradeable", feeConverterProxy, { id: "FeeConverter"})
 
     //--------------- StakeWithDelegate -------//
     const stakingImpl = m.contract("QuantumPortalStakeWithDelegateUpgradeable", [], { id: "StakingImpl"})
-    initializeCalldata = m.encodeFunctionCall(stakingImpl, "initialize", [
+    initializeCalldata = m.encodeFunctionCall(stakingImpl, "initialize(address,address,address,address)", [
         conf.FRM[currentChainId!],
         authMgr,
         ZeroAddress,
         gateway
     ]);
-    const staking = m.contract("ERC1967Proxy", [stakingImpl, initializeCalldata], { id: "Staking"})
+    const stakingProxy = m.contract("ERC1967Proxy", [stakingImpl, initializeCalldata], { id: "StakingProxy"})
+    const staking = m.contractAt("QuantumPortalStakeWithDelegateUpgradeable", stakingProxy, { id: "Staking"})
 
     //---------------- MiningManager ----------//
     const minerMgrImpl = m.contract("QuantumPortalMinerMgrUpgradeable", [], { id: "MinerMgrImpl"})
@@ -80,7 +85,8 @@ const deployModule = buildModule("DeployModule", (m) => {
         ledgerMgr,
         gateway
     ]);
-    const minerMgr = m.contract("ERC1967Proxy", [minerMgrImpl, initializeCalldata], { id: "MinerMgr"})
+    const minerMgrProxy = m.contract("ERC1967Proxy", [minerMgrImpl, initializeCalldata], { id: "MinerMgrProxy"})
+    const minerMgr = m.contractAt("QuantumPortalMinerMgrUpgradeable", minerMgrProxy, { id: "MinerMgr"})
 
     //----------------- Setup -----------------//
     m.call(ledgerMgr, "updateAuthorityMgr", [authMgr])
@@ -88,12 +94,12 @@ const deployModule = buildModule("DeployModule", (m) => {
 	m.call(ledgerMgr, "updateFeeConvertor", [feeConverter])
 
     m.call(poc, "setManager", [ledgerMgr])
-	m.call(poc, "updateFeeTarget", [])
 	m.call(poc, "setFeeToken", [conf.FRM[currentChainId!]])
-
+    
 	m.call(minerMgr, "updateBaseToken", [conf.FRM[currentChainId!]])
 	m.call(ledgerMgr, "updateLedger", [poc])
-
+    
+	m.call(poc, "updateFeeTarget")
     return {
         gateway,
         ledgerMgr,
@@ -103,7 +109,6 @@ const deployModule = buildModule("DeployModule", (m) => {
         feeConverter,
         staking,
         minerMgr
-
     }
 })
 
