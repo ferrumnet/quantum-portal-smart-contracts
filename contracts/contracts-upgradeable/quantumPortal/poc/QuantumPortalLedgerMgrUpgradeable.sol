@@ -1065,7 +1065,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         return _getQuantumPortalLedgerMgrStorageV001().ledger;
     }
 
-    function feeConverter() public view returns (address) {
+    function feeConvertor() public view returns (address) {
         return _getQuantumPortalLedgerMgrStorageV001().feeConvertor;
     }
 

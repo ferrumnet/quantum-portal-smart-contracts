@@ -55,16 +55,24 @@ const deployModule = buildModule("DeployModule", (m) => {
     //--------------- Oracle ------------------//
     const oracle = m.contract("UniswapOracle", [conf.UniV2Factory[currentChainId!]], { id: "Oracle"})
 
-    //--------------- FeeConverter ------------//
-    const feeConverterImpl = m.contract("QuantumPortalFeeConverterUpgradeable", [], { id: "FeeConverterImpl"})
-    initializeCalldata = m.encodeFunctionCall(feeConverterImpl, "initialize", [
-        conf.WETH[currentChainId!],
-        conf.FRM[currentChainId!],
-        oracle,
+    //--------------- FeeConverterDirect ------------//
+    const feeConverterDirectImpl = m.contract("QuantumPortalFeeConverterDirectUpgradeable", [], { id: "FeeConverterDirectImpl"})
+    initializeCalldata = m.encodeFunctionCall(feeConverterDirectImpl, "initialize", [
         gateway
     ]);
-    const feeConverterProxy = m.contract("ERC1967Proxy", [feeConverterImpl, initializeCalldata], { id: "FeeConverterProxy"})
-    const feeConverter = m.contractAt("QuantumPortalFeeConverterUpgradeable", feeConverterProxy, { id: "FeeConverter"})
+    const feeConverterDirectProxy = m.contract("ERC1967Proxy", [feeConverterDirectImpl, initializeCalldata], { id: "FeeConverterDirectProxy"})
+    const feeConverterDirect = m.contractAt("QuantumPortalFeeConverterDirectUpgradeable", feeConverterDirectProxy, { id: "FeeConverterDirect"})
+
+
+    // const feeConverterImpl = m.contract("QuantumPortalFeeConverterUpgradeable", [], { id: "FeeConverterImpl"})
+    // initializeCalldata = m.encodeFunctionCall(feeConverterImpl, "initialize", [
+    //     conf.WETH[currentChainId!],
+    //     conf.FRM[currentChainId!],
+    //     oracle,
+    //     gateway
+    // ]);
+    // const feeConverterProxy = m.contract("ERC1967Proxy", [feeConverterImpl, initializeCalldata], { id: "FeeConverterProxy"})
+    // const feeConverter = m.contractAt("QuantumPortalFeeConverterUpgradeable", feeConverterProxy, { id: "FeeConverter"})
 
     //--------------- StakeWithDelegate -------//
     const stakingImpl = m.contract("QuantumPortalStakeWithDelegateUpgradeable", [], { id: "StakingImpl"})
@@ -91,25 +99,51 @@ const deployModule = buildModule("DeployModule", (m) => {
     //----------------- Setup -----------------//
     m.call(ledgerMgr, "updateAuthorityMgr", [authMgr])
 	m.call(ledgerMgr, "updateMinerMgr", [minerMgr])
-	m.call(ledgerMgr, "updateFeeConvertor", [feeConverter])
+	m.call(ledgerMgr, "updateFeeConvertor", [feeConverterDirect])
 
     m.call(poc, "setManager", [ledgerMgr])
 	m.call(poc, "setFeeToken", [conf.FRM[currentChainId!]])
     
 	m.call(minerMgr, "updateBaseToken", [conf.FRM[currentChainId!]])
 	m.call(ledgerMgr, "updateLedger", [poc])
-    
-	m.call(poc, "updateFeeTarget")
+
     return {
         gateway,
         ledgerMgr,
         poc,
         authMgr,
         oracle,
-        feeConverter,
+        feeConverterDirect,
         staking,
         minerMgr
     }
 })
 
-export default deployModule;
+const configModule = buildModule("ConfigModule", (m) => {
+    const { gateway,
+        ledgerMgr,
+        poc,
+        authMgr,
+        oracle,
+        feeConverterDirect,
+        staking,
+        minerMgr
+    } = m.useModule(deployModule)
+
+    m.call(poc, "updateFeeTarget")
+    // Add the 3 calls on gateway to update the 3 qp contract addresses
+    m.call(gateway, "upgrade", [poc, ledgerMgr, staking])
+
+    return {
+        gateway,
+        ledgerMgr,
+        poc,
+        authMgr,
+        oracle,
+        feeConverterDirect,
+        staking,
+        minerMgr
+    }
+})
+
+export default configModule;

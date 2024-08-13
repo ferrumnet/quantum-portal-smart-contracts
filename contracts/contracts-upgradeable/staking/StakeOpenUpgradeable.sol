@@ -104,7 +104,10 @@ contract StakeOpenUpgradeable is Initializable, UUPSUpgradeable, SweepableUpgrad
         return _stake(to, id, 0);
     }
 
-    function _init(address token, string memory _name, address[] memory rewardTokens
+    function _init(
+        address token,
+        string memory _name,
+        address[] memory rewardTokens
     ) internal {
         BaseStakingV2StorageV001 storage $b = _getBaseStakingV2StorageV001();
         StakingBasics.StakeInfo storage info = $b.stakings[token];

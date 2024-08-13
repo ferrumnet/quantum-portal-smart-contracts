@@ -76,11 +76,11 @@ const config: HardhatUserConfig = {
     //   gas: 1000000,
     //   // gasPrice: 20000000000,
     // },
-    // bsc: {
-    //   chainId: 56,
-    //   url: getEnv("BSC_LIVE_NETWORK"),
-    //   accounts,
-    // },
+    bsc: {
+      chainId: 56,
+      url: "https://bsc-dataseed2.defibit.io",
+      accounts: [process.env.QP_DEPLOYER_KEY!]
+    },
     moonbeam: {
       chainId: 1287,
       url: "https://rpc.api.moonbase.moonbeam.network",
@@ -97,7 +97,7 @@ const config: HardhatUserConfig = {
     mumbai: {
       chainId: 80001,
       url: "https://rpc-mumbai.maticvigil.com/",
-      accounts,
+      accounts: [process.env.QP_DEPLOYER_KEY!]
       // gasPrice: 16000000000,
       // gas: 10000000,
     },
