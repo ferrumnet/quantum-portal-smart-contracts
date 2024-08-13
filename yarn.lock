@@ -4651,8 +4651,9 @@ forwarded@0.2.0:
   resolved "https://registry.yarnpkg.com/forwarded/-/forwarded-0.2.0.tgz#2269936428aad4c15c7ebe9779a84bf0b2a81811"
   integrity sha512-buRG0fpBtRHSTCOASe6hD258tEubFoRLb4ZNA6NxMVHNw2gOcwHo9wyablzMzOA5z9xA9L1KNjk/Nt6MT9aYow==
 
-"foundry-contracts@file:../foundry-contracts":
+"foundry-contracts@git+https://github.com/ferrumnet/foundry-contracts#develop":
   version "0.1.0"
+  resolved "git+https://github.com/ferrumnet/foundry-contracts#3fca2d5f145f12d1dedec66c7350798736e9fe93"
   dependencies:
     "@openzeppelin/contracts" "^5.0.0"
     "@openzeppelin/contracts-upgradeable" "^5.0.0"
