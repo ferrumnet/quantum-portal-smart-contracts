@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 import "../QuantumPortalPoc.sol";
 import "../QuantumPortalLedgerMgr.sol";
-import "foundry-contracts/contracts/common/SafeAmount.sol";
+import "foundry-contracts/contracts/contracts/common/SafeAmount.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "hardhat/console.sol";

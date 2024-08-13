@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 import "../IQuantumPortalPoc.sol";
-import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
-import "foundry-contracts/contracts/token/ERC20/ERC20.sol";
+import "foundry-contracts/contracts/contracts/common/IFerrumDeployer.sol";
+import "foundry-contracts/contracts/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract MultiChainToken is ERC20, Ownable {

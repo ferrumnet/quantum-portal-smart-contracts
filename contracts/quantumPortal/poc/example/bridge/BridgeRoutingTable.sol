@@ -2,7 +2,7 @@
 pragma solidity ^0.8.24;
 
 import "./IBridgeRoutingTable.sol";
-import "foundry-contracts/contracts/common/SafeAmount.sol";
+import "foundry-contracts/contracts/contracts/common/SafeAmount.sol";
 
 /**
  @notice This contract is a helper for bridge V12. Ported to the QPN.

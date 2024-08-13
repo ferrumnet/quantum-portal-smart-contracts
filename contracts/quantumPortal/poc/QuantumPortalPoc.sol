@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "foundry-contracts/contracts/common/IVersioned.sol";
+import "foundry-contracts/contracts/contracts/common/IVersioned.sol";
 import "./IQuantumPortalPoc.sol";
 import "./IQuantumPortalNativeFeeRepo.sol";
 import "./utils/IQpSelfManagedToken.sol";

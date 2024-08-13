@@ -1,12 +1,11 @@
-import { HardhatUserConfig } from "hardhat/types";
-import "@nomiclabs/hardhat-ethers";
-import "@nomiclabs/hardhat-waffle";
-import "@typechain/hardhat";
-// import "@openzeppelin/hardhat-upgrades";
-import "@nomicfoundation/hardhat-verify";
+import { HardhatUserConfig } from "hardhat/config";
+import "@nomicfoundation/hardhat-toolbox";
+import "@nomicfoundation/hardhat-ignition-ethers";
+import "hardhat-contract-sizer"
+
 import { TEST_MNEMONICS } from "./test/common/TestAccounts";
 import { ethers } from "ethers";
-require("dotenv").config({ path: __dirname + "/localConfig/test.env" });
+require("dotenv").config();
 
 const getEnv = (env: string) => {
   const value = process.env[env];
@@ -20,7 +19,7 @@ const getEnv = (env: string) => {
 const accounts: any = process.env.TEST_ACCOUNT_PRIVATE_KEY ? [process.env.TEST_ACCOUNT_PRIVATE_KEY] : { mnemonic: TEST_MNEMONICS };
 
 if (accounts.mnemonic) {
-    let mnemonicWallet = ethers.Wallet.fromMnemonic(TEST_MNEMONICS);
+    let mnemonicWallet = ethers.HDNodeWallet.fromPhrase(TEST_MNEMONICS);
     console.log('Test account used from MNEMONIC', mnemonicWallet.privateKey, mnemonicWallet.address);
 } else {
     let wallet = new ethers.Wallet(accounts[0]);
@@ -46,6 +45,7 @@ const config: HardhatUserConfig = {
     hardhat: {
       accounts,
       blockGasLimit: 3000000000,
+      allowUnlimitedContractSize: true,
       // gas: 100000,
       // gasPrice: 20000000000,
     },
@@ -69,25 +69,18 @@ const config: HardhatUserConfig = {
       accounts,
       gasPrice: 18000000000,
     },
-    bsctestnet: {
-      chainId: 97,
-      url: getEnv("BSC_TESTNET_LIVE_NETWORK"),
-      accounts,
-      gas: 1000000,
-      // gasPrice: 20000000000,
-    },
-    bsc: {
-      chainId: 56,
-      url: getEnv("BSC_LIVE_NETWORK"),
-      accounts,
-    },
-    btfd_ghostnet: {
-      chainId: 42,
-      url: "http://ghostnet.dev.svcs.ferrumnetwork.io:9944",
-      accounts,
-      allowUnlimitedContractSize: true,
-      gas: 10000000, // this override is required for Substrate based evm chains
-    },
+    // bsctestnet: {
+    //   chainId: 97,
+    //   url: getEnv("BSC_TESTNET_LIVE_NETWORK"),
+    //   accounts,
+    //   gas: 1000000,
+    //   // gasPrice: 20000000000,
+    // },
+    // bsc: {
+    //   chainId: 56,
+    //   url: getEnv("BSC_LIVE_NETWORK"),
+    //   accounts,
+    // },
     moonbeam: {
       chainId: 1287,
       url: "https://rpc.api.moonbase.moonbeam.network",

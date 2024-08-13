@@ -156,8 +156,8 @@ async function prep(conf: QpDeployConfig) {
         console.log(`mgr.ledger = ${ctx.poc.address}, poc.mgr = ${ctx.mgr.address}, state = ${ctx.state.address}`);
         await ctx.mgr.connect(qpWallet).updateLedger(ctx.poc.address);
         await ctx.poc.connect(qpWallet).setManager(ctx.mgr.address, ctx.state.address);
-
     }
+    
     if (newLedgerMgr || newMinerMgr) {
         console.log('New miner mgr. Updating ledgerMgr');
         await ctx.mgr.connect(qpWallet).updateMinerMgr(ctx.miner.address);

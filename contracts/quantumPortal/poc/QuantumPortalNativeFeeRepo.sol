@@ -5,11 +5,11 @@ import "./IQuantumPortalPoc.sol";
 import "../../uniswap/IWETH.sol";
 import "./poa/IQuantumPortalFeeConvertor.sol";
 import "./IQuantumPortalNativeFeeRepo.sol";
-import "foundry-contracts/contracts/common/IVersioned.sol";
-import "foundry-contracts/contracts/math/FullMath.sol";
-import "foundry-contracts/contracts/math/FixedPoint128.sol";
-import "foundry-contracts/contracts/common/SafeAmount.sol";
-import "foundry-contracts/contracts/common/WithAdmin.sol";
+import "foundry-contracts/contracts/contracts/common/IVersioned.sol";
+import "foundry-contracts/contracts/contracts/math/FullMath.sol";
+import "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
+import "foundry-contracts/contracts/contracts/common/SafeAmount.sol";
+import "foundry-contracts/contracts/contracts/common/WithAdmin.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 /**

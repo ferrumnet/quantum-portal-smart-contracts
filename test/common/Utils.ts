@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { randomBytes } from "crypto";
-import { Signer } from "ethers";
+import { Contract, EventLog, Signer } from "ethers";
 import { ethers } from "hardhat";
 import { DummyToken } from "../../typechain/DummyToken";
 import { DirectMinimalErc20 } from "foundry-contracts/typechain-types/DirectMinimalErc20";
@@ -9,7 +9,7 @@ import { IVersioned } from "../../typechain/IVersioned";
 export const ZeroAddress = '0x' + '0'.repeat(40);
 export const Salt = '0x' + '12'.repeat(32);
 
-export const abi = ethers.utils.defaultAbiCoder;
+export const abi = new ethers.AbiCoder();
 
 export const _WETH: {[k: number]: string} = {
 	4: '0xc778417e063141139fce010982780140aa0cd5ab',
@@ -130,25 +130,15 @@ export async function getTransactionReceipt(id: string) {
 	return reci;
 }
 
-export async function getTransactionLog(id: string, contract: any, eventName: string) {
-	const reci = await getTransactionReceipt(id);
-	const log = reci.logs.find(l => l.address.toLowerCase() === contract.address.toLocaleLowerCase());
-	if (!reci || !log) {
-		throw new Error('Could not get transaction ' + id + ' or logs were messed up. ' + (reci || ''));
+export async function getTransactionLog(txHash: string, contract: Contract, eventName: string) {
+
+	const logs = await contract.queryFilter(eventName)
+	const filteredLogs = logs.filter(l => l.transactionHash === txHash);
+	if (filteredLogs.length === 0) {
+		throw new Error('Could not get transaction ' + txHash);
 	}
-	if (reci) {
-		let events = contract.interface.decodeEventLog(
-			eventName,
-			log.data,
-			log.topics);
-		console.log('Received event: ', events);
-		if (!events) {
-			throw new Error('Event not found! ' + id);
-		}
-		return events;
-	} else {
-		throw new Error('Tx not found! ' + id);
-	}
+
+	return filteredLogs;	
 }
 
 export async function contractExists(contractName: string, contract: string) {
@@ -179,30 +169,17 @@ export async function deployUsingDeployer(contract: string, owner: string, initD
 	const res = siger ? await deployer.connect(siger).deployOwnable(salt, owner, initData, contr.bytecode, {gasLimit: 6000000})
 		: await deployer.deployOwnable(salt, owner, initData, contr.bytecode);
 	console.log(`Deploy tx hash: ${res.hash}`)
-	const events = await getTransactionLog(res.hash, deployer, 'DeployedWithData');
-	// let reci = await getTransactionReceipt(res.hash);
-	// let eventAddr = '';
-	// const log = reci.logs.find(l => l.address.toLowerCase() === deployer.address.toLocaleLowerCase());
-	// if (!reci || !log) {
-	// 	throw new Error('Could not get transaction ' + res.hash + ' or logs were messed up. ' + (reci || ''));
-	// }
-	// if (reci) {
-	// 	let events = deployer.interface.decodeEventLog(
-	// 		'DeployedWithData',
-	// 		log.data,
-	// 		log.topics);
-	// 	console.log('Received event: ', events);
-		const eventAddr = events.conAddr;
-		// if (!eventAddr) {
-		// 	throw new Error('Event address was not found! ' + res.hash);
-		// }
-	// }
+	console.log("Passing in deployer")
+	console.log(deployer)
+	const logs = await getTransactionLog(res.hash, deployer, 'DeployedWithData') as any as EventLog;
+	const eventAddr = logs[0].args[0];
+	console.log('Event address ', eventAddr);
 
-	const bytecodeHash = ethers.utils.keccak256(contr.bytecode);
+	const bytecodeHash = ethers.keccak256(contr.bytecode);
 	const addr = await deployer.computeAddressOwnable(salt, owner, initData, bytecodeHash);
 	console.log('Deployed address ', {addr, eventAddr});
 	if (eventAddr !== addr) {
-		console.log('Address was diferent! Sad!')
+		console.log('Address was diferent!')
 	}
 
 	return contr.attach(eventAddr);

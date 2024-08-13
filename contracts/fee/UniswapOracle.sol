@@ -4,9 +4,9 @@ pragma solidity ^0.8.0;
 import "./IPriceOracle.sol";
 import "../uniswap/IUniswapV2Factory.sol";
 import "../uniswap/IUniswapV2Pair.sol";
-import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
-import "foundry-contracts/contracts/math/FullMath.sol";
-import "foundry-contracts/contracts/math/FixedPoint128.sol";
+import "foundry-contracts/contracts/contracts/common/IFerrumDeployer.sol";
+import "foundry-contracts/contracts/contracts/math/FullMath.sol";
+import "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
 
 import "hardhat/console.sol";
 
@@ -39,12 +39,8 @@ contract UniswapOracle is IPriceOracle {
     mapping(bytes32 => uint256[]) public emas;
     mapping(bytes32 => EmaTimes) public emaTimes;
 
-    constructor() {
-        address factory = abi.decode(
-            IFerrumDeployer(msg.sender).initData(),
-            (address)
-        );
-        uniV2Factory = IUniswapV2Factory(factory);
+    constructor(address _factory) {
+        uniV2Factory = IUniswapV2Factory(_factory);
     }
 
     /**

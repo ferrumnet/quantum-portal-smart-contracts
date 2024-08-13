@@ -3,7 +3,6 @@ pragma solidity ^0.8.0;
 
 import "./IQuantumPortalStakeWithDelegate.sol";
 import "../QuantumPortalAuthorityMgr.sol";
-import "../Delegator.sol";
 import "./OperatorRelation.sol";
 import "../../../../staking/StakeOpen.sol";
 
