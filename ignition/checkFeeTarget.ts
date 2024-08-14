@@ -1,32 +1,26 @@
 import { ethers } from "ethers";
+import configModule from "./modules/QPDeploy"
+import hre from "hardhat";
 
-const rpcUrl = "http://localhost:8545"
+const rpcUrl = "https://testnet.dev.svcs.ferrumnetwork.io"
 
 // Create a provider
 const provider = new ethers.JsonRpcProvider(rpcUrl);
-const abi = [
-    {
-        "inputs": [],
-        "name": "feeConvertor",
-        "outputs": [
-            {
-            "internalType": "address",
-            "name": "",
-            "type": "address"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    }
-]
 
 async function sendTransaction() {
-    try {
-        const poc = new ethers.Contract("0xd8ad656fa118c5d4f4d02910a295fdce659a4267", abi, provider);
-        console.log(await poc.feeConvertor())
-    } catch (error) {
-        console.error("Error sending transaction:", error);
-    }
+    // const { gateway,
+    //     ledgerMgr,
+    //     poc,
+    //     authMgr,
+    //     feeConverterDirect,
+    //     staking,
+    //     minerMgr
+    // } = await hre.ignition.deploy(configModule)
+
+    console.log( hre.network.config.gas)
+    
+    hre.network.config.gasPrice = 40000000000000
+    console.log( hre.network.config.gasPrice)
 }
 
 sendTransaction();

@@ -38,9 +38,10 @@ contract QuantumPortalFeeConverterUpgradeable is Initializable, UUPSUpgradeable,
         address _networkFeeWrappedToken,
         address _qpFeeToken,
         address _oracle,
-        address gateway
+        address gateway,
+        address initialOwnerAdmin
     ) public initializer {
-        __WithAdmin_init(msg.sender, msg.sender);
+        __WithAdmin_init(initialOwnerAdmin, initialOwnerAdmin);
         __WithGateway_init_unchained(gateway);
         __QuantumPortalFeeConvertor_init_unchained(_networkFeeWrappedToken, _qpFeeToken, _oracle);
     }

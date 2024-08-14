@@ -11,9 +11,9 @@ const DEFAULT_QP_CONFIG_FILE = 'QpDeployConfig.yaml';
 const upgradeModule = buildModule("UpgradeModule", (m) => {
     // Ignition will reconcile deployments in ignition/deployments folder, so won't deploy again
     const {gateway, ledgerMgr} = m.useModule(deployModule)
-    const ledgerMgrImpl = m.contract("QuantumPortalLedgerMgrImplUpgradeableV2", [], { id: "LedgerMgrImpl"})
+    const newGateway = m.contract("QuantumPortalGatewayUpgradeableV2", ["0xdCd60Be5b153d1884e1E6E8C23145D6f3546315e"])
 
-    m.call(gateway, "upgradeQpComponentAndCall", [ledgerMgr, ledgerMgrImpl, "0x"])
+    m.call(gateway, "upgradeToAndCall", [newGateway, "0x"])
 
     return {ledgerMgr}
 })

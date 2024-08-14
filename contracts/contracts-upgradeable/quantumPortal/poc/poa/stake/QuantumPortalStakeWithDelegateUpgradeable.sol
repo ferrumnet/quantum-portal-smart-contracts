@@ -63,9 +63,10 @@ contract QuantumPortalStakeWithDelegateUpgradeable is
         address _token,
         address _authority,
         address _stakeVerifyer,
-        address _gateway
+        address _gateway,
+        address initialOwnerAdmin
     ) public initializer {
-        super.initialize(_gateway); // initialize() from StakeOpen
+        super.initialize(_gateway, initialOwnerAdmin); // initialize() from StakeOpen
         address[] memory tokens = new address[](1);
         tokens[0] = _token;
         _init(_token, "QP Stake", tokens);

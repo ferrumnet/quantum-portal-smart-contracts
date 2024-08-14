@@ -32,9 +32,8 @@ contract StakeOpenUpgradeable is Initializable, UUPSUpgradeable, SweepableUpgrad
     // keccak256(abi.encode(uint256(keccak256("ferrum.storage.stakeopen.001")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant StakeOpenStorageV001Location = 0xd1e594e328d6b9dce40c5be8d3fbae8ce305ff69cc672a339e247103e00d4f00;
 
-    function initialize(address _gateway) public initializer {
-        __EIP712_init(NAME, VERSION);
-        __Ownable_init(msg.sender);
+    function initialize(address _gateway, address initialOwner) public initializer {
+        __Ownable_init(initialOwner);
         __WithGateway_init_unchained(_gateway);
         __BaseStakingV2_init();
     }
@@ -71,14 +70,14 @@ contract StakeOpenUpgradeable is Initializable, UUPSUpgradeable, SweepableUpgrad
         require(allocation != 0, "StakeTimed: allocation is required");
         address allocator = $b.extraInfo.allocators[id];
         require(allocator != address(0), "StakeTimed: no allocator");
-        verifyAllocation(
-            id,
-            msg.sender,
-            allocator,
-            allocation,
-            salt,
-            allocatorSignature
-        );
+        // verifyAllocation(
+        //     id,
+        //     msg.sender,
+        //     allocator,
+        //     allocation,
+        //     salt,
+        //     allocatorSignature
+        // );
         return _stake(staker, id, allocation);
     }
 

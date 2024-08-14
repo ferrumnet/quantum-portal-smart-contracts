@@ -67,12 +67,13 @@ contract QuantumPortalMinerMgrUpgradeable is
         address _miningStake,
         address _portal,
         address _mgr,
-        address _gateway
+        address _gateway,
+        address _initialOwner
     ) public initializer {
         QuantumPortalMinerMgrStorageV001 storage $ = _getQuantumPortalMinerMgrStorageV001();
         $.miningStake = _miningStake;
         __EIP712_init(NAME, VERSION);
-        __QuantimPortalWorkPoolServer_init(_mgr, _portal, msg.sender, msg.sender);
+        __QuantimPortalWorkPoolServer_init(_mgr, _portal, _initialOwner, _initialOwner);
         __WithGateway_init_unchained(_gateway);
         __UUPSUpgradeable_init();
     }

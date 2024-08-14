@@ -2,11 +2,14 @@ import hre from "hardhat"
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules"
 import { ZeroAddress } from "ethers";
 import { loadQpDeployConfig, QpDeployConfig } from "../../scripts/utils/DeployUtils";
+import QuantumPortalGatewayUpgradeable from "../../artifacts/contracts/contracts-upgradeable/quantumPortal/poc/QuantumPortalGatewayUpgradeable.sol/QuantumPortalGatewayUpgradeable.json"
 const DEFAULT_QP_CONFIG_FILE = 'QpDeployConfig.yaml';
 
 
 const deployModule = buildModule("DeployModule", (m) => {
-    const currentChainId = 31337 // hre.network.config.chainId;
+    
+    hre.network.config.gasPrice = 40000000000000
+    const currentChainId = 31337;
     const conf: QpDeployConfig = loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
     const owner = m.getAccount(0)
 
@@ -53,12 +56,13 @@ const deployModule = buildModule("DeployModule", (m) => {
     const authMgr = m.contractAt("QuantumPortalAuthorityMgrUpgradeable", authMgrProxy, { id: "AuthMgr"})
 
     //--------------- Oracle ------------------//
-    const oracle = m.contract("UniswapOracle", [conf.UniV2Factory[currentChainId!]], { id: "Oracle"})
+    // const oracle = m.contract("UniswapOracle", [conf.UniV2Factory[currentChainId!]], { id: "Oracle"})
 
     //--------------- FeeConverterDirect ------------//
     const feeConverterDirectImpl = m.contract("QuantumPortalFeeConverterDirectUpgradeable", [], { id: "FeeConverterDirectImpl"})
     initializeCalldata = m.encodeFunctionCall(feeConverterDirectImpl, "initialize", [
-        gateway
+        gateway,
+        owner
     ]);
     const feeConverterDirectProxy = m.contract("ERC1967Proxy", [feeConverterDirectImpl, initializeCalldata], { id: "FeeConverterDirectProxy"})
     const feeConverterDirect = m.contractAt("QuantumPortalFeeConverterDirectUpgradeable", feeConverterDirectProxy, { id: "FeeConverterDirect"})
@@ -76,11 +80,12 @@ const deployModule = buildModule("DeployModule", (m) => {
 
     //--------------- StakeWithDelegate -------//
     const stakingImpl = m.contract("QuantumPortalStakeWithDelegateUpgradeable", [], { id: "StakingImpl"})
-    initializeCalldata = m.encodeFunctionCall(stakingImpl, "initialize(address,address,address,address)", [
+    initializeCalldata = m.encodeFunctionCall(stakingImpl, "initialize(address,address,address,address,address)", [
         conf.FRM[currentChainId!],
         authMgr,
         ZeroAddress,
-        gateway
+        gateway,
+        owner
     ]);
     const stakingProxy = m.contract("ERC1967Proxy", [stakingImpl, initializeCalldata], { id: "StakingProxy"})
     const staking = m.contractAt("QuantumPortalStakeWithDelegateUpgradeable", stakingProxy, { id: "Staking"})
@@ -91,7 +96,8 @@ const deployModule = buildModule("DeployModule", (m) => {
         staking,
         poc,
         ledgerMgr,
-        gateway
+        gateway,
+        owner
     ]);
     const minerMgrProxy = m.contract("ERC1967Proxy", [minerMgrImpl, initializeCalldata], { id: "MinerMgrProxy"})
     const minerMgr = m.contractAt("QuantumPortalMinerMgrUpgradeable", minerMgrProxy, { id: "MinerMgr"})
@@ -112,7 +118,6 @@ const deployModule = buildModule("DeployModule", (m) => {
         ledgerMgr,
         poc,
         authMgr,
-        oracle,
         feeConverterDirect,
         staking,
         minerMgr
@@ -124,7 +129,6 @@ const configModule = buildModule("ConfigModule", (m) => {
         ledgerMgr,
         poc,
         authMgr,
-        oracle,
         feeConverterDirect,
         staking,
         minerMgr
@@ -139,7 +143,6 @@ const configModule = buildModule("ConfigModule", (m) => {
         ledgerMgr,
         poc,
         authMgr,
-        oracle,
         feeConverterDirect,
         staking,
         minerMgr

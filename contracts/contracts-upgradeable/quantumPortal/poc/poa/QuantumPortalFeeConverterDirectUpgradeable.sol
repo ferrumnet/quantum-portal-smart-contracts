@@ -46,8 +46,8 @@ contract QuantumPortalFeeConverterDirectUpgradeable is
         return _getQuantumPortalFeeConverterDirectStorageV001().feeTokenPriceList[chainId];
     }
 
-    function initialize(address gateway) public initializer {
-        __WithAdmin_init(msg.sender, msg.sender);
+    function initialize(address gateway, address initialOwnerAdmin) public initializer {
+        __WithAdmin_init(initialOwnerAdmin, initialOwnerAdmin);
         __WithGateway_init_unchained(gateway);
         __UUPSUpgradeable_init();
     }
