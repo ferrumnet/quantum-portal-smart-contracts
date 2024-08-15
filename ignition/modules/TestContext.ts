@@ -33,6 +33,7 @@ const deployModule = buildModule("DeployModule", (m) => {
 	let initializeCalldata: any = m.encodeFunctionCall(mgr1Impl, "initialize", [
 		owner,
 		owner,
+		1000,
 		testGatewayAddress
 	]);
 
@@ -152,18 +153,18 @@ const deployModule = buildModule("DeployModule", (m) => {
 	// const qpState2 = m.contractAt("QuantumPortalStateUpgradeable", qpState2Proxy, { id: "QPState2"})
 
 	// -------------- Setup ---------------//
-	// m.call(poc1, "setManager", [mgr1, qpState1])
-	// m.call(poc1, "updateFeeTarget", [])
-	// m.call(poc1, "setFeeToken", [testFeeToken])
-	// m.call(minerMgr1, "updateBaseToken", [testFeeToken])
-	// m.call(poc2, "setManager", [mgr2, qpState2])
-	// m.call(poc2, "updateFeeTarget", [])
-	// m.call(poc2, "setFeeToken", [testFeeToken])
-	// m.call(minerMgr2, "updateBaseToken", [testFeeToken])
-	// m.call(mgr1, "updateLedger", [poc1])
-	// m.call(mgr1, "updateState", [qpState1])
-	// m.call(mgr2, "updateLedger", [poc2])
-	// m.call(mgr2, "updateState", [qpState2])
+	m.call(poc1, "setManager", [mgr1, qpState1])
+	m.call(poc1, "updateFeeTarget", [])
+	m.call(poc1, "setFeeToken", [testFeeToken])
+	m.call(minerMgr1, "updateBaseToken", [testFeeToken])
+	m.call(poc2, "setManager", [mgr2, qpState2])
+	m.call(poc2, "updateFeeTarget", [])
+	m.call(poc2, "setFeeToken", [testFeeToken])
+	m.call(minerMgr2, "updateBaseToken", [testFeeToken])
+	m.call(mgr1, "updateLedger", [poc1])
+	m.call(mgr1, "updateState", [qpState1])
+	m.call(mgr2, "updateLedger", [poc2])
+	m.call(mgr2, "updateState", [qpState2])
 
 	return {
         mgr1,

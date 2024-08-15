@@ -63,13 +63,13 @@ describe("Proxy version", function () {
             let isBlockReady = await ctx.chain1.ledgerMgr.isLocalBlockReady(ctx.chain2.chainId);
             console.log('Is block ready on chain 1? ', isBlockReady);
             expect(isBlockReady).to.be.false;
-            let lastNonce = await ctx.chain1.state.getLastLocalBlock(ctx.chain2.chainId);
+            let lastNonce = await ctx.chain1.ledgerMgr.getLastLocalBlock(ctx.chain2.chainId);
             console.log('Last nonce is ', lastNonce.nonce);
             let block = (await ctx.chain1.ledgerMgr.localBlockByNonce(ctx.chain2.chainId, 1))[0];
             console.log('Local block is: ', blockMetadata(block.metadata));
             let key = (await ctx.chain1.ledgerMgr.getBlockIdx(ctx.chain2.chainId, 1)).toString();
             console.log('Key is', ctx.chain2.chainId, ',', key);
-            let tx = await ctx.chain1.state.getLocalBlockTransaction(key, 0);
+            let tx = await ctx.chain1.ledgerMgr.getLocalBlockTransaction(key, 0);
             console.log('Local block txs.0', tx);
 
             console.log('Moving time forward');
@@ -123,7 +123,7 @@ describe("Proxy version", function () {
             await QuantumPortalUtils.finalize(
                 ctx.chain1.chainId,
                 ctx.chain2.ledgerMgr,
-                ctx.chain2.state,
+                ctx.chain2.ledgerMgr,
                 ctx.sks[0],
             );
     

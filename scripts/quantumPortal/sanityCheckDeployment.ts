@@ -63,7 +63,6 @@ async function runCheck(conf: QpDeployConfig) {
         // 'feeConvertor': async (c: QuantumPortalLedgerMgr) => c.feeConvertor(),
         'varFeeTarget': async (c: QuantumPortalLedgerMgr) => c.varFeeTarget(),
         'fixedFeeTarget': async (c: QuantumPortalLedgerMgr) => c.fixedFeeTarget(),
-        'stakes': async (c: QuantumPortalLedgerMgr) => c.stakes(),
     }));
     console.log('QuantumPortalLedgerMgrImpl version: ', quantumPortalLedgerMgrVer);
     console.log('QuantumPortalLedgerMgrImpl parameters: ', quantumPortalLedgerMgrPar);
