@@ -7,7 +7,6 @@ import {Staking, IStakeV2} from "../../staking/interfaces/IStakeV2.sol";
 import {IStakeInfo} from "../../staking/interfaces/IStakeInfo.sol";
 import {StakingBasics, StakeFlags} from "../../staking/library/StakingBasics.sol";
 import {AdminedUpgradeable} from "./library/AdminedUpgradeable.sol";
-import {VestingLibrary} from "../../staking/vesting/VestingLibrary.sol";
 import {TokenReceivableUpgradeable} from "./library/TokenReceivableUpgradeable.sol";
 import {StakingV2CommonSignaturesUpgradeable} from "./library/StakingV2CommonSignaturesUpgradeable.sol";
 import {IStakingFactory} from "../../staking/factory/IStakingFactory.sol";
@@ -18,8 +17,7 @@ abstract contract BaseStakingV2Upgradeable is
 	IStakeV2,
 	IStakeInfo,
 	TokenReceivableUpgradeable,
-	AdminedUpgradeable,
-	StakingV2CommonSignaturesUpgradeable
+	AdminedUpgradeable
 {
 	using StakeFlags for uint16;
 	/// @custom:storage-location erc7201:ferrum.storage.basestakingv2.001
@@ -29,7 +27,6 @@ abstract contract BaseStakingV2Upgradeable is
 		StakingBasics.StakeBaseInfo baseInfo;
 		StakingBasics.StakeState state;
 		StakingBasics.RewardState reward;
-		VestingLibrary.VestingSchedule vesting;
 		mapping(address => StakingBasics.StakeInfo) stakings;
 	}
 

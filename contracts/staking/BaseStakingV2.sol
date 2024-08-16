@@ -20,7 +20,6 @@ abstract contract BaseStakingV2 is IStakeV2, IStakeInfo, TokenReceivable, Admine
   StakingBasics.StakeBaseInfo internal baseInfo;
   StakingBasics.StakeState internal state;
   StakingBasics.RewardState internal reward;
-  VestingLibrary.VestingSchedule internal vesting;
   mapping(address => StakingBasics.StakeInfo) public stakings;
   event RewardPaid(address id, address staker, address to, address[] rewardTokens, uint256[] rewards);
   event BasePaid(address id, address staker, address to, address token, uint256 amountPaid);

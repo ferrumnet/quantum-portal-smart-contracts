@@ -449,11 +449,16 @@ contract QuantumPortalLedgerMgr is
 
             require(totalSize <= MAX_BLOCK_SIZE, "QPLM: block too large");
 
-            // Validate miner
-            (
-                IQuantumPortalMinerMgr.ValidationResult validationResult,
-                address miner
-            ) = IQuantumPortalMinerMgr(minerMgr).verifyMinerSignature(
+            address miner;
+            uint256 minerStake;
+            { // Sub stack
+                // Validate miner
+                IQuantumPortalMinerMgr.ValidationResult validationResult;
+                (
+                    validationResult,
+                    miner,
+                    minerStake
+                ) = IQuantumPortalMinerMgr(minerMgr).verifyMinerSignature(
                     blockHash,
                     salt,
                     expiry,
@@ -461,6 +466,19 @@ contract QuantumPortalLedgerMgr is
                     totalValue,
                     minerMinimumStake
                 );
+
+                if (
+                    validationResult !=
+                    IQuantumPortalMinerMgr.ValidationResult.Valid
+                ) {
+                    require(
+                        validationResult !=
+                            IQuantumPortalMinerMgr.ValidationResult.NotEnoughStake,
+                        "QPLM: miner has not enough stake"
+                    );
+                    revert("QPLM: miner signature cannot be verified");
+                }
+            }
 
             {
                 uint256 remoteBlockTimestamp = transactions[
@@ -477,21 +495,6 @@ contract QuantumPortalLedgerMgr is
             }
 
             console.log("MINER IS", miner);
-            {
-                uint256 stake = stakeOf(miner);
-                require(stake >= minerMinimumStake, "QPLM: not enough stake");
-            }
-            if (
-                validationResult !=
-                IQuantumPortalMinerMgr.ValidationResult.Valid
-            ) {
-                require(
-                    validationResult !=
-                        IQuantumPortalMinerMgr.ValidationResult.NotEnoughStake,
-                    "QPLM: miner has not enough stake"
-                );
-                revert("QPLM: miner signature cannot be verified");
-            }
 
             IQuantumPortalWorkPoolClient(minerMgr).registerWork(
                 remoteChainId,
@@ -506,7 +509,6 @@ contract QuantumPortalLedgerMgr is
                     timestamp: uint64(block.timestamp)
                 });
             state.setLastMinedBlock(remoteChainId, blockMetadata);
-            uint256 minerStake = stakeOf(miner);
             mb = IQuantumPortalLedgerMgr.MinedBlock({
                 blockHash: blockHash,
                 miner: msg.sender,

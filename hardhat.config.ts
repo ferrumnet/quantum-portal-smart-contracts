@@ -2,6 +2,7 @@ import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-ignition-ethers";
 import "hardhat-contract-sizer"
+import "@nomicfoundation/hardhat-verify";
 
 import { TEST_MNEMONICS } from "./test/common/TestAccounts";
 import { ethers } from "ethers";
@@ -76,11 +77,11 @@ const config: HardhatUserConfig = {
     //   gas: 1000000,
     //   // gasPrice: 20000000000,
     // },
-    // bsc: {
-    //   chainId: 56,
-    //   url: getEnv("BSC_LIVE_NETWORK"),
-    //   accounts,
-    // },
+    bsc: {
+      chainId: 56,
+      url: "https://bsc-dataseed2.defibit.io",
+      accounts: [process.env.QP_DEPLOYER_KEY!]
+    },
     moonbeam: {
       chainId: 1287,
       url: "https://rpc.api.moonbase.moonbeam.network",
@@ -97,7 +98,7 @@ const config: HardhatUserConfig = {
     mumbai: {
       chainId: 80001,
       url: "https://rpc-mumbai.maticvigil.com/",
-      accounts,
+      accounts: [process.env.QP_DEPLOYER_KEY!]
       // gasPrice: 16000000000,
       // gas: 10000000,
     },
@@ -121,15 +122,33 @@ const config: HardhatUserConfig = {
       url: "http://127.0.0.1:9933/",
       accounts,
       allowUnlimitedContractSize: true,
+      // gas: 10000000, // this override is required for Substrate based evm chains
+    },
+    arbitrumOne: {
+      url: 'https://nd-829-997-700.p2pify.com/790712c620e64556719c7c9f19ef56e3',
+      accounts: [process.env.QP_DEPLOYER_KEY!]
+    },
+    base: {
+      url: 'https://base-mainnet.core.chainstack.com/e7aa01c976c532ebf8e2480a27f18278',
+      accounts: [process.env.QP_DEPLOYER_KEY!]
+    },
+    ferrum_testnet: {
+      chainId: 26100,
+      url: "https://testnet.dev.svcs.ferrumnetwork.io",
+      accounts: [process.env.QP_DEPLOYER_KEY!],
+      allowUnlimitedContractSize: true,
       gas: 10000000, // this override is required for Substrate based evm chains
     },
   },
   etherscan: {
     // Your API key for Etherscan
     apiKey: {
-      bscTestnet: getEnv("BSCSCAN_API_KEY"),
-      polygonMumbai: getEnv("POLYGONSCAN_API_KEY"),
-      btfd_ghostnet: getEnv("POLYGONSCAN_API_KEY"),
+      // bscTestnet: getEnv("BSCSCAN_API_KEY"),
+      // polygonMumbai: getEnv("POLYGONSCAN_API_KEY"),
+      // btfd_ghostnet: getEnv("POLYGONSCAN_API_KEY"),
+      arbitrumOne: process.env.ARBISCAN_API_KEY!,
+      base: process.env.BASESCAN_API_KEY!,
+      bsc: process.env.BSCSCAN_API_KEY!,
   },
   customChains: [
     {
@@ -148,6 +167,16 @@ const config: HardhatUserConfig = {
     enabled: true,
     apiUrl: "https://sourcify.dev/server",
     browserUrl: "https://repo.sourcify.dev",
-  }
+  },
+  ignition: {
+    strategyConfig: {
+      create2: {
+        // To learn more about salts, see the CreateX documentation
+        salt: "0x0000000000000000000000000000000000000000000000000000000000000005"
+        // salt: "0x46657272756D4E6574776F726B2D746573746E65743A30312E3030312E303033",
+      },
+    },
+  },
 };
+
 export default config;

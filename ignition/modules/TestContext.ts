@@ -33,6 +33,7 @@ const deployModule = buildModule("DeployModule", (m) => {
 	let initializeCalldata: any = m.encodeFunctionCall(mgr1Impl, "initialize", [
 		owner,
 		owner,
+		1000,
 		testGatewayAddress
 	]);
 
@@ -139,23 +140,19 @@ const deployModule = buildModule("DeployModule", (m) => {
 	m.call(minerMgr2, "updateRemotePeers", [[31337], [minerMgr1]]) // TODO: Figure out how to pass chainId1 variable
 
 	// ------------- QP State --------------//
-	const qpStateImpl = m.contract("QuantumPortalStateUpgradeable")
-	initializeCalldata = m.encodeFunctionCall(qpStateImpl, "initialize", [
-		owner,
-		owner,
-		testGatewayAddress
-	]);
-	const qpState1Proxy = m.contract("ERC1967Proxy", [qpStateImpl, initializeCalldata], { id: "QPState1Proxy"})
-	const qpState2Proxy = m.contract("ERC1967Proxy", [qpStateImpl, initializeCalldata], { id: "QPState2Proxy"})
+	// const qpStateImpl = m.contract("QuantumPortalStateUpgradeable")
+	// initializeCalldata = m.encodeFunctionCall(qpStateImpl, "initialize", [
+	// 	owner,
+	// 	owner,
+	// 	testGatewayAddress
+	// ]);
+	// const qpState1Proxy = m.contract("ERC1967Proxy", [qpStateImpl, initializeCalldata], { id: "QPState1Proxy"})
+	// const qpState2Proxy = m.contract("ERC1967Proxy", [qpStateImpl, initializeCalldata], { id: "QPState2Proxy"})
 
-	const qpState1 = m.contractAt("QuantumPortalStateUpgradeable", qpState1Proxy, { id: "QPState1"})
-	const qpState2 = m.contractAt("QuantumPortalStateUpgradeable", qpState2Proxy, { id: "QPState2"})
+	// const qpState1 = m.contractAt("QuantumPortalStateUpgradeable", qpState1Proxy, { id: "QPState1"})
+	// const qpState2 = m.contractAt("QuantumPortalStateUpgradeable", qpState2Proxy, { id: "QPState2"})
 
 	// -------------- Setup ---------------//
-	m.call(qpState1, "setMgr", [mgr1])
-	m.call(qpState1, "setLedger", [poc1])
-	m.call(qpState2, "setMgr", [mgr2])
-	m.call(qpState2, "setLedger", [poc2])
 	m.call(poc1, "setManager", [mgr1, qpState1])
 	m.call(poc1, "updateFeeTarget", [])
 	m.call(poc1, "setFeeToken", [testFeeToken])
@@ -181,8 +178,6 @@ const deployModule = buildModule("DeployModule", (m) => {
 		staking,
 		minerMgr1,
 		minerMgr2,
-		qpState1,
-		qpState2,
     }
 })
 

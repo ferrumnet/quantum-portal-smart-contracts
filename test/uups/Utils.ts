@@ -18,8 +18,6 @@ export async function deployAll() {
 		staking,
 		minerMgr1,
 		minerMgr2,
-		qpState1,
-		qpState2,
     } = await hre.ignition.deploy(qpDeployModule)
 
     const chainId1 = await mgr1.realChainId()
@@ -39,7 +37,6 @@ export async function deployAll() {
             poc: poc1,
             autorityMgr: authMgr1,
             minerMgr: minerMgr1,
-            state: qpState1,
             token: testFeeToken,
             stake: staking,
             feeConverter,
@@ -50,7 +47,6 @@ export async function deployAll() {
             poc: poc2,
             autorityMgr: authMgr2,
             minerMgr: minerMgr2,
-            state: qpState2,
             token: testFeeToken,
             stake: staking,
             feeConverter,

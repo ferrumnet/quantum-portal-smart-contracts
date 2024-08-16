@@ -67,12 +67,13 @@ contract QuantumPortalMinerMgrUpgradeable is
         address _miningStake,
         address _portal,
         address _mgr,
-        address _gateway
+        address _gateway,
+        address _initialOwner
     ) public initializer {
         QuantumPortalMinerMgrStorageV001 storage $ = _getQuantumPortalMinerMgrStorageV001();
         $.miningStake = _miningStake;
         __EIP712_init(NAME, VERSION);
-        __QuantimPortalWorkPoolServer_init(_mgr, _portal, msg.sender, msg.sender);
+        __QuantimPortalWorkPoolServer_init(_mgr, _portal, _initialOwner, _initialOwner);
         __WithGateway_init_unchained(_gateway);
         __UUPSUpgradeable_init();
     }
@@ -137,13 +138,13 @@ contract QuantumPortalMinerMgrUpgradeable is
         bytes memory multiSig,
         uint256 /*msgValue*/,
         uint256 minStakeAllowed
-    ) external view override returns (ValidationResult res, address signer) {
+    ) external view override returns (ValidationResult res, address signer, uint256 stake) {
         // Validate miner signature
         // Get its stake
         // Validate miner has stake
         signer = verifySignature(msgHash, salt, expiry, multiSig);
         require(signer != address(0), "QPMM: invalid signature");
-        uint256 stake = IQuantumPortalStakeWithDelegate(miningStake()).stakeOfDelegate(
+        stake = IQuantumPortalStakeWithDelegate(miningStake()).stakeOfDelegate(
             signer
         );
         require(stake != 0, "QPMM: Not a valid miner");

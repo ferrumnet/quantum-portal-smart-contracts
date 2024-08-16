@@ -116,14 +116,14 @@ contract QuantumPortalMinerMgr is
         bytes memory multiSig,
         uint256 /*msgValue*/,
         uint256 minStakeAllowed
-    ) external view override returns (ValidationResult res, address signer) {
+    ) external view override returns (ValidationResult res, address signer, uint256 stake) {
         // Validate miner signature
         // Get its stake
         // Validate miner has stake
         signer = verifySignature(msgHash, salt, expiry, multiSig);
         require(signer != address(0), "QPMM: invalid signature");
         console.log("Signer is ?", signer);
-        uint256 stake = IQuantumPortalStakeWithDelegate(miningStake).stakeOfDelegate(
+        stake = IQuantumPortalStakeWithDelegate(miningStake).stakeOfDelegate(
             signer
         );
         require(stake != 0, "QPMM: Not a valid miner");
