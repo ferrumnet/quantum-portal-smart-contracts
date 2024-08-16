@@ -17,9 +17,9 @@ async function sendTransaction() {
     const tokenBase = new ethers.Contract(tokenAddress, erc20abi, walletBase);
     const tokenBsc = new ethers.Contract(tokenAddress, erc20abi, walletBsc);
 
-    const txResponseArb = await tokenArb.mint("0xe817f160A009AABb53a6b6c7DBBF482682fFc6f1", 1000000000000000000000000n)
+    const txResponseArb = await tokenArb.mint("0x6e6D2F5bc91aa8432F848278034FD81dD56e3Db6", 1000000000000000000000000n)
     console.log("Arb tx sent. Hash:", txResponseArb.hash)
-    const txResponseBase = await tokenBase.mint("0x4bcBA75cdcAAa7b231b493b5a73E00BA76607557", 1000000000000000000000000n)
+    const txResponseBase = await tokenBase.mint("0xe9EC8965932d86e751B60384D664cfbc09A9597D", 1000000000000000000000000n)
     console.log("Base tx sent. Hash:", txResponseBase.hash)
     // const txResponseBsc = await tokenBsc.mint(clientAddresses, 1000000000000000000000000n)
     // console.log("Bsc tx sent. Hash:", txResponseBsc.hash)

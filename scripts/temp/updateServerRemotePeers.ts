@@ -34,7 +34,7 @@ const serverAbi = [
 
 async function sendTransaction() {
     const contract = new ethers.Contract(contractAddress, serverAbi, wallet);
-    const clientAddress = "0xe817f160A009AABb53a6b6c7DBBF482682fFc6f1"
+    const clientAddress = "0x6e6D2F5bc91aa8432F848278034FD81dD56e3Db6"
     const txResponse = await contract.updateRemotePeers(
         [42161],
         [clientAddress]

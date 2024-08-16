@@ -111,7 +111,12 @@ const deployModule = buildModule("DeployModule", (m) => {
 	m.call(poc, "setFeeToken", [conf.FRM[currentChainId!]])
     
 	m.call(minerMgr, "updateBaseToken", [conf.FRM[currentChainId!]])
-	m.call(ledgerMgr, "updateLedger", [poc])
+	m.call(ledgerMgr, "updateLedger", [poc], { id: "UpdateLedgerOnLedgerMgr"}) // WHY IS THIS NOT CALLED ON LIVE
+
+
+    // ADD UPDATE FEE TARGETS ON LEDGERMGR
+    // SET FEEPERBYTE ON FEECONVERTERDIRECT
+
 
     return {
         gateway,

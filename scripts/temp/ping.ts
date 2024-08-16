@@ -8,7 +8,7 @@ const rpcUrl = "https://nd-829-997-700.p2pify.com/790712c620e64556719c7c9f19ef56
 const provider = new ethers.JsonRpcProvider(rpcUrl);
 const privateKey = process.env.QP_DEPLOYER_KEY!;
 const wallet = new ethers.Wallet(privateKey, provider);
-const contractAddress = "0xe817f160A009AABb53a6b6c7DBBF482682fFc6f1"
+const contractAddress = "0x6e6D2F5bc91aa8432F848278034FD81dD56e3Db6"
 const erc20abi = [
     {
       "inputs": [
@@ -327,7 +327,9 @@ const erc20abi = [
 
 async function sendTransaction() {
     const contract = new ethers.Contract(contractAddress, erc20abi, wallet);
-    const txResponse = await contract.ping()
+    const txResponse = await contract.ping({
+      gasLimit: 1000000
+    })
 
     console.log("Transaction sent! Hash:", txResponse.hash);
 
