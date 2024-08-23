@@ -77,7 +77,7 @@ contract QuantumPortalAuthorityMgrUpgradeable is
                 expiry
             )
         );
-        verifyUniqueSalt(message, salt, 1, signature);
+        verifyUniqueSalt(message, salt, 0, signature);
     }
 
     /**
@@ -113,10 +113,10 @@ contract QuantumPortalAuthorityMgrUpgradeable is
         initializeQuorum(quorumId, groupId, minSignatures, ownerGroupId, addresses);
 
         // if QPN testnet or mainnet, ensure the precompile is called
-        if (LibChainCheck.isFerrumChain()) {
-            for (uint i=0; i<addresses.length; i++) {
-                IQuantumPortalFinalizerPrecompile(QUANTUM_PORTAL_PRECOMPILE).registerFinalizer(block.chainid, addresses[i]);
-            }
-        }
+        // if (LibChainCheck.isFerrumChain()) {
+        //     for (uint i=0; i<addresses.length; i++) {
+        //         IQuantumPortalFinalizerPrecompile(QUANTUM_PORTAL_PRECOMPILE).registerFinalizer(block.chainid, addresses[i]);
+        //     }
+        // }
     }
 }

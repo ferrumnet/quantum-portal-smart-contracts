@@ -634,6 +634,10 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         IQuantumPortalMinerMembership($.minerMgr).registerMiner(msg.sender);
     }
 
+    function unregisterMiner(address miner) external onlyAdmin {
+        IQuantumPortalMinerMembership(minerMgr()).unregisterMiner(miner);
+    }
+
     bytes32 constant MINE_REMOTE_BLOCK =
         keccak256(
             "MineRemoteBlock(uint64 remoteChainId,uint64 blockNonce,bytes32 transactions,bytes32 salt, uint64 expiry)"

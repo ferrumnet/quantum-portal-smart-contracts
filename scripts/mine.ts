@@ -79,7 +79,7 @@ function logForRecord(name: string, addr: string) {
 
 async function prep(conf: QpDeployConfig) {
     // const deployerWallet = !!conf.DeployerKeys.DeployerContract ? new ethers.Wallet(conf.DeployerKeys.DeployerContract, ethers.provider) : undefined;
-    const qpWallet = new ethers.Wallet("cb6df9de1efca7a3998a8ead4e02159d5fa99c3e0d4fd6432667390bb4726854", ethers.provider);
+    const qpWallet = new ethers.Wallet("", ethers.provider);
     // const ownerWallet = !!conf.DeployerKeys.Owner ? new ethers.Wallet(conf.DeployerKeys.Owner, ethers.provider) : undefined;
     // await distributeTestTokensIfTest([deployerWallet.address, qpWallet.address, ownerWallet?.address], '10');
     // if (ownerWallet) {
@@ -200,7 +200,7 @@ async function mineAndFinilizeOneToOne(ctx: Ctx, nonce: number, invalid: boolean
         }];
 
 
-    const minerWallet = new ethers.Wallet("cb6df9de1efca7a3998a8ead4e02159d5fa99c3e0d4fd6432667390bb4726854", ethers.provider);
+    const minerWallet = new ethers.Wallet("", ethers.provider);
     const [salt, expiry, signature] = await QuantumPortalUtils.generateSignatureForMining(
         ctx.mgr,
         ctx.chainId.toString(),
@@ -258,7 +258,7 @@ async function mineAndFinilizeOneToTwo(ctx: PortalContext, nonce: number, invali
                 timestamp: tx.timestamp.toString(),
         }];
     
-    const minerWallet = new ethers.Wallet("1f3bacb4212b04d1b8c3362207e5086939cf773f02cc0d966d945edb7214b57c", ethers.provider);
+    const minerWallet = new ethers.Wallet("", ethers.provider);
     const [salt, expiry, signature] = await QuantumPortalUtils.generateSignatureForMining(
         ctx.chain2.ledgerMgr,
         ctx.chain1.chainId.toString(),

@@ -11,8 +11,11 @@ contract ClientPing is WithQp, WithRemotePeers {
 
     uint64 immutable serverChainId;
     address public serverAddress;
-    uint256 public numbPings;
+    uint256 public numbPingsSent;
+    uint256 public numbPongsReceived;
     uint256 public feeAmount;
+
+    event PingPong(uint256 numbPingsSent, uint256 numbPongsReceived);
 
     error NotServer();
     
@@ -37,9 +40,9 @@ contract ClientPing is WithQp, WithRemotePeers {
         (uint256 sourceChainId, address sourceRouter,) = portal.msgSender();
         if (remotePeers[sourceChainId] != sourceRouter) revert NotServer();
 
-        numbPings++;
+        numbPongsReceived++;
 
-        _ping();
+        emit PingPong(numbPingsSent, numbPongsReceived);
     }
 
     function _ping() internal {
@@ -47,12 +50,16 @@ contract ClientPing is WithQp, WithRemotePeers {
             IERC20(portal.feeToken()).transfer(portal.feeTarget(), feeAmount);
         }
 
+        numbPingsSent++;
+
         portal.run(
             serverChainId,
             serverAddress,
             owner(),
             abi.encodePacked(ServerPong.pong.selector)
         );
+
+        emit PingPong(numbPingsSent, numbPongsReceived);
     }
 
     function updateFeeAmount(uint256 _feeAmount) external onlyOwner {

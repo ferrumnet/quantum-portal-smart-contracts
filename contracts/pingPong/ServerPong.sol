@@ -14,12 +14,19 @@ contract ServerPong is WithQp, WithRemotePeers {
 
     error NotClient();
 
+    event Pong(uint256 sourceChainId, uint256 numbPongs);
+
+    modifier onlyPortal() {
+        require(msg.sender == address(portal), "Only portal");
+        _;
+    }
+
     constructor(address _portal, uint256 _feeAmount) Ownable(msg.sender) {
         _initializeWithQp(_portal);
         feeAmount = _feeAmount;
     }
 
-    function pong() external {
+    function pong() external onlyPortal {
         (uint256 sourceChainId, address sourceRouter,) = portal.msgSender();
         if (remotePeers[sourceChainId] != sourceRouter) revert NotClient(); // Ensure the sender is a client
 
@@ -35,6 +42,8 @@ contract ServerPong is WithQp, WithRemotePeers {
             owner(),
             abi.encodePacked(ClientPing.receivePongResponse.selector)
         );
+
+        emit Pong(sourceChainId, numbPongs[sourceChainId]);
     }
 
     function updateFeeAmount(uint256 _feeAmount) external onlyOwner {

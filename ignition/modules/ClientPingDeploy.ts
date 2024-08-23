@@ -4,9 +4,9 @@ import { buildModule } from "@nomicfoundation/hardhat-ignition/modules"
 
 const deployModule = buildModule("ClientPingModule", (m) => {    
     const clientPing = m.contract("ClientPing", [
-        "0x64947EBc33f8ED810D635e62525a0696C0a3717B", // Portal address
-        8453,
-        "0xe9EC8965932d86e751B60384D664cfbc09A9597D", // Server address
+        "0xD73B1C4D1e686492aa46F21e1701Fd7d707b53BA", // Portal address
+        26100, // Server chain Id
+        "0xF6540DDa789D9E2058B8AEeBf53e80C537689fc6", // Server address
         1000000000000000000n
     ])
     return {clientPing}

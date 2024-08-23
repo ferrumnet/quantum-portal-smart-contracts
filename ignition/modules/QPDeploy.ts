@@ -2,19 +2,17 @@ import hre from "hardhat"
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules"
 import { ZeroAddress } from "ethers";
 import { loadQpDeployConfig, QpDeployConfig } from "../../scripts/utils/DeployUtils";
-import QuantumPortalGatewayUpgradeable from "../../artifacts/contracts/contracts-upgradeable/quantumPortal/poc/QuantumPortalGatewayUpgradeable.sol/QuantumPortalGatewayUpgradeable.json"
 const DEFAULT_QP_CONFIG_FILE = 'QpDeployConfig.yaml';
 
 
 const deployModule = buildModule("DeployModule", (m) => {
     
-    hre.network.config.gasPrice = 40000000000000
-    const currentChainId = 31337;
+    const currentChainId = 26100
     const conf: QpDeployConfig = loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
     const owner = m.getAccount(0)
 
     //--------------- Gateway ----------------//
-    const gatewayImpl = m.contract("QuantumPortalGatewayUpgradeable", [conf.FRM[currentChainId!]], { id: "QPGatewayImpl"})
+    const gatewayImpl = m.contract("QuantumPortalGatewayUpgradeable", ["0x0000000000000000000000000000000000000000"], { id: "QPGatewayImpl"})
     let initializeCalldata: any = m.encodeFunctionCall(gatewayImpl, "initialize", [
 		owner,
 		owner
@@ -55,8 +53,8 @@ const deployModule = buildModule("DeployModule", (m) => {
     const authMgrProxy = m.contract("ERC1967Proxy", [authMgrImpl, initializeCalldata], { id: "AuthMgrProxy"})
     const authMgr = m.contractAt("QuantumPortalAuthorityMgrUpgradeable", authMgrProxy, { id: "AuthMgr"})
 
-    //--------------- Oracle ------------------//
-    // const oracle = m.contract("UniswapOracle", [conf.UniV2Factory[currentChainId!]], { id: "Oracle"})
+    // //--------------- Oracle ------------------//
+    // // const oracle = m.contract("UniswapOracle", [conf.UniV2Factory[currentChainId!]], { id: "Oracle"})
 
     //--------------- FeeConverterDirect ------------//
     const feeConverterDirectImpl = m.contract("QuantumPortalFeeConverterDirectUpgradeable", [], { id: "FeeConverterDirectImpl"})
@@ -66,17 +64,6 @@ const deployModule = buildModule("DeployModule", (m) => {
     ]);
     const feeConverterDirectProxy = m.contract("ERC1967Proxy", [feeConverterDirectImpl, initializeCalldata], { id: "FeeConverterDirectProxy"})
     const feeConverterDirect = m.contractAt("QuantumPortalFeeConverterDirectUpgradeable", feeConverterDirectProxy, { id: "FeeConverterDirect"})
-
-
-    // const feeConverterImpl = m.contract("QuantumPortalFeeConverterUpgradeable", [], { id: "FeeConverterImpl"})
-    // initializeCalldata = m.encodeFunctionCall(feeConverterImpl, "initialize", [
-    //     conf.WETH[currentChainId!],
-    //     conf.FRM[currentChainId!],
-    //     oracle,
-    //     gateway
-    // ]);
-    // const feeConverterProxy = m.contract("ERC1967Proxy", [feeConverterImpl, initializeCalldata], { id: "FeeConverterProxy"})
-    // const feeConverter = m.contractAt("QuantumPortalFeeConverterUpgradeable", feeConverterProxy, { id: "FeeConverter"})
 
     //--------------- StakeWithDelegate -------//
     const stakingImpl = m.contract("QuantumPortalStakeWithDelegateUpgradeable", [], { id: "StakingImpl"})
@@ -111,12 +98,13 @@ const deployModule = buildModule("DeployModule", (m) => {
 	m.call(poc, "setFeeToken", [conf.FRM[currentChainId!]])
     
 	m.call(minerMgr, "updateBaseToken", [conf.FRM[currentChainId!]])
-	m.call(ledgerMgr, "updateLedger", [poc], { id: "UpdateLedgerOnLedgerMgr"}) // WHY IS THIS NOT CALLED ON LIVE
+	m.call(ledgerMgr, "updateLedger", [poc], { id: "UpdateLedgerOnLedgerMgr"})
 
 
     // ADD UPDATE FEE TARGETS ON LEDGERMGR
-    // SET FEEPERBYTE ON FEECONVERTERDIRECT
+    m.call(ledgerMgr, "updateFeeTargets", [minerMgr, minerMgr])
 
+    // SET FEEPERBYTE ON FEECONVERTERDIRECT
 
     return {
         gateway,
@@ -140,7 +128,6 @@ const configModule = buildModule("ConfigModule", (m) => {
     } = m.useModule(deployModule)
 
     m.call(poc, "updateFeeTarget")
-    // Add the 3 calls on gateway to update the 3 qp contract addresses
     m.call(gateway, "upgrade", [poc, ledgerMgr, staking])
 
     return {

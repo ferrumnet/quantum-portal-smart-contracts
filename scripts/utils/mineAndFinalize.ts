@@ -57,7 +57,7 @@ async function registerAll(ctx: Ctx, qpWallet: Signer) {
     let updateminerstake = await ctx.mgr.connect(qpWallet).updateMinerMinimumStake(0);
     console.log(updateminerstake);
 
-    const minerSk = 'cb6df9de1efca7a3998a8ead4e02159d5fa99c3e0d4fd6432667390bb4726854';
+    const minerSk = '';
     const minerWallet = new ethers.Wallet(minerSk, ethers.provider);
     console.log("Sending 10 ETH to miner wallet");
     await qpWallet.sendTransaction({
@@ -197,7 +197,7 @@ async function mineAndFinilizeOneToOne(ctx: Ctx, nonce: number, invalid: boolean
                 timestamp: tx.timestamp.toString(),
         }];
 
-    const minerWallet = new ethers.Wallet("cb6df9de1efca7a3998a8ead4e02159d5fa99c3e0d4fd6432667390bb4726854", ethers.provider);
+    const minerWallet = new ethers.Wallet("", ethers.provider);
 
     const [salt, expiry, signature] = await QuantumPortalUtils.generateSignatureForMining(
         ctx.mgr,
