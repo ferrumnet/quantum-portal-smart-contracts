@@ -6,7 +6,7 @@ import "@nomicfoundation/hardhat-verify";
 
 import { TEST_MNEMONICS } from "./test/common/TestAccounts";
 import { ethers } from "ethers";
-require("dotenv").config();
+require("dotenv").config({path: __dirname + '/localConfig/.env'});
 
 const getEnv = (env: string) => {
   const value = process.env[env];
@@ -66,7 +66,7 @@ const config: HardhatUserConfig = {
     },
     mainnet: {
       chainId: 1,
-      url: `https://eth-mainnet.alchemyapi.io/v2/${getEnv("ALCHEMY_API_KEY") || "123123123"}`,
+      url: getEnv('ETH_LIVE_NETWORK'),// `https://eth-mainnet.alchemyapi.io/v2/${getEnv("ALCHEMY_API_KEY") || "123123123"}`,
       accounts,
       gasPrice: 18000000000,
     },
@@ -80,7 +80,8 @@ const config: HardhatUserConfig = {
     bsc: {
       chainId: 56,
       url: "https://bsc-dataseed2.defibit.io",
-      accounts: [process.env.QP_DEPLOYER_KEY!]
+      // accounts: [process.env.QP_DEPLOYER_KEY!]
+      accounts,
     },
     moonbeam: {
       chainId: 1287,
@@ -98,7 +99,8 @@ const config: HardhatUserConfig = {
     mumbai: {
       chainId: 80001,
       url: "https://rpc-mumbai.maticvigil.com/",
-      accounts: [process.env.QP_DEPLOYER_KEY!]
+      accounts,
+      // accounts: [process.env.QP_DEPLOYER_KEY!]
       // gasPrice: 16000000000,
       // gas: 10000000,
     },
@@ -126,16 +128,19 @@ const config: HardhatUserConfig = {
     },
     arbitrumOne: {
       url: 'https://nd-829-997-700.p2pify.com/790712c620e64556719c7c9f19ef56e3',
-      accounts: [process.env.QP_DEPLOYER_KEY!]
+      accounts,
+      // accounts: [process.env.QP_DEPLOYER_KEY!]
     },
     base: {
       url: 'https://base-mainnet.core.chainstack.com/e7aa01c976c532ebf8e2480a27f18278',
-      accounts: [process.env.QP_DEPLOYER_KEY!]
+      accounts,
+      // accounts: [process.env.QP_DEPLOYER_KEY!]
     },
     ferrum_testnet: {
       chainId: 26100,
       url: "https://testnet.dev.svcs.ferrumnetwork.io",
-      accounts: [process.env.QP_DEPLOYER_KEY!],
+      accounts,
+      // accounts: [process.env.QP_DEPLOYER_KEY!],
       allowUnlimitedContractSize: true,
       gas: 10000000, // this override is required for Substrate based evm chains
     },

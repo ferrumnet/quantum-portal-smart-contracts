@@ -19,7 +19,6 @@ import {QuantumPortalLib} from "../../../quantumPortal/poc/QuantumPortalLib.sol"
 import {PortalLedgerUpgradeable} from "./PortalLedgerUpgradeable.sol";
 import {WithGatewayUpgradeable} from "./utils/WithGatewayUpgradeable.sol";
 
-
 /**
  @notice Manages block generation.
  Each remote chain will have an independent block thread.
@@ -779,7 +778,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
 
     bytes32 constant FINALIZE_METHOD =
         keccak256(
-            "Finalize(uint256 remoteChainId,uint256 blockNonce,bytes32 finalizersHash,address[] finalizers,bytes32 salt,uint64 expiry)"
+            "Finalize(uint256 remoteChainId,uint256 blockNonce,uint256[] invalidBlockNonces,bytes32 salt,uint64 expiry)"
         );
 
     /**
@@ -787,8 +786,6 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
      * @param remoteChainId The remote chain ID
      * @param blockNonce The block nonce
      * @param invalidBlockNonces List of invalid blocks
-     * @param finalizersHash The finalizers hash
-     * @param finalizers List of finalizers
      * @param salt The salt
      * @param expiry Signature expiry
      * @param multiSignature The signature
@@ -797,8 +794,6 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         uint256 remoteChainId,
         uint256 blockNonce,
         uint256[] memory invalidBlockNonces,
-        bytes32 finalizersHash,
-        address[] memory finalizers,
         bytes32 salt,
         uint64 expiry,
         bytes memory multiSignature
@@ -809,14 +804,13 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
                 FINALIZE_METHOD,
                 remoteChainId,
                 blockNonce,
-                finalizersHash,
-                finalizers,
+                invalidBlockNonces,
                 salt,
                 expiry
             )
         );
         
-        IQuantumPortalAuthorityMgr($.authorityMgr).validateAuthoritySignature(
+        address[] memory finalizers = IQuantumPortalAuthorityMgr($.authorityMgr).validateAuthoritySignature(
             IQuantumPortalAuthorityMgr.Action.FINALIZE,
             msgHash,
             salt,
@@ -827,7 +821,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
             remoteChainId,
             blockNonce,
             invalidBlockNonces,
-            finalizersHash,
+            msgHash,
             finalizers
         );
     }
@@ -938,14 +932,14 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
      * @param remoteChainId The remote chain ID
      * @param blockNonce The block nonce
      * @param invalidNoncesOrdered List of invalid blocks. Must be ordered
-     * @param finalizersHash Hash of finalizers
+     * @param msgHash Hash of finalization request
      * @param finalizers List of finalizers
      */
     function doFinalize(
         uint256 remoteChainId,
         uint256 blockNonce,
         uint256[] memory invalidNoncesOrdered,
-        bytes32 finalizersHash,
+        bytes32 msgHash,
         address[] memory finalizers
     ) internal {
         {
@@ -986,7 +980,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
             finalizeFrom,
             blockNonce,
             invalidNoncesOrdered,
-            finalizersHash,
+            msgHash,
             finalizedKey
         );
 
@@ -1003,15 +997,16 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
             blockNonce
         );
 
-        for (uint i = 0; i < finalizers.length; i++) {
-            pushFinalizationStake(
-                finalizedKey,
-                IQuantumPortalLedgerMgr.FinalizerStake({
-                    finalizer: finalizers[i],
-                    staked: stakeOf(finalizers[i])
-                })
-            );
-        }
+        // Disabled the stake log for gas saving. This can be done off-chain
+        // for (uint i = 0; i < finalizers.length; i++) {
+        //     pushFinalizationStake(
+        //         finalizedKey,
+        //         IQuantumPortalLedgerMgr.FinalizerStake({
+        //             finalizer: finalizers[i],
+        //             staked: stakeOf(finalizers[i])
+        //         })
+        //     );
+        // }
         setLastFinalizedBlock(
             remoteChainId,
             QuantumPortalLib.Block({
@@ -1034,7 +1029,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
      * @param fromNonce The starting nonce
      * @param toNonce The ending nonce
      * @param invalids List of invalid blocks
-     * @param finalizersHash The finalizers hash
+     * @param msgHash The hash of finalization message
      * @param finalizedKey The key of finalized block
      * @return totalMinedWork Total mined work
      * @return totalVarWork Total variable work
@@ -1044,7 +1039,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         uint256 fromNonce,
         uint256 toNonce,
         uint256[] memory invalids,
-        bytes32 finalizersHash,
+        bytes32 msgHash,
         uint256 finalizedKey
     ) internal returns (uint256 totalMinedWork, uint256 totalVarWork) {
         bytes32 finHash = 0;
@@ -1084,7 +1079,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
             memory fin = IQuantumPortalLedgerMgr.FinalizationMetadata({
                 executor: msg.sender,
                 finalizedBlocksHash: finHash,
-                finalizersHash: finalizersHash,
+                finalizationHash: msgHash,
                 totalBlockStake: totalBlockStake
             });
         setFinalization(finalizedKey, fin);

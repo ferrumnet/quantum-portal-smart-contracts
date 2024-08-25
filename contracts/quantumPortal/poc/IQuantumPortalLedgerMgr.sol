@@ -25,7 +25,7 @@ interface IQuantumPortalLedgerMgr {
     struct FinalizationMetadata {
         address executor;
         bytes32 finalizedBlocksHash;
-        bytes32 finalizersHash;
+        bytes32 finalizationHash;
         uint256 totalBlockStake;
     }
 
