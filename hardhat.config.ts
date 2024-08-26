@@ -4,53 +4,41 @@ import "@nomicfoundation/hardhat-ignition-ethers";
 import "hardhat-contract-sizer"
 import "@nomicfoundation/hardhat-verify";
 import { Secrets } from "foundry-contracts/dist/test/common/Secrets";
-
+import deasync from 'deasync';
 import { TEST_MNEMONICS } from "./test/common/TestAccounts";
 import { ethers } from "ethers";
 require("dotenv").config({path: __dirname + '/localConfig/.env'});
 
-const getEnv = (env: string) => {
-  const value = process.env[env];
-  if (typeof value === "undefined") {
-    console.warn(`${env} has not been set.`);
-    // throw new Error(`${env} has not been set.`);
-  }
-  return value;
-};
-
-
-let accounts: any = undefined;
-if (process.env.PAIVATE_KEY_SECRET_ARN) {
-  console.log('Using AWS Secrets Manager for private keys');
-  Secrets.fromAws(process.env.PAIVATE_KEY_SECRET_ARN).then((secret: any) => {
-    const hre = require("hardhat");
-    // Use the default mnemonics
-    // accounts = { mnemonic: secret.DEV_MNEMONICS };
-    // Or use a single account. Check available keys from the secret manager
-    const accounts = [secret.PRIVATEKEY_TEST_VALIDATOR];
-
-    const nets = Object.keys(hre.config.networks);
-    nets.forEach((network) => {
-      hre.config.networks[network].accounts = accounts;
-    });
-    logLocalAccount(accounts);
-  }).catch((e: any) => {
-    console.error('Failed to get secret from PAIVATE_KEY_SECRET_ARN environment', e);
-  });
-} else {
-  accounts = process.env.TEST_ACCOUNT_PRIVATE_KEY ? [process.env.TEST_ACCOUNT_PRIVATE_KEY] : { mnemonic: TEST_MNEMONICS };
-  logLocalAccount(accounts);
-}
-
 function logLocalAccount(accounts: any) {
-  if (accounts.mnemonic) {
+  if (accounts?.mnemonic) {
       let mnemonicWallet = ethers.HDNodeWallet.fromPhrase(accounts.mnemonic);
       console.log('Test account used from MNEMONIC', mnemonicWallet.privateKey, mnemonicWallet.address);
   } else {
-      let wallet = new ethers.Wallet(accounts[0]);
-      console.log('Single test account used:', wallet.address);
+    let wallet = new ethers.Wallet(accounts[0]);
+    console.log('Single test account used:', wallet.address);
   }
 }
+
+let accounts: any = undefined;
+if (process.env.PAIVATE_KEY_SECRET_ARN) {
+  console.log('Getting secret from AWS Secret Manager');
+  let done = false;
+  Secrets.fromAws().then((secret) => {
+    // Use the default mnemonics
+    accounts = { mnemonic: secret.DEV_MNEMONICS };
+    // Or use a single account. Check available keys from the secret manager
+    // accounts = [secret.PRIVATEKEY_TEST_VALIDATOR];
+    done = true;
+  }).catch((e) => {;
+    console.error('Failed to get secret from PAIVATE_KEY_SECRET_ARN environment', e);
+    done = true;
+  });
+
+  while (!done) { deasync.sleep(100); } // Sync the secrets call
+} else {
+  accounts = process.env.TEST_ACCOUNT_PRIVATE_KEY ? [process.env.TEST_ACCOUNT_PRIVATE_KEY] : { mnemonic: TEST_MNEMONICS };
+}
+logLocalAccount(accounts);
 
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
@@ -71,7 +59,7 @@ const config: HardhatUserConfig = {
     hardhat: {
       blockGasLimit: 3000000000,
       allowUnlimitedContractSize: true,
-      accounts,
+      accounts: accounts.constructor.name == "Array" ? { privateKey: accounts[0], balance: ethers.parseEther("1000").toString() } : accounts,
     },
     local: {
       // chainId: 97,
@@ -89,17 +77,17 @@ const config: HardhatUserConfig = {
     },
     mainnet: {
       chainId: 1,
-      url: getEnv('ETH_LIVE_NETWORK'),// `https://eth-mainnet.alchemyapi.io/v2/${getEnv("ALCHEMY_API_KEY") || "123123123"}`,
-      gasPrice: 18000000000,
+      url: process.env.ETH_LIVE_NETWORK,
+      // gasPrice: 18000000000,
       accounts,
     },
-    // bsctestnet: {
-    //   chainId: 97,
-    //   url: getEnv("BSC_TESTNET_LIVE_NETWORK"),
-    //   accounts,
-    //   gas: 1000000,
-    //   // gasPrice: 20000000000,
-    // },
+    bsctestnet: {
+      chainId: 97,
+      url: process.env.BSC_TESTNET_LIVE_NETWORK,
+      accounts,
+      // gas: 1000000,
+      // gasPrice: 20000000000,
+    },
     bsc: {
       chainId: 56,
       url: "https://bsc-dataseed2.defibit.io",
