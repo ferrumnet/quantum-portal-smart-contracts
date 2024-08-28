@@ -14,6 +14,9 @@ import {IOperatorRelation, OperatorRelationUpgradeable} from "./stake/OperatorRe
 import {MultiSigLib} from "foundry-contracts/contracts/contracts/signature/MultiSigLib.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
+import "hardhat/console.sol";
+
+
 error OperatorHasNoValidator(address operator);
 error SignaturesAreNoteSorted(address lastSigner, address signer);
 error NotEnoughSignatures(uint256 minSignatures, uint256 signatures);
@@ -85,8 +88,11 @@ contract QuantumPortalAuthorityMgrUpgradeable is
                 expiry
             )
         );
+        console.log("MESSAGE");
+        console.logBytes32(message);
         bool result;
         bytes32 digest = _hashTypedDataV4(message);
+        console.logBytes32(digest);
         (result, validators) = tryVerifyDigestWithAddressWithMinSigCheckForOperators(digest, signature);
         require(result, "QPAM: invalid signature");
 

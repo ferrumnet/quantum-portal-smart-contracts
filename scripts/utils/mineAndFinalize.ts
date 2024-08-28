@@ -75,7 +75,7 @@ async function registerAll(ctx: Ctx, qpWallet: Signer) {
     console.log('QP wallet balance', await feeT.balanceOf(await qpWallet.getAddress()));
 
     await QuantumPortalUtils.stakeAndDelegate(
-        ctx.mgr
+        ctx.mgr, ctx.auth,
         , ctx.stake, '1', await qpWallet.getAddress(), minerWallet.address, qpWallet, minerSk);
 
     console.log("Finding miners");
