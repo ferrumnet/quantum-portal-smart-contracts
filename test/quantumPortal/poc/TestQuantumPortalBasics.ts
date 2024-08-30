@@ -4,7 +4,7 @@ import { expect } from "chai";
 import { advanceTimeAndBlock } from "../../common/TimeTravel";
 import { deployAll, estimateGasUsingEthCall, PortalContext, QuantumPortalUtils } from "./QuantumPortalUtils";
 import { ethers } from 'hardhat';
-import { EstimateGasExample } from '../../../typechain-types/EstimateGasExample';
+import { EstimateGasExample } from '../../../typechain-types';
 
 const _it = (a: any, b: any) => () => {};
 
@@ -139,7 +139,7 @@ describe("Test qp", function () {
         expect(remoteBalance).to.be.equal('20.0');
     });
 
-    _it('Miners can claim their rewards.', async function() {
+    it('Miners can claim their rewards.', async function() {
         // Run some txs to collect rewards.
         const ctx = await deployAll();
         await ctx.chain1.token.transfer(ctx.chain1.poc.target, Wei.from('20'));
@@ -168,7 +168,7 @@ describe("Test qp", function () {
         expect(finalBal).to.be.equal('0.144');
     });
 
-    _it('Can estimate gas', async function() {
+    it('Can estimate gas', async function() {
         const ctx = await deployAll();
         const estimageGasTestF = await ethers.getContractFactory('EstimateGasExample');
         const estimageGasTest = await estimageGasTestF.deploy(ctx.chain2.poc.target) as EstimateGasExample;
@@ -192,12 +192,12 @@ describe("Test qp", function () {
             '0']
         );
 
-        const gasUsed = await estimateGasUsingEthCall(ctx.chain2.poc.target, estimateMethodCall);
+        const gasUsed = await estimateGasUsingEthCall(ctx.chain2.poc.target.toString(), estimateMethodCall);
         console.log('Gas used: ', gasUsed);
         expect(gasUsed).to.be.greaterThan(26000);
     });
 
-    _it('Estimate gas reverts the work', async function() {
+    it('Estimate gas reverts the work', async function() {
         const ctx = await deployAll();
 
         const estimageGasTestF = await ethers.getContractFactory('EstimateGasExample');

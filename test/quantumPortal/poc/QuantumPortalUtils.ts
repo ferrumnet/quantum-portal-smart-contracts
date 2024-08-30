@@ -387,7 +387,7 @@ export class QuantumPortalUtils {
         await QuantumPortalUtils.finalize(
             ctx.chain2.chainId,
             ctx.chain1.ledgerMgr,
-            ctx.sks[0],
+            ctx.sks[1],
             invalid ? [nonce.toString()] : []
         );
     }
@@ -515,7 +515,9 @@ export async function deployAll(): Promise<PortalContext> {
 
     console.log(`Registering a single authority ("${ctx.wallets[0]}"`);
     await autorityMgr1.connect(ctx.signers.acc1).initializeQuorum(ctx.owner, 1, 1, 0, [ctx.wallets[0]]); 
-    await autorityMgr2.connect(ctx.signers.acc2).initializeQuorum(ctx.owner, 1, 1, 0, [ctx.wallets[0], ctx.wallets[1]]); 
+    await autorityMgr1.connect(ctx.signers.acc1).initializeQuorum(ctx.acc1, 2, 1, 0, [ctx.wallets[1]]); 
+    await autorityMgr2.connect(ctx.signers.acc2).initializeQuorum(ctx.owner, 1, 1, 0, [ctx.wallets[0]]); 
+    await autorityMgr2.connect(ctx.signers.acc2).initializeQuorum(ctx.acc1, 2, 1, 0, [ctx.wallets[1]]); 
 
     console.log(`Settting authority mgr (${autorityMgr1.target}/${autorityMgr2.target}) and miner mgr ${miningMgr1.target} / ${miningMgr2.target} on both QP managers, and fee converter`);
     await mgr1.updateAuthorityMgr(autorityMgr1.target);
