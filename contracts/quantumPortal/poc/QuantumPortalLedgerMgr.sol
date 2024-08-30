@@ -842,7 +842,7 @@ contract QuantumPortalLedgerMgr is
             memory fin = IQuantumPortalLedgerMgr.FinalizationMetadata({
                 executor: msg.sender,
                 finalizedBlocksHash: finHash,
-                finalizersHash: finalizersHash,
+                finalizationHash: finalizersHash,
                 totalBlockStake: totalBlockStake
             });
         state.setFinalization(finalizedKey, fin);

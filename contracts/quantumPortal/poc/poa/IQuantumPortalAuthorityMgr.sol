@@ -26,5 +26,5 @@ interface IQuantumPortalAuthorityMgr {
         bytes32 salt,
         uint64 expiry,
         bytes memory signature
-    ) external;
+    ) external returns (address[] memory validators);
 }

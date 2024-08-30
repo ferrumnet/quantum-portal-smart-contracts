@@ -79,7 +79,7 @@ describe("Proxy version", function () {
             expect(isBlockReady).to.be.true;
 
             console.log('Now, mining a block on chain 2');
-            await QuantumPortalUtils.stakeAndDelegate(ctx.chain2.ledgerMgr, ctx.chain2.stake, '10', ctx.owner, ctx.wallets[0], ctx.signers.owner, ctx.sks[0]);
+            await QuantumPortalUtils.stakeAndDelegate(ctx.chain2.ledgerMgr, ctx.chain2.autorityMgr, ctx.chain2.stake, '10', ctx.owner, ctx.wallets[0], ctx.signers.owner, ctx.sks[0]);
             console.log('- Staked and delegated....');
             
             const txs = [{

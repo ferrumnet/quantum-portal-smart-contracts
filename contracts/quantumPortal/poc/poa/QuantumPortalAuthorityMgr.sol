@@ -49,7 +49,7 @@ contract QuantumPortalAuthorityMgr is
         bytes32 salt,
         uint64 expiry,
         bytes memory signature
-    ) external override onlyMgr {
+    ) external override onlyMgr returns (address[] memory) { // DEPRECTATED...
         require(action != Action.NONE, "QPAM: action required");
         require(msgHash != bytes32(0), "QPAM: msgHash required");
         require(salt != 0, "QPAM: salt required");

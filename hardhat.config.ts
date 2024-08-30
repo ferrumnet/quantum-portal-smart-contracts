@@ -3,29 +3,42 @@ import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-ignition-ethers";
 import "hardhat-contract-sizer"
 import "@nomicfoundation/hardhat-verify";
-
+import { Secrets } from "foundry-contracts/dist/test/common/Secrets";
+import deasync from 'deasync';
 import { TEST_MNEMONICS } from "./test/common/TestAccounts";
 import { ethers } from "ethers";
-require("dotenv").config();
+require("dotenv").config({path: __dirname + '/localConfig/.env'});
 
-const getEnv = (env: string) => {
-  const value = process.env[env];
-  if (typeof value === "undefined") {
-    console.warn(`${env} has not been set.`);
-    // throw new Error(`${env} has not been set.`);
-  }
-  return value;
-};
-
-const accounts: any = process.env.TEST_ACCOUNT_PRIVATE_KEY ? [process.env.TEST_ACCOUNT_PRIVATE_KEY] : { mnemonic: TEST_MNEMONICS };
-
-if (accounts.mnemonic) {
-    let mnemonicWallet = ethers.HDNodeWallet.fromPhrase(TEST_MNEMONICS);
-    console.log('Test account used from MNEMONIC', mnemonicWallet.privateKey, mnemonicWallet.address);
-} else {
+function logLocalAccount(accounts: any) {
+  if (accounts?.mnemonic) {
+      let mnemonicWallet = ethers.HDNodeWallet.fromPhrase(accounts.mnemonic);
+      console.log('Test account used from MNEMONIC', mnemonicWallet.privateKey, mnemonicWallet.address);
+  } else {
     let wallet = new ethers.Wallet(accounts[0]);
-    console.log('Test account used from TEST_ACCOUNT_PRIVATE_KEY', wallet.address);
+    console.log('Single test account used:', wallet.address);
+  }
 }
+
+let accounts: any = undefined;
+if (process.env.PAIVATE_KEY_SECRET_ARN) {
+  console.log('Getting secret from AWS Secret Manager');
+  let done = false;
+  Secrets.fromAws().then((secret) => {
+    // Use the default mnemonics
+    accounts = { mnemonic: secret.DEV_MNEMONICS };
+    // Or use a single account. Check available keys from the secret manager
+    // accounts = [secret.PRIVATEKEY_TEST_VALIDATOR];
+    done = true;
+  }).catch((e) => {;
+    console.error('Failed to get secret from PAIVATE_KEY_SECRET_ARN environment', e);
+    done = true;
+  });
+
+  while (!done) { deasync.sleep(100); } // Sync the secrets call
+} else {
+  accounts = process.env.TEST_ACCOUNT_PRIVATE_KEY ? [process.env.TEST_ACCOUNT_PRIVATE_KEY] : { mnemonic: TEST_MNEMONICS };
+}
+logLocalAccount(accounts);
 
 const config: HardhatUserConfig = {
   defaultNetwork: "hardhat",
@@ -44,11 +57,9 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
-      accounts,
       blockGasLimit: 3000000000,
       allowUnlimitedContractSize: true,
-      // gas: 100000,
-      // gasPrice: 20000000000,
+      accounts: accounts.constructor.name == "Array" ? { privateKey: accounts[0], balance: ethers.parseEther("1000").toString() } : accounts,
     },
     local: {
       // chainId: 97,
@@ -60,45 +71,47 @@ const config: HardhatUserConfig = {
     btfd_ghostnet: {
       chainId: 42,
       url: "http://ghostnet.dev.svcs.ferrumnetwork.io:9944",
-      accounts,
       allowUnlimitedContractSize: true,
+      accounts,
       //gas: 10000000, // this override is required for Substrate based evm chains
     },
     mainnet: {
       chainId: 1,
-      url: `https://eth-mainnet.alchemyapi.io/v2/${getEnv("ALCHEMY_API_KEY") || "123123123"}`,
+      url: process.env.ETH_LIVE_NETWORK,
+      // gasPrice: 18000000000,
       accounts,
-      gasPrice: 18000000000,
     },
-    // bsctestnet: {
-    //   chainId: 97,
-    //   url: getEnv("BSC_TESTNET_LIVE_NETWORK"),
-    //   accounts,
-    //   gas: 1000000,
-    //   // gasPrice: 20000000000,
-    // },
+    bsctestnet: {
+      chainId: 97,
+      url: process.env.BSC_TESTNET_LIVE_NETWORK,
+      accounts,
+      // gas: 1000000,
+      // gasPrice: 20000000000,
+    },
     bsc: {
       chainId: 56,
       url: "https://bsc-dataseed2.defibit.io",
-      accounts: [process.env.QP_DEPLOYER_KEY!]
+      accounts,
+      // accounts: [process.env.QP_DEPLOYER_KEY!]
     },
     moonbeam: {
       chainId: 1287,
       url: "https://rpc.api.moonbase.moonbeam.network",
-      accounts,
       allowUnlimitedContractSize: true,
       gas: 10000000, // this override is required for Substrate based evm chains
+      accounts,
     },
     matic: {
       chainId: 137,
       url: "https://rpc-mainnet.maticvigil.com/",
-      accounts,
       gasPrice: 16000000000,
+      accounts,
     },
     mumbai: {
       chainId: 80001,
       url: "https://rpc-mumbai.maticvigil.com/",
-      accounts: [process.env.QP_DEPLOYER_KEY!]
+      accounts,
+      // accounts: [process.env.QP_DEPLOYER_KEY!]
       // gasPrice: 16000000000,
       // gas: 10000000,
     },
@@ -120,24 +133,27 @@ const config: HardhatUserConfig = {
     shibuya_testnet: {
       chainId: 4369,
       url: "http://127.0.0.1:9933/",
-      accounts,
       allowUnlimitedContractSize: true,
       // gas: 10000000, // this override is required for Substrate based evm chains
+      accounts,
     },
     arbitrumOne: {
       url: 'https://nd-829-997-700.p2pify.com/790712c620e64556719c7c9f19ef56e3',
-      accounts: [process.env.QP_DEPLOYER_KEY!]
+      // accounts: [process.env.QP_DEPLOYER_KEY!]
+      accounts,
     },
     base: {
       url: 'https://base-mainnet.core.chainstack.com/e7aa01c976c532ebf8e2480a27f18278',
-      accounts: [process.env.QP_DEPLOYER_KEY!]
+      // accounts: [process.env.QP_DEPLOYER_KEY!]
+      accounts,
     },
     ferrum_testnet: {
       chainId: 26100,
       url: "https://testnet.dev.svcs.ferrumnetwork.io",
-      accounts: [process.env.QP_DEPLOYER_KEY!],
+      // accounts: [process.env.QP_DEPLOYER_KEY!],
       allowUnlimitedContractSize: true,
       gas: 10000000, // this override is required for Substrate based evm chains
+      accounts,
     },
   },
   etherscan: {
