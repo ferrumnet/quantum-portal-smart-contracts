@@ -1,5 +1,5 @@
 import { ethers } from "hardhat";
-import { DummyToken,  } from "../../../typechain-types";
+import { DummyToken, WFRM,  } from "../../../typechain-types";
 import { randomSalt } from "foundry-contracts/dist/test/common/Eip712Utils";
 import { abi, deployWithOwner, expiryInFuture, getCtx, isAllZero, Salt, TestContext, Wei, ZeroAddress} from 
     'foundry-contracts/dist/test/common/Utils';
@@ -434,6 +434,7 @@ export class QuantumPortalUtils {
 
 export interface PortalContext extends TestContext {
     chain1: {
+        gateway: QuantumPortalGatewayUpgradeable;
         chainId: number;
         ledgerMgr: QuantumPortalLedgerMgrUpgradeableTest;
         poc: QuantumPortalPocUpgradeableTest;
@@ -444,6 +445,7 @@ export interface PortalContext extends TestContext {
         feeConverter: QuantumPortalFeeConverterDirectUpgradeable;
     },
     chain2: {
+        gateway: QuantumPortalGatewayUpgradeable;
         chainId: number;
         ledgerMgr: QuantumPortalLedgerMgrUpgradeableTest;
         poc: QuantumPortalPocUpgradeableTest;
@@ -591,4 +593,10 @@ export async function estimateGasUsingEthCall(contract: string, encodedAbiForEst
             throw error
         }
     }
+}
+
+export async function deployWFRM() {
+    const wfrmF = await ethers.getContractFactory("WFRM");
+    const frm = await wfrmF.deploy();
+    return frm as any as WFRM;
 }
