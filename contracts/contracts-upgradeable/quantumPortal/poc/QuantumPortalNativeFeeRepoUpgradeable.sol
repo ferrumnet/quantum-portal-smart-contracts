@@ -19,7 +19,6 @@ import {IQuantumPortalNativeFeeRepo} from "../../../quantumPortal/poc/IQuantumPo
  */
 abstract contract QuantumPortalNativeFeeRepoUpgradeable is
     IQuantumPortalNativeFeeRepo,
-    IQuantumPortalPoc,
     IVersioned,
     WithAdminUpgradeable
 {
@@ -86,5 +85,12 @@ abstract contract QuantumPortalNativeFeeRepoUpgradeable is
                 FixedPoint128.Q128
             );
         IERC20($.portal.feeToken()).safeTransfer($.portal.feeTarget(), txGas);
+    }
+}
+
+
+contract QuantumPortalNativeFeeRepoBasicUpgradeable is QuantumPortalNativeFeeRepoUpgradeable {
+    function initialize(address _portal, address _feeConvertor, address initialOwner, address initialAdmin) public virtual initializer {
+        QuantumPortalNativeFeeRepoUpgradeable.__QuantumPortalNativeFeeRepo_init(_portal, _feeConvertor, initialOwner, initialAdmin);
     }
 }
