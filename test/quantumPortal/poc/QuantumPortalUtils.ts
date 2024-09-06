@@ -1,5 +1,5 @@
 import { ethers } from "hardhat";
-import { DummyToken,  } from "../../../typechain-types";
+import { DummyToken, WFRM,  } from "../../../typechain-types";
 import { randomSalt } from "foundry-contracts/dist/test/common/Eip712Utils";
 import { abi, deployWithOwner, expiryInFuture, getCtx, isAllZero, Salt, TestContext, Wei, ZeroAddress} from 
     'foundry-contracts/dist/test/common/Utils';
@@ -10,6 +10,7 @@ import { keccak256, Signer } from "ethers";
 import { QuantumPortalState, QuantumPortalLedgerMgrUpgradeableTest, QuantumPortalGatewayUpgradeable,
         QuantumPortalPocUpgradeableTest, QuantumPortalFeeConverterDirectUpgradeable, QuantumPortalMinerMgrUpgradeable,
         QuantumPortalStakeWithDelegateUpgradeable, QuantumPortalAuthorityMgrUpgradeable,
+        QuantumPortalNativeFeeRepoBasicUpgradeable,
  } from '../../../typechain-types';
 import { advanceTimeAndBlock } from "../../common/TimeTravel";
 
@@ -387,7 +388,7 @@ export class QuantumPortalUtils {
         await QuantumPortalUtils.finalize(
             ctx.chain2.chainId,
             ctx.chain1.ledgerMgr,
-            ctx.sks[0],
+            ctx.sks[1],
             invalid ? [nonce.toString()] : []
         );
     }
@@ -434,6 +435,7 @@ export class QuantumPortalUtils {
 
 export interface PortalContext extends TestContext {
     chain1: {
+        gateway: QuantumPortalGatewayUpgradeable;
         chainId: number;
         ledgerMgr: QuantumPortalLedgerMgrUpgradeableTest;
         poc: QuantumPortalPocUpgradeableTest;
@@ -444,6 +446,7 @@ export interface PortalContext extends TestContext {
         feeConverter: QuantumPortalFeeConverterDirectUpgradeable;
     },
     chain2: {
+        gateway: QuantumPortalGatewayUpgradeable;
         chainId: number;
         ledgerMgr: QuantumPortalLedgerMgrUpgradeableTest;
         poc: QuantumPortalPocUpgradeableTest;
@@ -515,7 +518,9 @@ export async function deployAll(): Promise<PortalContext> {
 
     console.log(`Registering a single authority ("${ctx.wallets[0]}"`);
     await autorityMgr1.connect(ctx.signers.acc1).initializeQuorum(ctx.owner, 1, 1, 0, [ctx.wallets[0]]); 
-    await autorityMgr2.connect(ctx.signers.acc2).initializeQuorum(ctx.owner, 1, 1, 0, [ctx.wallets[0], ctx.wallets[1]]); 
+    await autorityMgr1.connect(ctx.signers.acc1).initializeQuorum(ctx.acc1, 2, 1, 0, [ctx.wallets[1]]); 
+    await autorityMgr2.connect(ctx.signers.acc2).initializeQuorum(ctx.owner, 1, 1, 0, [ctx.wallets[0]]); 
+    await autorityMgr2.connect(ctx.signers.acc2).initializeQuorum(ctx.acc1, 2, 1, 0, [ctx.wallets[1]]); 
 
     console.log(`Settting authority mgr (${autorityMgr1.target}/${autorityMgr2.target}) and miner mgr ${miningMgr1.target} / ${miningMgr2.target} on both QP managers, and fee converter`);
     await mgr1.updateAuthorityMgr(autorityMgr1.target);
@@ -568,6 +573,20 @@ export async function deployAll(): Promise<PortalContext> {
     } as PortalContext;
 }
 
+export async function deployNativeFeeRepo(ctx: PortalContext) {
+    const nativeFeeF = await ethers.getContractFactory('QuantumPortalNativeFeeRepoBasicUpgradeable');
+    const nativeFee1 = await nativeFeeF.deploy() as any as QuantumPortalNativeFeeRepoBasicUpgradeable;
+    await nativeFee1.initialize(ctx.chain1.poc.target, ctx.chain1.feeConverter.target, ctx.owner, ctx.owner);
+    const nativeFee2 = await nativeFeeF.deploy() as any as QuantumPortalNativeFeeRepoBasicUpgradeable;
+    await nativeFee2.initialize(ctx.chain2.poc.target, ctx.chain1.feeConverter.target, ctx.owner, ctx.owner);
+    console.log(`Deployed native fee token repos: ${nativeFee1.target}, ${nativeFee2.target}`);
+    await ctx.chain1.token.transfer(nativeFee1.target, Wei.from('100'));
+    await ctx.chain1.token.transfer(nativeFee2.target, Wei.from('100'));
+    console.log('Transferred 100 FRM to each native fee repo');
+    await ctx.chain1.poc.setNativeFeeRepo(nativeFee1.target);
+    await ctx.chain2.poc.setNativeFeeRepo(nativeFee2.target);
+}
+
 export async function estimateGasUsingEthCall(contract: string, encodedAbiForEstimateGas: string) {
     try {
         await ethers.provider.call({
@@ -589,4 +608,10 @@ export async function estimateGasUsingEthCall(contract: string, encodedAbiForEst
             throw error
         }
     }
+}
+
+export async function deployWFRM() {
+    const wfrmF = await ethers.getContractFactory("WFRM");
+    const frm = await wfrmF.deploy();
+    return frm as any as WFRM;
 }
