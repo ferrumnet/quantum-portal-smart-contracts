@@ -63,11 +63,9 @@ contract QuantumPortalStakeWithDelegateUpgradeable is
         address _token,
         address _authority,
         address _stakeVerifyer,
-        address _gateway,
         address initialOwnerAdmin
     ) public initializer {
-        __Ownable_init(initialOwnerAdmin);
-        __WithGateway_init_unchained(_gateway);
+        __WithAdmin_init(initialOwnerAdmin, initialOwnerAdmin);
         __BaseStakingV2_init();
 
         address[] memory tokens = new address[](1);
@@ -126,10 +124,10 @@ contract QuantumPortalStakeWithDelegateUpgradeable is
     }
 
     /**
-     * @notice Updatesth te stake verifyer
+     * @notice Updates the stake verifyer
      * @param newStakeVerifyer The new stake verifyer
      */
-    function updateStakeVerifyer(address newStakeVerifyer) external onlyOwner {
+    function updateStakeVerifyer(address newStakeVerifyer) external onlyAdmin {
         QuantumPortalStakeWithDelegateStorageV001 storage $ = _getQuantumPortalStakeWithDelegateStorageV001();
         $.stakeVerifyer = IQuantumPortalAuthorityMgr(newStakeVerifyer);
     }
@@ -158,8 +156,8 @@ contract QuantumPortalStakeWithDelegateUpgradeable is
         address delegate,
         address delegator
     ) external override {
-        // Can only be called by the staker or the gateway. Gateway in part ensures being called by the staker
-        require(msg.sender == delegator || msg.sender == gateway(), "QPS: unauthorized");
+        // Can only be called by the staker or the gateway (admin). Gateway in part ensures being called by the staker
+        require(msg.sender == delegator || msg.sender == admin(), "QPS: unauthorized");
         _setDelegation(delegate, delegator);
     }
 

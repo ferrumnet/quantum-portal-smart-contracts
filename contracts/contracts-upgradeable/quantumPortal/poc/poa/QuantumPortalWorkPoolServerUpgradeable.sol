@@ -54,8 +54,6 @@ abstract contract QuantumPortalWorkPoolServerUpgradeable is
         _initialize();
     }
 
-
-
     function baseToken() public view returns (address) {
         return _getQuantumPortalWorkPoolServerStorageV001().baseToken;
     }
@@ -84,7 +82,7 @@ abstract contract QuantumPortalWorkPoolServerUpgradeable is
      */
     function updateBaseToken(
         address _baseToken
-    ) external onlyOwner {
+    ) external onlyAdmin {
         QuantumPortalWorkPoolServerStorageV001 storage $ = _getQuantumPortalWorkPoolServerStorageV001();
         $.baseToken = _baseToken;
     }

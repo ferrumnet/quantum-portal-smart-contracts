@@ -3,10 +3,10 @@ pragma solidity ^0.8.0;
 
 import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IGeneralTaxDistributor} from "foundry-contracts/contracts/contracts/taxing/IGeneralTaxDistributor.sol";
+import {WithAdminUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdminUpgradeable.sol";
 import {Staking, IStakeV2} from "../../staking/interfaces/IStakeV2.sol";
 import {IStakeInfo} from "../../staking/interfaces/IStakeInfo.sol";
 import {StakingBasics, StakeFlags} from "../../staking/library/StakingBasics.sol";
-import {AdminedUpgradeable} from "./library/AdminedUpgradeable.sol";
 import {TokenReceivableUpgradeable} from "./library/TokenReceivableUpgradeable.sol";
 import {StakingV2CommonSignaturesUpgradeable} from "./library/StakingV2CommonSignaturesUpgradeable.sol";
 import {IStakingFactory} from "../../staking/factory/IStakingFactory.sol";
@@ -17,7 +17,7 @@ abstract contract BaseStakingV2Upgradeable is
 	IStakeV2,
 	IStakeInfo,
 	TokenReceivableUpgradeable,
-	AdminedUpgradeable
+	WithAdminUpgradeable
 {
 	using StakeFlags for uint16;
 	/// @custom:storage-location erc7201:ferrum.storage.basestakingv2.001
@@ -43,13 +43,8 @@ abstract contract BaseStakingV2Upgradeable is
 		_;
 	}
 
-	modifier onlyAdmin(address id) {
-		require(admins(id, msg.sender) != StakingBasics.AdminRole.None, "BSV2: You are not admin");
-		_;
-	}
-
 	function __BaseStakingV2_init() internal onlyInitializing {
-		// __EIP712Upgradeable_init(); // This needs to be called from child contract!
+		// __EIP712Upgradeable_init(); // This 2 need to be called from child contract!
 		__TokenReceivable_init();
 	}
 
@@ -61,12 +56,12 @@ abstract contract BaseStakingV2Upgradeable is
 		return _getBaseStakingV2StorageV001().stakings[id];
 	}
 
-	function setCreationSigner(address _signer) external onlyOwner {
+	function setCreationSigner(address _signer) external onlyAdmin {
 		_getBaseStakingV2StorageV001().creationSigner = _signer;
 	}
 
 	// TODO: Make this a gov multisig request
-	function setLockSeconds(address id, uint256 _lockSeconds) external onlyOwner {
+	function setLockSeconds(address id, uint256 _lockSeconds) external onlyAdmin {
 		require(id != address(0), "BSV: id required");
 		BaseStakingV2StorageV001 storage $ = _getBaseStakingV2StorageV001();
 		StakingBasics.StakeInfo memory stake = stakings(id);

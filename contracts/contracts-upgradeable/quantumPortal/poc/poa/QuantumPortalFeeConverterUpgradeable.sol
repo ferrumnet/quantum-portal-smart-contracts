@@ -4,14 +4,13 @@ pragma solidity ^0.8.24;
 import {Initializable, UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {FixedPoint128} from "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
 import {WithAdminUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdminUpgradeable.sol";
-import {WithGatewayUpgradeable} from "../utils/WithGatewayUpgradeable.sol";
 import {IPriceOracle} from "../../../../fee/IPriceOracle.sol";
 
 
 /**
  * @notice Fee convertor utility for QP. Used for gas calculations
  */
-contract QuantumPortalFeeConverterUpgradeable is Initializable, UUPSUpgradeable, WithAdminUpgradeable, WithGatewayUpgradeable {
+contract QuantumPortalFeeConverterUpgradeable is Initializable, UUPSUpgradeable, WithAdminUpgradeable {
     string public constant VERSION = "0.0.1";
 
     /// @custom:storage-location erc7201:ferrum.storage.quantumportalfeeconverter.001
@@ -26,7 +25,7 @@ contract QuantumPortalFeeConverterUpgradeable is Initializable, UUPSUpgradeable,
     // keccak256(abi.encode(uint256(keccak256("ferrum.storage.quantumportalfeeconverter.001")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant QuantumPortalFeeConverterStorageV001Location = 0xaba0b53a9265323e2d929e5915afa443008841d14c0632881afa3ef9dbea6d00;
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyGateway {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
 
     function _getQuantumPortalFeeConverterStorageV001() internal pure returns (QuantumPortalFeeConverterStorageV001 storage $) {
         assembly {
@@ -38,11 +37,9 @@ contract QuantumPortalFeeConverterUpgradeable is Initializable, UUPSUpgradeable,
         address _networkFeeWrappedToken,
         address _qpFeeToken,
         address _oracle,
-        address gateway,
         address initialOwnerAdmin
     ) public initializer {
         __WithAdmin_init(initialOwnerAdmin, initialOwnerAdmin);
-        __WithGateway_init_unchained(gateway);
         __QuantumPortalFeeConvertor_init_unchained(_networkFeeWrappedToken, _qpFeeToken, _oracle);
     }
 

@@ -8,7 +8,6 @@ import {MultiSigLib} from "foundry-contracts/contracts/contracts/signature/Multi
 import {IQuantumPortalMinerMgr} from "../../../../quantumPortal/poc/poa/IQuantumPortalMinerMgr.sol";
 import {IQuantumPortalStakeWithDelegate} from "../../../../quantumPortal/poc/poa/stake/IQuantumPortalStakeWithDelegate.sol";
 import {IDelegator} from "../../../../quantumPortal/poc/poa/IDelegator.sol";
-import {WithGatewayUpgradeable} from "../utils/WithGatewayUpgradeable.sol";
 import {QuantumPortalWorkPoolClientUpgradeable, IQuantumPortalWorkPoolClient} from "./QuantumPortalWorkPoolClientUpgradeable.sol";
 import {QuantumPortalWorkPoolServerUpgradeable, IQuantumPortalWorkPoolServer} from "./QuantumPortalWorkPoolServerUpgradeable.sol";
 import {QuantumPortalMinerMembershipUpgradeable, IQuantumPortalMinerMembership} from "./QuantumPortalMinerMembershipUpgradeable.sol";
@@ -27,7 +26,6 @@ contract QuantumPortalMinerMgrUpgradeable is
     Initializable,
     UUPSUpgradeable,
     EIP712Upgradeable,
-    WithGatewayUpgradeable,
     QuantumPortalWorkPoolServerUpgradeable,
     QuantumPortalWorkPoolClientUpgradeable,
     QuantumPortalMinerMembershipUpgradeable
@@ -67,18 +65,16 @@ contract QuantumPortalMinerMgrUpgradeable is
         address _miningStake,
         address _portal,
         address _mgr,
-        address _gateway,
         address _initialOwner
     ) public initializer {
         QuantumPortalMinerMgrStorageV001 storage $ = _getQuantumPortalMinerMgrStorageV001();
         $.miningStake = _miningStake;
         __EIP712_init(NAME, VERSION);
         __QuantimPortalWorkPoolServer_init(_mgr, _portal, _initialOwner, _initialOwner);
-        __WithGateway_init_unchained(_gateway);
         __UUPSUpgradeable_init();
     }
     
-    function _authorizeUpgrade(address newImplementation) internal override onlyGateway {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
 
     function miningStake() public view returns (address) {
         return _getQuantumPortalMinerMgrStorageV001().miningStake;

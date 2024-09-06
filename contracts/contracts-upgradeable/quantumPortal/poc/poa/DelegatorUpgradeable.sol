@@ -3,14 +3,13 @@ pragma solidity ^0.8.0;
 
 import {UUPSUpgradeable, Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {WithAdminUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdminUpgradeable.sol";
-import {WithGatewayUpgradeable} from "../utils/WithGatewayUpgradeable.sol";
 import {IDelegator} from "../../../../quantumPortal/poc/poa/IDelegator.sol";
 
 
 /**
  * @notice A delegator allows delegation.
  */
-contract DelegatorUpgradeable is Initializable, UUPSUpgradeable, WithAdminUpgradeable, WithGatewayUpgradeable {
+contract DelegatorUpgradeable is Initializable, UUPSUpgradeable, WithAdminUpgradeable {
     /// @custom:storage-location erc7201:ferrum.storage.delegator.001
     struct DelegatorStorageV001 {
         mapping(address => address) delegation;
@@ -20,9 +19,8 @@ contract DelegatorUpgradeable is Initializable, UUPSUpgradeable, WithAdminUpgrad
     // keccak256(abi.encode(uint256(keccak256("ferrum.storage.delegator.001")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant DelegatorStorageV001Location = 0xf5bb349c9eb4a7e2375754f6b8067bc31c1aa3cc007d281e4d733c138db7fb00;
 
-    function initialize(address initialOwnerAdmin, address gateway) public initializer {
+    function initialize(address initialOwnerAdmin) public initializer {
         __WithAdmin_init(initialOwnerAdmin, initialOwnerAdmin);
-        __WithGateway_init_unchained(gateway);
     }
 
     function _getDelegatorStorageV001() internal pure returns (DelegatorStorageV001 storage $) {
@@ -31,7 +29,7 @@ contract DelegatorUpgradeable is Initializable, UUPSUpgradeable, WithAdminUpgrad
         }
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyGateway {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
 
     event Delegated(address delator, address delegatee);
 

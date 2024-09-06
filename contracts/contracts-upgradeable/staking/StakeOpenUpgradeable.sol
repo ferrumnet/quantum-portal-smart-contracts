@@ -9,7 +9,6 @@ import {IRewardPool} from "../../staking/interfaces/IRewardPool.sol";
 import {StakeFlags, StakingBasics} from "../../staking/library/StakingBasics.sol";
 import {VestingLibrary} from "../../staking/vesting/VestingLibrary.sol";
 import {BaseStakingV2Upgradeable} from "./BaseStakingV2Upgradeable.sol";
-import {WithGatewayUpgradeable} from "../quantumPortal/poc/utils/WithGatewayUpgradeable.sol";
 
 
 /**
@@ -19,7 +18,7 @@ import {WithGatewayUpgradeable} from "../quantumPortal/poc/utils/WithGatewayUpgr
  * Supports min lock.
  * Cannot be tokenizable.
  */
-contract StakeOpenUpgradeable is Initializable, UUPSUpgradeable, SweepableUpgradeable, BaseStakingV2Upgradeable, WithGatewayUpgradeable, IRewardPool {
+contract StakeOpenUpgradeable is Initializable, UUPSUpgradeable, SweepableUpgradeable, BaseStakingV2Upgradeable, IRewardPool {
     using StakeFlags for uint16;
     string constant public NAME = "FERRUM_STAKING_V2_OPEN";
     string constant public VERSION = "000.001";
@@ -32,13 +31,12 @@ contract StakeOpenUpgradeable is Initializable, UUPSUpgradeable, SweepableUpgrad
     // keccak256(abi.encode(uint256(keccak256("ferrum.storage.stakeopen.001")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant StakeOpenStorageV001Location = 0xd1e594e328d6b9dce40c5be8d3fbae8ce305ff69cc672a339e247103e00d4f00;
 
-    function initialize(address _gateway, address initialOwner) public initializer {
-        __Ownable_init(initialOwner);
-        __WithGateway_init_unchained(_gateway);
+    function initialize(address initialOwner, address initialAdmin) public initializer {
+        __WithAdmin_init(initialOwner, initialAdmin);
         __BaseStakingV2_init();
     }
 
-    function _authorizeUpgrade(address newImplementation) internal virtual override onlyGateway {}
+    function _authorizeUpgrade(address newImplementation) internal virtual override onlyAdmin {}
 
     function initDefault(address token) external nonZeroAddress(token) {
         BaseStakingV2StorageV001 storage $b = _getBaseStakingV2StorageV001();
@@ -55,7 +53,7 @@ contract StakeOpenUpgradeable is Initializable, UUPSUpgradeable, SweepableUpgrad
         setAllowedRewardTokens(token, rewardTokens);
     }
 
-    function init(address token, string memory _name, address[] calldata rewardTokens) external nonZeroAddress(token) onlyOwner {
+    function init(address token, string memory _name, address[] calldata rewardTokens) external nonZeroAddress(token) onlyAdmin {
         _init(token, _name, rewardTokens);
     }
 

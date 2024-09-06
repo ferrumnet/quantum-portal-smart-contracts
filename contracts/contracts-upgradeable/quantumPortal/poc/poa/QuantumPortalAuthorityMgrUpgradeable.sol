@@ -9,12 +9,9 @@ import {IQuantumPortalFinalizerPrecompile, QUANTUM_PORTAL_PRECOMPILE} from "../.
 import {LibChainCheck} from "../../../../quantumPortal/poc/utils/LibChainCheck.sol";
 import {QuantumPortalWorkPoolServerUpgradeable, IQuantumPortalWorkPoolServer} from "./QuantumPortalWorkPoolServerUpgradeable.sol";
 import {QuantumPortalWorkPoolClientUpgradeable} from "./QuantumPortalWorkPoolClientUpgradeable.sol";
-import {WithGatewayUpgradeable} from "../utils/WithGatewayUpgradeable.sol";
 import {IOperatorRelation, OperatorRelationUpgradeable} from "./stake/OperatorRelationUpgradeable.sol";
 import {MultiSigLib} from "foundry-contracts/contracts/contracts/signature/MultiSigLib.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-
-import "hardhat/console.sol";
 
 
 error OperatorHasNoValidator(address operator);
@@ -34,7 +31,6 @@ contract QuantumPortalAuthorityMgrUpgradeable is
     QuantumPortalWorkPoolServerUpgradeable,
     MultiSigCheckableUpgradeable,
     OperatorRelationUpgradeable,
-    WithGatewayUpgradeable,
     IQuantumPortalAuthorityMgr
 {
     string public constant NAME = "FERRUM_QUANTUM_PORTAL_AUTHORITY_MGR";
@@ -48,16 +44,14 @@ contract QuantumPortalAuthorityMgrUpgradeable is
         address _ledgerMgr,
         address _portal,
         address initialOwner,
-        address initialAdmin,
-        address gateway
+        address initialAdmin
     ) public initializer {
         __EIP712_init(NAME, VERSION);
         __QuantimPortalWorkPoolServer_init(_ledgerMgr, _portal, initialOwner, initialAdmin);
-        __WithGateway_init_unchained(gateway);        
         __UUPSUpgradeable_init();
     }
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyGateway {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
     
     /**
      * @notice Validates the authority signature
@@ -88,11 +82,8 @@ contract QuantumPortalAuthorityMgrUpgradeable is
                 expiry
             )
         );
-        console.log("MESSAGE");
-        console.logBytes32(message);
         bool result;
         bytes32 digest = _hashTypedDataV4(message);
-        console.logBytes32(digest);
         (result, validators) = tryVerifyDigestWithAddressWithMinSigCheckForOperators(digest, signature);
         require(result, "QPAM: invalid signature");
 

@@ -6,22 +6,29 @@ const rpcUrl = "https://testnet.dev.svcs.ferrumnetwork.io" // testnet
 const provider = new ethers.JsonRpcProvider(rpcUrl);
 const privateKey = process.env.QP_DEPLOYER_KEY!;
 const wallet = new ethers.Wallet(privateKey, provider);
+const ledgerMgrAddress = "0x2381E4d8fB6fD92cAF233B2eDa8f70beaDF2932f"
 
-const erc20abi = [
-    {
-      "inputs": [],
-      "name": "ping",
-      "outputs": [],
-      "stateMutability": "nonpayable",
-      "type": "function"
-    },
-  ]
+const abi = [
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "miner",
+        "type": "address"
+      }
+    ],
+    "name": "unregisterMiner",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+]
 
 
 async function sendTransaction() {
-  const contractAddress = "0x99d3Fa0Cf0a5C748F357028De4AdF50072098e72"
-    const contract = new ethers.Contract(contractAddress, erc20abi, wallet);
-    const txResponse = await contract.ping()
+  
+    const contract = new ethers.Contract(ledgerMgrAddress, abi, wallet);
+    const txResponse = await contract.unregisterMiner("0xCcEE8000aaA01484112DfC0865d288de43940DEA")
 
     console.log("Transaction sent! Hash:", txResponse.hash);
 

@@ -45,17 +45,9 @@ abstract contract WithLedgerMgrUpgradeable is Initializable, WithAdminUpgradeabl
      * @notice Updates the ledger mgr
      * @param mgr The ledger mgr
      */
-    function updateLedgerMgr(address mgr) external onlyOwner {
+    function updateLedgerMgr(address mgr) external onlyAdmin {
         WithLedgerMgrStorageV001 storage $ = _getWithLedgerMgrStorageV001();
         $.qpLedgerMgr = mgr;
-    }
-
-    /**
-     * @notice Ristricted: update the manager
-     * @param mgr The manager contract address
-     */
-    function initializeWithLedgerMgr(address mgr) external virtual onlyOwner {
-        _initializeWithLedgerMgr(mgr);
     }
 
     /**

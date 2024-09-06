@@ -41,17 +41,9 @@ abstract contract WithQpUpgradeable is Initializable, WithAdminUpgradeable {
      * @notice Upddates the qp portal
      * @param _portal the portal
      */
-    function updatePortal(address _portal) external onlyOwner {
+    function updatePortal(address _portal) external onlyAdmin {
         WithQpStorageV001 storage $ = _getWithQpStorageV001();
         $.portal = IQuantumPortalPoc(_portal);
-    }
-
-    /**
-     * @notice Initialize the multi-chain contract. Pass data using
-     * the initiData
-     */
-    function initializeWithQp(address _portal) external onlyOwner virtual {
-        _initializeWithQp(_portal);
     }
 
     function _initializeWithQp(address _portal) internal {

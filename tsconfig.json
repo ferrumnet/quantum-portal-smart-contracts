@@ -13,7 +13,8 @@
   },
   "include": [
     "./scripts",
-    "./test"
+    "./test",
+    "./ignition"
   ],
   "files": ["./hardhat.config.ts"]
 }

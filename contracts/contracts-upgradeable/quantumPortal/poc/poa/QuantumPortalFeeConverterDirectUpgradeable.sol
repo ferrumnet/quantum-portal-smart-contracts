@@ -5,7 +5,6 @@ import {Initializable, UUPSUpgradeable} from "@openzeppelin/contracts-upgradeabl
 import {FixedPoint128} from "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
 import {IQuantumPortalFeeConvertor} from "../../../../quantumPortal/poc/poa/IQuantumPortalFeeConvertor.sol";
 import {WithAdminUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdminUpgradeable.sol";
-import {WithGatewayUpgradeable} from "../utils/WithGatewayUpgradeable.sol";
 
 
 /**
@@ -15,8 +14,7 @@ contract QuantumPortalFeeConverterDirectUpgradeable is
     IQuantumPortalFeeConvertor,
     Initializable,
     UUPSUpgradeable,
-    WithAdminUpgradeable,
-    WithGatewayUpgradeable
+    WithAdminUpgradeable
 {
     string public constant VERSION = "0.0.1";
     uint constant DEFAULT_PRICE = 0x100000000000000000000000000000000; //FixedPoint128.Q128;
@@ -31,7 +29,7 @@ contract QuantumPortalFeeConverterDirectUpgradeable is
     // keccak256(abi.encode(uint256(keccak256("ferrum.storage.quantumportalfeeconverterdirect.001")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant QuantumPortalFeeConverterDirectStorageV001Location = 0x1bb5efccb3fe848156cfca94d479e33ae6d3f05bb5c87d9f9eee341398fc7500;
 
-    function _authorizeUpgrade(address newImplementation) internal override onlyGateway {}
+    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
 
     function qpFeeToken() external view returns (address) {
         QuantumPortalFeeConverterDirectStorageV001 storage $ = _getQuantumPortalFeeConverterDirectStorageV001();
@@ -46,9 +44,8 @@ contract QuantumPortalFeeConverterDirectUpgradeable is
         return _getQuantumPortalFeeConverterDirectStorageV001().feeTokenPriceList[chainId];
     }
 
-    function initialize(address gateway, address initialOwnerAdmin) public initializer {
+    function initialize(address initialOwnerAdmin) public initializer {
         __WithAdmin_init(initialOwnerAdmin, initialOwnerAdmin);
-        __WithGateway_init_unchained(gateway);
         __UUPSUpgradeable_init();
     }
 

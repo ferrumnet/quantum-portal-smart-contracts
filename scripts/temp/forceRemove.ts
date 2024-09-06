@@ -6,11 +6,18 @@ const rpcUrl = "https://testnet.dev.svcs.ferrumnetwork.io" // testnet
 const provider = new ethers.JsonRpcProvider(rpcUrl);
 const privateKey = process.env.QP_DEPLOYER_KEY!;
 const wallet = new ethers.Wallet(privateKey, provider);
+const contractAddress = "0x2927ec4185210FA20cf5d86B84B16E8fE064fF97"
 
-const erc20abi = [
+const abi = [
     {
-      "inputs": [],
-      "name": "ping",
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_address",
+          "type": "address"
+        }
+      ],
+      "name": "forceRemoveFromQuorum",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -19,9 +26,9 @@ const erc20abi = [
 
 
 async function sendTransaction() {
-  const contractAddress = "0x99d3Fa0Cf0a5C748F357028De4AdF50072098e72"
-    const contract = new ethers.Contract(contractAddress, erc20abi, wallet);
-    const txResponse = await contract.ping()
+  
+    const contract = new ethers.Contract(contractAddress, abi, wallet);
+    const txResponse = await contract.forceRemoveFromQuorum("0xCcEE8000aaA01484112DfC0865d288de43940DEA")
 
     console.log("Transaction sent! Hash:", txResponse.hash);
 

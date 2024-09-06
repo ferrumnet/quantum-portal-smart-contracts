@@ -49,7 +49,7 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 200,
+            runs: 130,
           },
         },
       },
@@ -138,14 +138,12 @@ const config: HardhatUserConfig = {
       accounts,
     },
     arbitrumOne: {
-      url: 'https://nd-829-997-700.p2pify.com/790712c620e64556719c7c9f19ef56e3',
-      // accounts: [process.env.QP_DEPLOYER_KEY!]
-      accounts,
+      url: process.env.ARBITRUM_RPC!,
+      accounts: [process.env.QP_DEPLOYER_KEY!]
     },
     base: {
-      url: 'https://base-mainnet.core.chainstack.com/e7aa01c976c532ebf8e2480a27f18278',
-      // accounts: [process.env.QP_DEPLOYER_KEY!]
-      accounts,
+      url: process.env.BASE_RPC!,
+      accounts: [process.env.QP_DEPLOYER_KEY!]
     },
     ferrum_testnet: {
       chainId: 26100,
@@ -165,6 +163,7 @@ const config: HardhatUserConfig = {
       arbitrumOne: process.env.ARBISCAN_API_KEY!,
       base: process.env.BASESCAN_API_KEY!,
       bsc: process.env.BSCSCAN_API_KEY!,
+      ferrum_testnet: 'empty'
   },
   customChains: [
     {
@@ -173,6 +172,14 @@ const config: HardhatUserConfig = {
       urls: {
         apiURL: "https://ghostnet.dev.svcs.ferrumnetwork.io/api/",
         browserURL: "https://ghostnet.dev.svcs.ferrumnetwork.io/"
+      }
+    },
+    {
+      network: "ferrum_testnet",
+      chainId: 26100,
+      urls: {
+        apiURL: "https://testnet-explorer.svcs.ferrumnetwork.io/api",
+        browserURL: "http://https://testnet-explorer.svcs.ferrumnetwork.io"
       }
     }
   ]
@@ -188,8 +195,8 @@ const config: HardhatUserConfig = {
     strategyConfig: {
       create2: {
         // To learn more about salts, see the CreateX documentation
-        salt: "0x0000000000000000000000000000000000000000000000000000000000000005"
-        // salt: "0x46657272756D4E6574776F726B2D746573746E65743A30312E3030312E303033",
+        salt: "0x0000000000000000000000000000000000000000000000000000000000000007"
+        // salt: "0x46657272756D4E6574776F726B2D746573746E65743A30312E3030312E303037",
       },
     },
   },

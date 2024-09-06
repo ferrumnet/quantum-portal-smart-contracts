@@ -17,7 +17,6 @@ import {IQuantumPortalWorkPoolServer} from "../../../quantumPortal/poc/poa/IQuan
 import {QuantumPortalMinerMgr} from "../../../quantumPortal/poc/poa/QuantumPortalMinerMgr.sol";
 import {QuantumPortalLib} from "../../../quantumPortal/poc/QuantumPortalLib.sol";
 import {PortalLedgerUpgradeable} from "./PortalLedgerUpgradeable.sol";
-import {WithGatewayUpgradeable} from "./utils/WithGatewayUpgradeable.sol";
 
 /**
  @notice Manages block generation.
@@ -25,7 +24,7 @@ import {WithGatewayUpgradeable} from "./utils/WithGatewayUpgradeable.sol";
  Local blocks are virtual, meaning, they do not need to be implicitly generated.
  However, they are completely deterministic and updated as transactions are being added.
 */
-contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, WithAdminUpgradeable, WithGatewayUpgradeable, IVersioned {
+contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, WithAdminUpgradeable, IVersioned {
     uint256 constant FIX_TX_SIZE = 9 * 32;
     uint256 constant FIXED_REJECT_SIZE = 9 * 32;
     uint256 constant BLOCK_PERIOD = 2 minutes; // One block per two minutes?
@@ -121,14 +120,13 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         CHAIN_ID = overrideChainId == 0 ? block.chainid : overrideChainId;
     }
 
-    function initialize(address initialOwner, address initialAdmin, uint256 _minerMinimumStake, address gateway) public initializer {
+    function initialize(address initialOwner, address initialAdmin, uint256 _minerMinimumStake) public initializer {
         __WithAdmin_init(initialOwner, initialAdmin);
-        __WithGateway_init_unchained(gateway);
         QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
         $.minerMinimumStake = _minerMinimumStake;
     }
 
-    function _authorizeUpgrade(address) internal override onlyGateway {}
+    function _authorizeUpgrade(address) internal override onlyAdmin {}
 
     /**
      * @notice Restricted: Update ledger address
@@ -631,6 +629,10 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         uint256 stake = stakeOf(msg.sender);
         require(stake >= $.minerMinimumStake, "QPLM: not enough stake");
         IQuantumPortalMinerMembership($.minerMgr).registerMiner(msg.sender);
+    }
+
+    function unregisterMiner(address miner) external onlyAdmin {
+        IQuantumPortalMinerMembership(minerMgr()).unregisterMiner(miner);
     }
 
     bytes32 constant MINE_REMOTE_BLOCK =

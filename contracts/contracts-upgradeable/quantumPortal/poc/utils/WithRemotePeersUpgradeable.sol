@@ -29,7 +29,7 @@ abstract contract WithRemotePeersUpgradeable is WithAdminUpgradeable {
      * @param remotes The list of contracts
      */
     function updateRemotePeers(uint256[] calldata chainIds, address[] calldata remotes
-    ) external virtual onlyOwner {
+    ) external virtual onlyAdmin {
         WithRemotePeersStorageV001 storage $ = _getWithRemotePeersStorageV001();
         require(chainIds.length == remotes.length, "WRP: wrong no. of remotes");
         for (uint i=0; i<chainIds.length; i++) {
@@ -43,7 +43,7 @@ abstract contract WithRemotePeersUpgradeable is WithAdminUpgradeable {
      * @param chainIds The list of chain IDs
      */
     function removeRemotePeers(uint256[] calldata chainIds
-    ) external virtual onlyOwner {
+    ) external virtual onlyAdmin {
         WithRemotePeersStorageV001 storage $ = _getWithRemotePeersStorageV001();
         for (uint i=0; i<chainIds.length; i++) {
             delete $.remotePeers[chainIds[i]];
