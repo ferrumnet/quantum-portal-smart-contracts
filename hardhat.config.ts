@@ -91,8 +91,7 @@ const config: HardhatUserConfig = {
     bsc: {
       chainId: 56,
       url: "https://bsc-dataseed2.defibit.io",
-      accounts,
-      // accounts: [process.env.QP_DEPLOYER_KEY!]
+      accounts: [process.env.QP_DEPLOYER_KEY!]
     },
     moonbeam: {
       chainId: 1287,
@@ -148,10 +147,9 @@ const config: HardhatUserConfig = {
     ferrum_testnet: {
       chainId: 26100,
       url: "https://testnet.dev.svcs.ferrumnetwork.io",
-      // accounts: [process.env.QP_DEPLOYER_KEY!],
+      accounts: [process.env.QP_DEPLOYER_KEY!],
       allowUnlimitedContractSize: true,
       gas: 10000000, // this override is required for Substrate based evm chains
-      accounts,
     },
   },
   etherscan: {

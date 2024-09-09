@@ -15,6 +15,7 @@ export interface QpDeployConfig {
     QuantumPortalFeeConvertorDirect?: string;
     QuantumPortalMinerMgr?: string;
     QuantumPortalStake?: string;
+    QuantumPortalNativeFeeRepo?: string;
     QuantumPortalMinStake?: string;
     UniswapOracle?: string;
     QuantumPortalBtcWallet?: string;

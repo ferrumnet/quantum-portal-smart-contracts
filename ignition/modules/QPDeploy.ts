@@ -69,6 +69,19 @@ const deployModule = buildModule("DeployModule", (m) => {
     const feeConverterDirectProxy = m.contract("ERC1967Proxy", [feeConverterDirectImpl, initializeCalldata], { id: "FeeConverterDirectProxy"})
     const feeConverterDirect = m.contractAt("QuantumPortalFeeConverterDirectUpgradeable", feeConverterDirectProxy, { id: "FeeConverterDirect"})
 
+    //---------------- NativeFeeRepo -------------//
+    const nativeFeeRepoImpl = m.contract("QuantumPortalNativeFeeRepoBasicUpgradeable", [], { id: "NativeFeeRepoImpl"})
+
+    initializeCalldata = m.encodeFunctionCall(nativeFeeRepoImpl, "initialize", [
+        poc,
+        feeConverterDirect,
+        owner,
+        owner
+    ])
+    const nativeFeeRepoProxy = m.contract("ERC1967Proxy", [nativeFeeRepoImpl, initializeCalldata], { id: "NativeFeeRepoProxy"})
+    const nativeFeeRepo = m.contractAt("QuantumPortalNativeFeeRepoBasicUpgradeable", nativeFeeRepoProxy, { id: "NativeFeeRepo"})
+
+
     //--------------- StakeWithDelegate -------//
     const stakingImpl = m.contract("QuantumPortalStakeWithDelegateUpgradeable", [], { id: "StakingImpl"})
     initializeCalldata = m.encodeFunctionCall(stakingImpl, "initialize(address,address,address,address)", [
@@ -98,6 +111,7 @@ const deployModule = buildModule("DeployModule", (m) => {
 
     m.call(poc, "setManager", [ledgerMgr])
 	m.call(poc, "setFeeToken", [conf.FRM[currentChainId!]])
+    m.call(poc, "setNativeFeeRepo", [nativeFeeRepo])
     
 	m.call(minerMgr, "updateBaseToken", [conf.FRM[currentChainId!]])
 	m.call(ledgerMgr, "updateLedger", [poc], { id: "UpdateLedgerOnLedgerMgr"})
@@ -332,7 +346,8 @@ const deployModule = buildModule("DeployModule", (m) => {
         authMgr,
         feeConverterDirect,
         staking,
-        minerMgr
+        minerMgr,
+        nativeFeeRepo
     }
 })
 
@@ -343,7 +358,8 @@ const configModule = buildModule("ConfigModule", (m) => {
         authMgr,
         feeConverterDirect,
         staking,
-        minerMgr
+        minerMgr,
+        nativeFeeRepo
     } = m.useModule(deployModule)
 
     m.call(poc, "updateFeeTarget")
@@ -356,7 +372,8 @@ const configModule = buildModule("ConfigModule", (m) => {
         authMgr,
         feeConverterDirect,
         staking,
-        minerMgr
+        minerMgr,
+        nativeFeeRepo
     }
 })
 

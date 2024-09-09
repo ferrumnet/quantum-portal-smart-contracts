@@ -5500,9 +5500,9 @@ forwarded@0.2.0:
   resolved "https://registry.yarnpkg.com/forwarded/-/forwarded-0.2.0.tgz#2269936428aad4c15c7ebe9779a84bf0b2a81811"
   integrity sha512-buRG0fpBtRHSTCOASe6hD258tEubFoRLb4ZNA6NxMVHNw2gOcwHo9wyablzMzOA5z9xA9L1KNjk/Nt6MT9aYow==
 
-"foundry-contracts@git+https://github.com/ferrumnet/foundry-contracts#develop":
+"foundry-contracts@git+file:../foundry-contracts#develop":
   version "0.1.0"
-  resolved "git+https://github.com/ferrumnet/foundry-contracts#5e1348cb93077c550c4d48916acedef73ab16bac"
+  resolved "git+file:../foundry-contracts#f71d10aed36c461e413d5aaa63f2171be26cd653"
   dependencies:
     "@aws-sdk/client-secrets-manager" "^3.637.0"
     "@openzeppelin/contracts" "^5.0.0"

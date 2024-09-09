@@ -10,6 +10,7 @@ const PROD_QUORUM_ID = "0x00000000000000000000000000000000000008AE"
 const TIMELOCKED_PROD_QUORUM_ID = "0x0000000000000000000000000000000000000d05"
 
 describe("FerrumAdmin", function () {
+    const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 3 // 1 day
     let gateway,
         ledgerMgr,
         poc,
@@ -74,7 +75,7 @@ describe("FerrumAdmin", function () {
 
     it("Quorum should no be able to permit a call to one that has no auth set", async function () {
         const salt = "0x" + Buffer.from(randomBytes(32)).toString("hex")
-        const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 1 // 1 day
+        
 
         const data = "0x12345678" // Arbitrary data
 
@@ -86,6 +87,7 @@ describe("FerrumAdmin", function () {
             data,
             await gateway.BETA_QUORUMID(),
             salt,
+            expiry,
             [owner, signer1]
         )
 
@@ -103,7 +105,7 @@ describe("FerrumAdmin", function () {
         const params = [newFeeToken.target]
         const calldata = poc.interface.encodeFunctionData(funcName, params)
 
-        const tx = gateway.connect(dev).executePermittedCall(poc, calldata, await gateway.BETA_QUORUMID(), salt)
+        const tx = gateway.connect(dev).executePermittedCall(poc, calldata, await gateway.BETA_QUORUMID(), salt, expiry)
 
         await expect(tx).to.be.revertedWith("FA: not permitted")
     })
@@ -113,7 +115,6 @@ describe("FerrumAdmin", function () {
         await poc.transferOwnership(gateway)
         
         const salt = "0x" + Buffer.from(randomBytes(32)).toString("hex")
-        const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 1 // 1 day
 
         const funcName = "setFeeToken"
         const newFeeToken = await hre.ethers.deployContract("TestToken")
@@ -125,13 +126,14 @@ describe("FerrumAdmin", function () {
             gateway,
             calldata,
             await gateway.BETA_QUORUMID(),
-            salt, 
+            salt,
+            expiry,
             [owner, signer1]
         )
 
         await gateway.permitCall(poc, calldata, await gateway.BETA_QUORUMID(), salt, expiry, multisig.sig)
 
-        const tx = gateway.connect(dev).executePermittedCall(poc, calldata, await gateway.BETA_QUORUMID(), salt)
+        const tx = gateway.connect(dev).executePermittedCall(poc, calldata, await gateway.BETA_QUORUMID(), salt, expiry)
         await expect(tx).to.emit(gateway, "CallExecuted").withArgs(multisig.structHash, poc.target, calldata)
         expect(await poc.feeToken()).to.equal(newFeeToken.target)
     })
@@ -141,7 +143,6 @@ describe("FerrumAdmin", function () {
         await poc.transferOwnership(gateway)
         
         const salt = "0x" + Buffer.from(randomBytes(32)).toString("hex")
-        const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 2 // 1 day
 
         const funcName = "upgradeToAndCall"
         const newPoc = await hre.ethers.deployContract("QuantumPortalPocImplUpgradeable")
@@ -154,13 +155,14 @@ describe("FerrumAdmin", function () {
             gateway,
             calldata,
             TIMELOCKED_PROD_QUORUM_ID,
-            salt, 
+            salt,
+            expiry,
             [signer5, signer6, signer7]
         )
 
         await gateway.permitCall(poc, calldata, TIMELOCKED_PROD_QUORUM_ID, salt, expiry, multisig.sig)
-        await hre.ethers.provider.send("evm_increaseTime", [60*60*24*1 + 1]);
-        const tx = gateway.connect(dev).executePermittedCall(poc, calldata, TIMELOCKED_PROD_QUORUM_ID, salt)
+        await hre.ethers.provider.send("evm_increaseTime", [60*60*24*1]);
+        const tx = gateway.connect(dev).executePermittedCall(poc, calldata, TIMELOCKED_PROD_QUORUM_ID, salt, expiry)
 
         await expect(tx)
         .to.emit(gateway, "CallExecuted").withArgs(multisig.structHash, poc.target, calldata).and
@@ -179,6 +181,7 @@ const getMultisig = async (
     data:string,
     quorumId:string,
     salt:string,
+    expiry:number,
     signers: Signer[]    
 ) => {    
     const domain = {
@@ -193,7 +196,8 @@ const getMultisig = async (
             { name: "target", type: "address" },
             { name: "data", type: "bytes" },
             { name: "quorumId", type: "address" },
-            { name: "salt", type: "bytes32" }
+            { name: "salt", type: "bytes32" },
+            { name: "expiry", type: "uint64" }
         ],
     };
 
@@ -201,7 +205,8 @@ const getMultisig = async (
         target: targetContract.target,
         data,
         quorumId,
-        salt
+        salt,
+        expiry
     };
 
     const typedDataEncoder = new TypedDataEncoder(types)

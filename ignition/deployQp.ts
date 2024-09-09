@@ -15,6 +15,7 @@ async function main() {
         feeConverterDirect,
         staking,
         minerMgr,
+        nativeFeeRepo,
         owner,
         signer1,
         signer2,
@@ -25,7 +26,7 @@ async function main() {
         signer7,
         settings
     
-    ({ gateway, ledgerMgr, poc, authMgr, feeConverterDirect, staking, minerMgr } = await hre.ignition.deploy(deployModule))
+    ({ gateway, ledgerMgr, poc, authMgr, feeConverterDirect, staking, minerMgr, nativeFeeRepo } = await hre.ignition.deploy(deployModule))
 
     owner = (await hre.ethers.getSigners())[0]
     signer1 = (await hre.ethers.getSigners())[1]
@@ -81,6 +82,7 @@ async function main() {
     conf.QuantumPortalFeeConvertorDirect = feeConverterDirect.target as string
     conf.QuantumPortalMinerMgr = minerMgr.target as string
     conf.QuantumPortalStake = staking.target as string
+    conf.QuantumPortalNativeFeeRepo = nativeFeeRepo.target as string
     
     const updatedConf = yaml.dump(conf);
 

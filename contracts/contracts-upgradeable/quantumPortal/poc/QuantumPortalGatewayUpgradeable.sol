@@ -4,7 +4,7 @@ pragma solidity ^0.8.24;
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {UUPSUpgradeable, Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {SafeAmount} from "foundry-contracts/contracts/contracts/common/SafeAmount.sol";
-import {FerrumAdminUpgradeable} from "../../FerrumAdminUpgradeable.sol";
+import {FerrumAdminUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/common/FerrumAdminUpgradeable.sol";
 import {IQuantumPortalLedgerMgr, IQuantumPortalLedgerMgrDependencies} from "../../../quantumPortal/poc/IQuantumPortalLedgerMgr.sol";
 import {IQuantumPortalStakeWithDelegate} from "../../../quantumPortal/poc/poa/stake/IQuantumPortalStakeWithDelegate.sol";
 import {IQuantumPortalPoc} from "../../../quantumPortal/poc/IQuantumPortalPoc.sol";
