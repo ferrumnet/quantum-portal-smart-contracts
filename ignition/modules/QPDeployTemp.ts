@@ -41,17 +41,57 @@ const deployModule = buildModule("DeployModule", (m) => {
     //----------------- Setup -----------------//
 	m.call(poc, "setFeeToken", [conf.FRM[currentChainId!]])
 
-    m.call(gateway, "initializeQuorum", [BETA_QUORUM_ID, 0, 2, 0, ["0xEb608fE026a4F54df43E57A881D2e8395652C58D", "0xdCd60Be5b153d1884e1E6E8C23145D6f3546315e"]])
+    m.call(gateway, "initializeQuorum", [BETA_QUORUM_ID, 0, 2, 0, ["0x286220e71bF9F7c7c4a0dC57b05Bd8C0855bed65", "0x4916B25FD967fa68A768AD664Ac6ae9E6B3ebBC2", "0x4Fc04C32Ef673A926120CC7747D1d2c05BA76516"]])
 
     const settings = [{
         quorumId: BETA_QUORUM_ID,
+        target: gateway,
+        funcSelector: FunctionFragment.getSelector("initializeQuorum", ["address", "uint64", "uint16", "uint8", "address[]"]),
+    },
+    {
+        quorumId: BETA_QUORUM_ID,
+        target: gateway,
+        funcSelector: FunctionFragment.getSelector("updateQpAddresses", ["address", "address", "address"]),
+    },
+    {
+        quorumId: BETA_QUORUM_ID,
+        target: gateway,
+        funcSelector: FunctionFragment.getSelector("setCallAuthLevels", ["(address,address,bytes4)[]"]),
+    },
+    {
+        quorumId: BETA_QUORUM_ID,
+        target: gateway,
+        funcSelector: FunctionFragment.getSelector("updateTimelockPeriod", ["uint256"]),
+    },
+    {
+        quorumId: BETA_QUORUM_ID,
+        target: gateway,
+        funcSelector: FunctionFragment.getSelector("addDevAccounts", ["address[]"]),
+    },
+    {
+        quorumId: BETA_QUORUM_ID,
+        target: gateway,
+        funcSelector: FunctionFragment.getSelector("removeDevAccounts", ["address[]"]),
+    },
+    {
+        quorumId: BETA_QUORUM_ID,
         target: poc,
         funcSelector: FunctionFragment.getSelector("setFeeToken", ["address"]),
+    },
+    {
+        quorumId: BETA_QUORUM_ID,
+        target: poc,
+        funcSelector: FunctionFragment.getSelector("setNativeFeeRepo", ["address"]),
+    },
+    {
+        quorumId: BETA_QUORUM_ID,
+        target: poc,
+        funcSelector: FunctionFragment.getSelector("setManager", ["address"]),
     }]
 
     m.call(gateway, "setCallAuthLevels", [settings])
-    m.call(poc, "setAdmin", [gateway])
-    m.call(poc, "transferOwnership", [gateway])
+    // m.call(poc, "setAdmin", [gateway])
+    // m.call(poc, "transferOwnership", [gateway])
     // SET FEEPERBYTE ON FEECONVERTERDIRECT
 
     return {

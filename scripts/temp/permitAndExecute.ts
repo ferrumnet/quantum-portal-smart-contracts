@@ -7,40 +7,42 @@ require("dotenv").config({path: __dirname + '/localConfig/.env'});
 
 
 
-
 async function main() {
     const conf: QpDeployConfig = loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
     const BETA_QUORUM_ID = "0x0000000000000000000000000000000000000457"
     
-    const wallet1 = new hre.ethers.Wallet(process.env.WALLET1_PRIVATE_KEY!, hre.ethers.provider)
-    const wallet2 = new hre.ethers.Wallet(process.env.WALLET2_PRIVATE_KEY!, hre.ethers.provider)
-    const dev = new hre.ethers.Wallet(process.env.QP_DEPLOYER_KEY!, hre.ethers.provider)
+    const wallet1 = new hre.ethers.Wallet(process.env.TEMP_SIGNER2_KEY!, hre.ethers.provider)
+    const wallet2 = new hre.ethers.Wallet(process.env.TEMP_SIGNER3_KEY!, hre.ethers.provider)
+    const dev = new hre.ethers.Wallet(process.env.TEMP_OWNER_KEY!, hre.ethers.provider)
     
-    const gatewayAddress = "0x21f64031935248c2765Fa6C0Dab4b68559e0d461"
-    const gateway = await hre.ethers.getContractAt("QuantumPortalGatewayUpgradeable", gatewayAddress, dev) as unknown as  QuantumPortalGatewayUpgradeable
+    const gatewayAddress = "0x3C9025571EA627431570C1aB2ea74617a1c30B40"
+    const gateway = await hre.ethers.getContractAt("QuantumPortalGatewayUpgradeable", gatewayAddress, dev)
 
-    const pocAddress = "0x0d2B09f34FD5888a01571ea56f52c9565639afca"
-    const poc = await hre.ethers.getContractAt("QuantumPortalPocImplUpgradeable", pocAddress, dev)
+    // const pocAddress = "0x2cfdD29175a163f28C66324d593d8773287847cd"
+    // const poc = await hre.ethers.getContractAt("QuantumPortalPocImplUpgradeable", pocAddress, dev)
 
-    const newFeeTokenAddress = "0x0000000000000000000000000000000000026026"
-
+    const newFeeTokenAddress = "0x0000000000000000000000000000000000026626"
 
     const salt = "0x" + Buffer.from(randomBytes(32)).toString("hex")
     const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 2 // 1 day
-    const funcName = "setFeeToken"
-    const params = [newFeeTokenAddress]
-    const calldata = poc.interface.encodeFunctionData(funcName, params)
+    const funcName = "setAdmin"
+    const params = ["0x2cfdD29175a163f28C66324d593d8773287847cd"]
+    const calldata = gateway.interface.encodeFunctionData(funcName, params)
 
     const multisig = await getMultisig(
-        pocAddress,
+        gatewayAddress,
         gatewayAddress,
         calldata,
         BETA_QUORUM_ID,
         salt,
+        expiry,
         [wallet1, wallet2]
     )
 
-    const tx = await gateway.connect(dev).permitAndExecuteCall(pocAddress, calldata, BETA_QUORUM_ID, salt, expiry, multisig.sig, {gasLimit: 1000000})
+    console.log(await gateway.VERSION())
+    console.log(await gateway.devAccounts(dev))
+
+    const tx = await gateway.permitAndExecuteCall(gatewayAddress, calldata, BETA_QUORUM_ID, salt, expiry, multisig.sig, {gasLimit: 500000})
 
     await tx.wait()
 }
@@ -59,12 +61,13 @@ const getMultisig = async (
     data:string,
     quorumId:string,
     salt:string,
+    expiry,
     signers: Signer[]    
 ) => {    
     const domain = {
         name: "FERRUM_QUANTUM_PORTAL_GATEWAY",
         version: "000.010",
-        chainId: 8453,
+        chainId: 31337,
         verifyingContract
     };
 
@@ -73,7 +76,8 @@ const getMultisig = async (
             { name: "target", type: "address" },
             { name: "data", type: "bytes" },
             { name: "quorumId", type: "address" },
-            { name: "salt", type: "bytes32" }
+            { name: "salt", type: "bytes32" },
+            { name: "expiry", type: "uint64" }
         ],
     };
 
@@ -81,7 +85,8 @@ const getMultisig = async (
         target: targetContract,
         data,
         quorumId,
-        salt
+        salt,
+        expiry
     };
 
     const typedDataEncoder = new TypedDataEncoder(types)

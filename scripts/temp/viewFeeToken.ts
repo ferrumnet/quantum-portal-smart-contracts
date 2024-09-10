@@ -1,7 +1,7 @@
 import hre from "hardhat"
 
 async function main() {
-    const pocAddress = "0x1E3F17291e8ae39104351AB8CceE1D241408c333"
+    const pocAddress = "0xbf18631e92A21b1DD4C6Cc49CF6A0d500A41f74A"
     const poc = await hre.ethers.getContractAt("QuantumPortalPocUpgradeable", pocAddress)
 
     console.log(await poc.feeToken())

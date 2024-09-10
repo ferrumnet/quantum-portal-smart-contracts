@@ -1,7 +1,6 @@
 import { loadFixture } from "@nomicfoundation/hardhat-toolbox/network-helpers";
 import { expect } from "chai";
 import hre from "hardhat";
-import { throws, Wei, ZeroAddress } from 'foundry-contracts/dist/test/common/Utils';
 import deployModule from "../../../ignition/modules/QPDeploy";
 import { Contract, randomBytes, Signer, TypedDataEncoder } from "ethers";
 

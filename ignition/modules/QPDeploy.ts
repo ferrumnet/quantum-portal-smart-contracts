@@ -337,6 +337,9 @@ const deployModule = buildModule("DeployModule", (m) => {
 
     m.call(gateway, "setCallAuthLevels", [settings])
 
+    // m.call(poc, "setAdmin", [gateway])
+    // m.call(poc, "transferOwnership", [gateway])
+
     // SET FEEPERBYTE ON FEECONVERTERDIRECT
 
     return {

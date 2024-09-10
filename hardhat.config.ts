@@ -138,11 +138,11 @@ const config: HardhatUserConfig = {
     },
     arbitrumOne: {
       url: process.env.ARBITRUM_RPC!,
-      accounts: [process.env.QP_DEPLOYER_KEY!]
+      accounts: [process.env.TEMP_OWNER_KEY!]
     },
     base: {
       url: process.env.BASE_RPC!,
-      accounts: [process.env.QP_DEPLOYER_KEY!]
+      accounts: [process.env.TEMP_OWNER_KEY!]
     },
     ferrum_testnet: {
       chainId: 26100,
