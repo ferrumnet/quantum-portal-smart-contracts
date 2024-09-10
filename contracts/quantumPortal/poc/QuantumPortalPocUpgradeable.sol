@@ -9,7 +9,7 @@ import {IQuantumPortalNativeFeeRepo} from "./IQuantumPortalNativeFeeRepo.sol";
 import {IQpSelfManagedToken} from "./utils/IQpSelfManagedToken.sol";
 import {IQuantumPortalLedgerMgrDependencies} from "./IQuantumPortalLedgerMgr.sol";
 import {IQuantumPortalLedgerMgr} from "./IQuantumPortalLedgerMgr.sol";
-import {TokenReceivableUpgradeable} from "../../staking/library/TokenReceivableUpgradeable.sol";
+import {TokenReceivableUpgradeable} from "./poa/stake/library/TokenReceivableUpgradeable.sol";
 import {PortalLedgerUpgradeable} from "./PortalLedgerUpgradeable.sol";
 import {QuantumPortalLib} from "./QuantumPortalLib.sol";
 

@@ -7,7 +7,7 @@ import {SweepableUpgradeable} from "foundry-contracts/contracts/contracts-upgrad
 import {IStakeV2, Staking} from "./interfaces/IStakeV2.sol";
 import {IRewardPool} from "./interfaces/IRewardPool.sol";
 import {StakeFlags, StakingBasics} from "./library/StakingBasics.sol";
-import {VestingLibrary} from "./vesting/VestingLibrary.sol";
+import {VestingLibrary} from "./VestingLibrary.sol";
 import {BaseStakingV2Upgradeable} from "./BaseStakingV2Upgradeable.sol";
 
 

@@ -6,7 +6,7 @@ import {FullMath} from "foundry-contracts/contracts/contracts/math/FullMath.sol"
 import {IQuantumPortalWorkPoolServer} from "./IQuantumPortalWorkPoolServer.sol";
 import {FixedPoint128} from "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
 import {WithAdminUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdminUpgradeable.sol";
-import {TokenReceivableUpgradeable} from "../../../staking/library/TokenReceivableUpgradeable.sol";
+import {TokenReceivableUpgradeable} from "./stake/library/TokenReceivableUpgradeable.sol";
 import {WithLedgerMgrUpgradeable} from "../utils/WithLedgerMgrUpgradeable.sol";
 import {WithQpUpgradeable} from "../utils/WithQpUpgradeable.sol";
 import {WithRemotePeersUpgradeable} from "../utils/WithRemotePeersUpgradeable.sol";

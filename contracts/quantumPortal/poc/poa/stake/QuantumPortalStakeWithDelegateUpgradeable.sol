@@ -7,7 +7,7 @@ import {FixedPoint128} from "foundry-contracts/contracts/contracts/math/FixedPoi
 import {IQuantumPortalStakeWithDelegate} from "./IQuantumPortalStakeWithDelegate.sol";
 import {IQuantumPortalAuthorityMgr, QuantumPortalAuthorityMgrUpgradeable} from "../QuantumPortalAuthorityMgrUpgradeable.sol";
 import {IOperatorRelation, OperatorRelationUpgradeable} from "./OperatorRelationUpgradeable.sol";
-import {StakeOpenUpgradeable} from "../../../../staking/StakeOpenUpgradeable.sol";
+import {StakeOpenUpgradeable} from "./StakeOpenUpgradeable.sol";
 
 
 /**

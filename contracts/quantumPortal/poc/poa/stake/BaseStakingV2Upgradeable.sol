@@ -9,7 +9,6 @@ import {IStakeInfo} from "./interfaces/IStakeInfo.sol";
 import {StakingBasics, StakeFlags} from "./library/StakingBasics.sol";
 import {TokenReceivableUpgradeable} from "./library/TokenReceivableUpgradeable.sol";
 import {StakingV2CommonSignaturesUpgradeable} from "./library/StakingV2CommonSignaturesUpgradeable.sol";
-import {IStakingFactory} from "./factory/IStakingFactory.sol";
 
 
 abstract contract BaseStakingV2Upgradeable is 

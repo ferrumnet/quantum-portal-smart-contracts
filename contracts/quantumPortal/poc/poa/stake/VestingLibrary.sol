@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "../library/StakingBasics.sol";
+import "./library/StakingBasics.sol";
 import "foundry-contracts/contracts/contracts/math/FullMath.sol";
 import "foundry-contracts/contracts/contracts/math/SafeCast.sol";
 import "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";

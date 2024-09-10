@@ -3,7 +3,7 @@ pragma solidity ^0.8.0;
 
 import "./IFrmFeeManager.sol";
 import "./IPriceOracle.sol";
-import "../staking/library/TokenReceivable.sol";
+import "../quantumPortal/poc/poa/stake/library/TokenReceivable.sol";
 import "foundry-contracts/contracts/contracts/common/WithAdmin.sol";
 import "foundry-contracts/contracts/contracts/math/FullMath.sol";
 import "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";

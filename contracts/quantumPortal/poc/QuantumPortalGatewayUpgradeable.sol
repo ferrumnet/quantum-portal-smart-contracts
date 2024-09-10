@@ -8,7 +8,7 @@ import {FerrumAdminUpgradeable} from "foundry-contracts/contracts/contracts-upgr
 import {IQuantumPortalLedgerMgr, IQuantumPortalLedgerMgrDependencies} from "./IQuantumPortalLedgerMgr.sol";
 import {IQuantumPortalStakeWithDelegate} from "./poa/stake/IQuantumPortalStakeWithDelegate.sol";
 import {IQuantumPortalPoc} from "./IQuantumPortalPoc.sol";
-import {IStakeV2} from "../../staking/interfaces/IStakeV2.sol";
+import {IStakeV2} from "./poa/stake/interfaces/IStakeV2.sol";
 import {IWETH} from "../../uniswap/IWETH.sol";
 import {IUUPSUpgradeable} from "./utils/IUUPSUpgradeable.sol";
 

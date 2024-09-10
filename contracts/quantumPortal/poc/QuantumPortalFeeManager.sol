@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "../../staking/library/TokenReceivable.sol";
+import "./poa/stake/library/TokenReceivable.sol";
 
 contract QuantumPortalFeeManager is TokenReceivable {
     /**
