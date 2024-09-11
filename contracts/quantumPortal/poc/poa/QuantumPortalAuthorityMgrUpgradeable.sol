@@ -34,7 +34,7 @@ contract QuantumPortalAuthorityMgrUpgradeable is
     IQuantumPortalAuthorityMgr
 {
     string public constant NAME = "FERRUM_QUANTUM_PORTAL_AUTHORITY_MGR";
-    string public constant VERSION = "000.200";
+    string public constant VERSION = "000.001";
     bytes32 constant VALIDATE_AUTHORITY_SIGNATURE =
         keccak256(
             "ValidateAuthoritySignature(uint256 action,bytes32 msgHash,bytes32 salt,uint64 expiry)"

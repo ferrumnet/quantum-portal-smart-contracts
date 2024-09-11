@@ -69,7 +69,7 @@ describe("FerrumAdmin", function () {
 
     it("Should have the correct version", async function () {
         console.log(await gateway.NAME())
-        expect(await gateway.VERSION()).to.equal("000.010");
+        expect(await gateway.VERSION()).to.equal("000.001");
     });
 
     it("Quorum should no be able to permit a call to one that has no auth set", async function () {

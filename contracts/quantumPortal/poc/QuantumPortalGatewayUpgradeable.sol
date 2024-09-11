@@ -20,7 +20,7 @@ import {IUUPSUpgradeable} from "./utils/IUUPSUpgradeable.sol";
  */
 contract QuantumPortalGatewayUpgradeable is Initializable, UUPSUpgradeable, FerrumAdminUpgradeable {
     string public constant NAME = "FERRUM_QUANTUM_PORTAL_GATEWAY";
-    string public constant VERSION = "000.010";
+    string public constant VERSION = "000.001";
     /// @custom:oz-upgrades-unsafe-allow state-variable-immutable
     address public immutable WFRM;
 

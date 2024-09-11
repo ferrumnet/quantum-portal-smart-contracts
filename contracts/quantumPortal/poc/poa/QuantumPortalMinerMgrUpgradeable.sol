@@ -32,7 +32,7 @@ contract QuantumPortalMinerMgrUpgradeable is
 {
     uint32 constant WEEK = 7 days;
     string public constant NAME = "FERRUM_QUANTUM_PORTAL_MINER_MGR";
-    string public constant VERSION = "000.010";
+    string public constant VERSION = "000.001";
     bytes32 public constant MINER_SIGNATURE =
         keccak256("MinerSignature(bytes32 msgHash,uint64 expiry,bytes32 salt)");
 

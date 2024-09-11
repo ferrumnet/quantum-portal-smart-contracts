@@ -459,22 +459,23 @@ export interface PortalContext extends TestContext {
 }
 
 export async function deployAll(): Promise<PortalContext> {
+    const gatewayTimelockPeriod = 60 * 60 * 24; // 1 day
     console.log('Signers: ', (await ethers.getSigners()).map(s => s.address));
 	const ctx = await getCtx();
     console.log('Owner address: ', ctx.owner);
     const gateFac = await ethers.getContractFactory("QuantumPortalGatewayUpgradeable");
     const gate1 = await gateFac.deploy(ZeroAddress) as unknown as QuantumPortalGatewayUpgradeable;
-    await gate1.initialize(ctx.owner, ctx.owner);
+    await gate1.initialize(gatewayTimelockPeriod, ctx.owner, ctx.owner);
     const gate2 = await gateFac.deploy(ZeroAddress) as unknown as QuantumPortalGatewayUpgradeable;
-    await gate2.initialize(ctx.owner, ctx.owner);
+    await gate2.initialize(gatewayTimelockPeriod, ctx.owner, ctx.owner);
 
 	const mgrFac = await ethers.getContractFactory("QuantumPortalLedgerMgrUpgradeableTest");
 	console.log('About to deploy the ledger managers');
     const mgr1 = await mgrFac.deploy(26000, {gasLimit: 8000000}) as unknown as QuantumPortalLedgerMgrUpgradeableTest;
-    await mgr1.initialize(ctx.owner, ctx.owner, Wei.from('1'), gate1.target);
+    await mgr1.initialize(ctx.owner, ctx.owner, Wei.from('1'));
     console.log('MGR LAUNCHED', await mgr1.VERSION());
     const mgr2 = await mgrFac.deploy(2) as unknown as QuantumPortalLedgerMgrUpgradeableTest;
-    await mgr2.initialize(ctx.owner, ctx.owner, Wei.from('1'), gate2.target);
+    await mgr2.initialize(ctx.owner, ctx.owner, Wei.from('1'));
 
     const chainId1 = 31337 // (await mgr1.realChainId()).toNumber();
     const chainId2 = 2;
@@ -487,17 +488,17 @@ export async function deployAll(): Promise<PortalContext> {
 	const pocFac = await ethers.getContractFactory("QuantumPortalPocUpgradeableTest");
 	console.log('About to deploy the pocs');
     const poc1 = await pocFac.deploy(26000) as unknown as QuantumPortalPocUpgradeableTest;
-    await poc1.initialize(ctx.owner, ctx.owner, gate1.target);
+    await poc1.initialize(ctx.owner, ctx.owner);
     const poc2 = await pocFac.deploy(2) as unknown as QuantumPortalPocUpgradeableTest;
-    await poc2.initialize(ctx.owner, ctx.owner, gate2.target);
+    await poc2.initialize(ctx.owner, ctx.owner);
 
     // By default, both test ledger mgrs use the same authority mgr.
 	console.log('About to deploy the authority managers');
 	const autorityMgrFac = await ethers.getContractFactory("QuantumPortalAuthorityMgrUpgradeable");
     const autorityMgr1 = await autorityMgrFac.deploy() as unknown as QuantumPortalAuthorityMgrUpgradeable;
-    await autorityMgr1.initialize(mgr1.target, poc1.target, ctx.acc1, ctx.acc1, gate1.target)
+    await autorityMgr1.initialize(mgr1.target, poc1.target, ctx.acc1, ctx.acc1)
     const autorityMgr2 = await autorityMgrFac.deploy() as unknown as QuantumPortalAuthorityMgrUpgradeable;
-    await autorityMgr2.initialize(mgr2.target, poc2.target, ctx.acc2, ctx.acc2, gate2.target)
+    await autorityMgr2.initialize(mgr2.target, poc2.target, ctx.acc2, ctx.acc2)
 
     console.log('Deploying some tokens');
 	const tokenData = abi.encode(['address'], [ctx.owner]);
@@ -506,15 +507,15 @@ export async function deployAll(): Promise<PortalContext> {
     console.log('Deploying direc fee converter');
     const feeConverterF = await ethers.getContractFactory('QuantumPortalFeeConverterDirectUpgradeable');
     const feeConverter = await feeConverterF.deploy() as unknown as QuantumPortalFeeConverterDirectUpgradeable;
-    await feeConverter.initialize(gate1.target, ctx.owner);
+    await feeConverter.initialize(ctx.owner);
     await feeConverter.updateFeePerByte(Wei.from('0.001'));
 
     console.log('Deploying staking');
     const stake = await delpoyStake(ctx, autorityMgr1.target.toString(), ZeroAddress, tok1.target.toString());
     // const stake = await delpoyStake(ctx, FERRUM_TOKENS[ctx.chainId] || panick(`No FRM token is configured for chain ${ctx.chainId}`));
     console.log('Deploying mining mgr');
-    const miningMgr1 = await deployMinerMgr(stake, poc1.target.toString(), mgr1.target.toString(), gate1.target.toString(), ctx.owner);
-    const miningMgr2 = await deployMinerMgr(stake, poc2.target.toString(), mgr2.target.toString(), gate2.target.toString(), ctx.acc1); // To deploy a different contract.
+    const miningMgr1 = await deployMinerMgr(stake, poc1.target.toString(), mgr1.target.toString(), ctx.owner);
+    const miningMgr2 = await deployMinerMgr(stake, poc2.target.toString(), mgr2.target.toString(), ctx.acc1); // To deploy a different contract.
 
     console.log(`Registering a single authority ("${ctx.wallets[0]}"`);
     await autorityMgr1.connect(ctx.signers.acc1).initializeQuorum(ctx.owner, 1, 1, 0, [ctx.wallets[0]]); 

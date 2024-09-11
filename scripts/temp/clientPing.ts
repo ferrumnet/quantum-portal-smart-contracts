@@ -1,15 +1,31 @@
 import { ethers } from "ethers";
-import hre from "hardhat";
 
+// const rpcUrl = "https://nd-829-997-700.p2pify.com/790712c620e64556719c7c9f19ef56e3" // Arbitrum
+// const rpcUrl = "https://bsc-dataseed2.defibit.io" // bsc
+// const rpcUrl = "https://base-mainnet.core.chainstack.com/e7aa01c976c532ebf8e2480a27f18278" // base
+const rpcUrl = "https://testnet.dev.svcs.ferrumnetwork.io" // ferrum_testnet
 
 // Create a provider
-const contractAddress = "0x9f7a4d7Dec1e6414812a20ace2B8bad409B9E880"
+const provider = new ethers.JsonRpcProvider(rpcUrl);
+const privateKey = process.env.QP_DEPLOYER_KEY!;
+const wallet = new ethers.Wallet(privateKey, provider);
+const contractAddress = "0x90e6558C427283220715dbE490AB5ff51E5E8b87"
 const pingABI = [
     {
       "inputs": [
         {
           "internalType": "address",
           "name": "_portal",
+          "type": "address"
+        },
+        {
+          "internalType": "uint64",
+          "name": "_serverChainId",
+          "type": "uint64"
+        },
+        {
+          "internalType": "address",
+          "name": "_serverAddress",
           "type": "address"
         },
         {
@@ -23,7 +39,7 @@ const pingABI = [
     },
     {
       "inputs": [],
-      "name": "NotRemotePeer",
+      "name": "NotServer",
       "type": "error"
     },
     {
@@ -81,32 +97,6 @@ const pingABI = [
       "type": "event"
     },
     {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "numbPingsSent",
-          "type": "uint256"
-        }
-      ],
-      "name": "Ping",
-      "type": "event"
-    },
-    {
-      "anonymous": false,
-      "inputs": [
-        {
-          "indexed": false,
-          "internalType": "uint256",
-          "name": "numbPingsReceived",
-          "type": "uint256"
-        }
-      ],
-      "name": "ReceivePing",
-      "type": "event"
-    },
-    {
       "inputs": [],
       "name": "admin",
       "outputs": [
@@ -147,20 +137,7 @@ const pingABI = [
     },
     {
       "inputs": [],
-      "name": "numbPingsReceived",
-      "outputs": [
-        {
-          "internalType": "uint256",
-          "name": "",
-          "type": "uint256"
-        }
-      ],
-      "stateMutability": "view",
-      "type": "function"
-    },
-    {
-      "inputs": [],
-      "name": "numbPingsSent",
+      "name": "numbPings",
       "outputs": [
         {
           "internalType": "uint256",
@@ -185,16 +162,10 @@ const pingABI = [
       "type": "function"
     },
     {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "chainId",
-          "type": "uint256"
-        }
-      ],
+      "inputs": [],
       "name": "ping",
       "outputs": [],
-      "stateMutability": "payable",
+      "stateMutability": "nonpayable",
       "type": "function"
     },
     {
@@ -212,7 +183,7 @@ const pingABI = [
     },
     {
       "inputs": [],
-      "name": "receivePing",
+      "name": "receivePongResponse",
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
@@ -254,6 +225,19 @@ const pingABI = [
       "name": "renounceOwnership",
       "outputs": [],
       "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "inputs": [],
+      "name": "serverAddress",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "view",
       "type": "function"
     },
     {
@@ -325,16 +309,27 @@ const pingABI = [
       "outputs": [],
       "stateMutability": "nonpayable",
       "type": "function"
+    },
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_serverAddress",
+          "type": "address"
+        }
+      ],
+      "name": "updateServerAddress",
+      "outputs": [],
+      "stateMutability": "nonpayable",
+      "type": "function"
     }
-]
+  ]
 
 
 async function sendTransaction() {
-    const wallet = (await hre.ethers.getSigners())[0]
     const contract = new ethers.Contract(contractAddress, pingABI, wallet);
-    const txResponse = await contract.ping(26100, {
-        value: ethers.parseEther("0.0000000001"),
-        gasLimit: 9000000
+    const txResponse = await contract.ping({
+      gasLimit: 5000000
     })
 
     console.log("Transaction sent! Hash:", txResponse.hash);

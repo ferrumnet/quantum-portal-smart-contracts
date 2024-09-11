@@ -43,7 +43,6 @@ abstract contract BaseStakingV2Upgradeable is
 	}
 
 	function __BaseStakingV2_init() internal onlyInitializing {
-		// __EIP712Upgradeable_init(); // This 2 need to be called from child contract!
 		__TokenReceivable_init();
 	}
 

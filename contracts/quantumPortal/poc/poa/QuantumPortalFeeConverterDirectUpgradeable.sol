@@ -16,7 +16,7 @@ contract QuantumPortalFeeConverterDirectUpgradeable is
     UUPSUpgradeable,
     WithAdminUpgradeable
 {
-    string public constant VERSION = "0.0.1";
+    string public constant VERSION = "000.001";
     uint constant DEFAULT_PRICE = 0x100000000000000000000000000000000; //FixedPoint128.Q128;
 
     /// @custom:storage-location erc7201:ferrum.storage.quantumportalfeeconverterdirect.001

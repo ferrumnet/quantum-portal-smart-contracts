@@ -11,7 +11,7 @@ const TIMELOCKED_PROD_QUORUM_ID = "0x0000000000000000000000000000000000000d05"
 
 const deployModule = buildModule("DeployModule", (m) => {
     
-    const currentChainId = hre.network.config.chainId
+    const currentChainId = 26100
     const conf: QpDeployConfig = loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
     const owner = m.getAccount(0)
 
@@ -336,6 +336,9 @@ const deployModule = buildModule("DeployModule", (m) => {
     ]
 
     m.call(gateway, "setCallAuthLevels", [settings])
+
+    // m.call(poc, "setAdmin", [gateway])
+    // m.call(poc, "transferOwnership", [gateway])
 
     // SET FEEPERBYTE ON FEECONVERTERDIRECT
 

@@ -49,7 +49,7 @@ const config: HardhatUserConfig = {
         settings: {
           optimizer: {
             enabled: true,
-            runs: 130,
+            runs: 100,
           },
         },
       },
@@ -138,11 +138,11 @@ const config: HardhatUserConfig = {
     },
     arbitrumOne: {
       url: process.env.ARBITRUM_RPC!,
-      accounts: [process.env.TEMP_OWNER_KEY!]
+      accounts: [process.env.QP_DEPLOYER_KEY!]
     },
     base: {
       url: process.env.BASE_RPC!,
-      accounts: [process.env.TEMP_OWNER_KEY!]
+      accounts: [process.env.QP_DEPLOYER_KEY!]
     },
     ferrum_testnet: {
       chainId: 26100,

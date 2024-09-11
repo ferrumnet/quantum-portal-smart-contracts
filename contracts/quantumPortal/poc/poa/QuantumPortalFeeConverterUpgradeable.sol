@@ -11,7 +11,7 @@ import {IPriceOracle} from "../../../fee/IPriceOracle.sol";
  * @notice Fee convertor utility for QP. Used for gas calculations
  */
 contract QuantumPortalFeeConverterUpgradeable is Initializable, UUPSUpgradeable, WithAdminUpgradeable {
-    string public constant VERSION = "0.0.1";
+    string public constant VERSION = "000.001";
 
     /// @custom:storage-location erc7201:ferrum.storage.quantumportalfeeconverter.001
     struct QuantumPortalFeeConverterStorageV001 {
