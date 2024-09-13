@@ -24,6 +24,7 @@ if (process.env.PAIVATE_KEY_SECRET_ARN) {
   console.log('Getting secret from AWS Secret Manager');
   let done = false;
   Secrets.fromAws().then((secret) => {
+    console.log('Secret received...')
     // Use the default mnemonics
     accounts = { mnemonic: secret.DEV_MNEMONICS };
     // Or use a single account. Check available keys from the secret manager
@@ -91,7 +92,7 @@ const config: HardhatUserConfig = {
     bsc: {
       chainId: 56,
       url: "https://bsc-dataseed2.defibit.io",
-      accounts: [process.env.QP_DEPLOYER_KEY!]
+      accounts,
     },
     moonbeam: {
       chainId: 1287,
@@ -110,9 +111,6 @@ const config: HardhatUserConfig = {
       chainId: 80001,
       url: "https://rpc-mumbai.maticvigil.com/",
       accounts,
-      // accounts: [process.env.QP_DEPLOYER_KEY!]
-      // gasPrice: 16000000000,
-      // gas: 10000000,
     },
     avax: {
       chainId: 43114,
@@ -138,16 +136,16 @@ const config: HardhatUserConfig = {
     },
     arbitrumOne: {
       url: process.env.ARBITRUM_RPC!,
-      accounts: [process.env.QP_DEPLOYER_KEY!]
+      accounts,
     },
     base: {
       url: process.env.BASE_RPC!,
-      accounts: [process.env.QP_DEPLOYER_KEY!]
+      accounts,
     },
     ferrum_testnet: {
       chainId: 26100,
       url: "https://testnet.dev.svcs.ferrumnetwork.io",
-      accounts: [process.env.QP_DEPLOYER_KEY!],
+      accounts,
       allowUnlimitedContractSize: true,
       gas: 10000000, // this override is required for Substrate based evm chains
     },

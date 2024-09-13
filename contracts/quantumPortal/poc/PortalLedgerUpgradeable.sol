@@ -50,7 +50,7 @@ abstract contract PortalLedgerUpgradeable is Initializable, WithAdminUpgradeable
         address sourceBeneficiary,
         uint64 remoteChainId,
         address localContract,
-        bytes4 methodHash, // First 4 bytes of the method hash. Can be used to compare with the method provided. Using 4 bytes to pack data
+        bytes4 methodHash, // First 4 bytes of the method call. Can be used to compare with the method provided. Using 4 bytes to pack data
         uint128 gasProvided,
         uint128 gasUsed,
         bytes32 revertReason
@@ -395,7 +395,7 @@ abstract contract PortalLedgerUpgradeable is Initializable, WithAdminUpgradeable
                 context().transaction.sourceBeneficiary,
                 uint64(remoteChainId),
                 localContract,
-                bytes4(keccak256(method)),
+                bytes4(method),
                 uint128(gas),
                 uint128(gasUsed),
                 revertReason);
