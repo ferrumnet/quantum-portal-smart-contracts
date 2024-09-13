@@ -50,7 +50,7 @@ describe("Proxy version", function () {
                 ctx.chain1.token,
                 '0x');
             // Check the block
-            let lastLocalBlock = await ctx.chain1.state.getLastLocalBlock(ctx.chain2.chainId);
+            let lastLocalBlock = await ctx.chain1.ledgerMgr.getLastLocalBlock(ctx.chain2.chainId);
             expect(lastLocalBlock.nonce).to.be.equal(1, 'Unexpected nonce!');
 
             console.log('Is the fee collected?');

@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 import "./QuantumPortalLib.sol";
-import "./QuantumPortalState.sol";
 
 interface IQuantumPortalLedgerMgr {
     struct LocalBlock {
@@ -28,11 +27,6 @@ interface IQuantumPortalLedgerMgr {
         bytes32 finalizationHash;
         uint256 totalBlockStake;
     }
-
-    /**
-     * @notice The state contract
-     */
-    function state() external returns (QuantumPortalState);
 
     /**
      * notice Register a multi-chain transaction

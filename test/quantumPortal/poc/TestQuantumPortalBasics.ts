@@ -129,8 +129,8 @@ describe("Test qp", function () {
         workDone = await ctx.chain2.autorityMgr.totalWork(ctx.chain1.chainId);
         myWork = await ctx.chain2.autorityMgr.works(ctx.chain1.chainId, ctx.owner);
         console.log(`Work done by authority is ${workDone} - vs mine: ${myWork} - ${ctx.owner}`); // Finalizer work is registered to the owner
-        expect(workDone.toString()).to.be.equal('22856');
-        expect(myWork.toString()).to.be.equal('22856');
+        expect(workDone.toString()).to.be.equal('22952');
+        expect(myWork.toString()).to.be.equal('22952');
 
         // await ctx.chain2.ledgerMgr.finalize(ctx.chain1.chainId, 1, Salt, [], salt0x(), expiryInFuture(), '0x');
         // let remoteBalance = Wei.to((await ctx.chain2.poc.remoteBalanceOf(ctx.chain1.chainId, ctx.chain1.token.target, ctx.acc1)).toString());
@@ -171,7 +171,7 @@ describe("Test qp", function () {
     it('Can estimate gas', async function() {
         const ctx = await deployAll();
         const estimageGasTestF = await ethers.getContractFactory('EstimateGasExample');
-        const estimageGasTest = await estimageGasTestF.deploy(ctx.chain2.poc.target) as EstimateGasExample;
+        const estimageGasTest = await estimageGasTestF.deploy(ctx.chain2.poc.target) as unknown as EstimateGasExample;
 
         let methodCall = estimageGasTest.interface.encodeFunctionData('setNumber', ['1']);
         await estimageGasTest.setNumber('6');
@@ -201,7 +201,7 @@ describe("Test qp", function () {
         const ctx = await deployAll();
 
         const estimageGasTestF = await ethers.getContractFactory('EstimateGasExample');
-        const estimageGasTest = await estimageGasTestF.deploy(ctx.chain2.poc.target) as EstimateGasExample;
+        const estimageGasTest = await estimageGasTestF.deploy(ctx.chain2.poc.target) as unknown as EstimateGasExample;
 
         await estimageGasTest.setNumber('6');
         const ensureNumberIs6 = async () => {
@@ -223,7 +223,7 @@ describe("Test qp", function () {
             try {
                 await estim(method);
                 throw new Error('estmate gas must fail');
-            } catch(e) {
+            } catch(e: any) {
                 const msg = e.toString();
                 const errMsg = msg.split("reverted with reason string '")[1].split("'")[0];
                 console.log('Result of calling ', method, 'is:', errMsg);

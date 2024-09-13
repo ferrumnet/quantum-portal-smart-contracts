@@ -15,7 +15,7 @@
     "@uniswap/v2-core": "^1.0.1",
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "deasync": "^0.1.30",
-    "foundry-contracts": "git+https://github.com/ferrumnet/foundry-contracts#develop"
+    "foundry-contracts": "git+https://github.com/lukmaan-ferrum/foundry-contracts#develop"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
@@ -39,6 +39,7 @@
     "hardhat": "^2.22.9",
     "hardhat-contract-sizer": "^2.10.0",
     "hardhat-gas-reporter": "^1.0.8",
+    "js-yaml": "^4.1.0",
     "solidity-coverage": "^0.8.0",
     "ts-generator": "^0.1.1",
     "ts-node": ">=10.0.0",

@@ -6,8 +6,8 @@ import serverDeployModule from "./ServerPongDeploy"
 const deployModule = buildModule("ServerPongConfigModule", (m) => {
     const { serverPong } = m.useModule(serverDeployModule)
     m.call(serverPong, "updateRemotePeers", [
-        [42161], // chainIds,
-        ["0x6e6D2F5bc91aa8432F848278034FD81dD56e3Db6"], // clientAddresses,
+        [26100], // chainIds,
+        ["0x2e2A7ADe98d17Fe726f0362f78fD5d4718FF5FCC"], // clientAddresses,
     ])
     return { serverPong }
 })
