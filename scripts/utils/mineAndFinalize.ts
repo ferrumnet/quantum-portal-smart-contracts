@@ -145,7 +145,7 @@ async function prep(conf: QpDeployConfig): Promise<[Ctx, Signer]> {
 }
 
 async function main(withReg: boolean) {
-    const conf = loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
+    const conf = await loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
     const [ctx, qpWallet] = await prep(conf);
 
     if (withReg) {

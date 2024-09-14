@@ -1,7 +1,7 @@
 import hre from "hardhat"
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules"
-import { ZeroAddress, FunctionFragment } from "ethers";
-import { loadQpDeployConfig, QpDeployConfig } from "../../scripts/utils/DeployUtils";
+import { FunctionFragment } from "ethers";
+import { loadQpDeployConfigSync, QpDeployConfig } from "../../scripts/utils/DeployUtils";
 const DEFAULT_QP_CONFIG_FILE = 'QpDeployConfig.yaml';
 
 
@@ -12,7 +12,7 @@ const TIMELOCKED_PROD_QUORUM_ID = "0x0000000000000000000000000000000000000d05"
 const deployModule = buildModule("DeployModule", (m) => {
     
     const currentChainId = 26100
-    const conf: QpDeployConfig = loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
+    const conf: QpDeployConfig = loadQpDeployConfigSync(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
     const owner = m.getAccount(0)
 
     //--------------- Gateway ----------------//

@@ -39,6 +39,9 @@ UniV2Factory:
 DirectFee:
   feePerByte: '10000000000000'
 DeployerKeys:
-  DeployerContract: 86315a4684c58910bf1bc496b9173ca2c2370450b1e1569ff171889ac3c7331b
+  DeployerContract:
+    type: secret
+    env: PAIVATE_KEY_SECRET_ARN
+    value: PRIVATEKEY_TEST_VALIDATOR
   Qp: c51a3cddd45c4be158d9ca4450402ee96c34639b50ed990964d0990d8736c6b7
   Owner: c51a3cddd45c4be158d9ca4450402ee96c34639b50ed990964d0990d8736c6b7

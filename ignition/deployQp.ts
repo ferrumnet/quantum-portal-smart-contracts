@@ -7,7 +7,7 @@ import { FunctionFragment } from "ethers";
 const DEFAULT_QP_CONFIG_FILE = 'QpDeployConfig.yaml';
 
 async function main() {
-    const conf: QpDeployConfig = loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
+    const conf: QpDeployConfig = await loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
     let gateway,
         ledgerMgr,
         poc,

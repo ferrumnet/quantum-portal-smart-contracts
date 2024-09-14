@@ -1,7 +1,7 @@
 import hre from "hardhat"
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules"
 import { ZeroAddress, FunctionFragment } from "ethers";
-import { loadQpDeployConfig, QpDeployConfig } from "../../scripts/utils/DeployUtils";
+import { loadQpDeployConfig, loadQpDeployConfigSync, QpDeployConfig } from "../../scripts/utils/DeployUtils";
 const DEFAULT_QP_CONFIG_FILE = 'QpDeployConfig.yaml';
 
 
@@ -12,8 +12,9 @@ const TIMELOCKED_PROD_QUORUM_ID = "0x0000000000000000000000000000000000000d05"
 const deployModule = buildModule("DeployModule", (m) => {
     
     const currentChainId = hre.network.config.chainId
-    const conf: QpDeployConfig = loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
+    const conf: QpDeployConfig = loadQpDeployConfigSync(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
     const owner = m.getAccount(0)
+    console.log('CONF', JSON.stringify(conf, null, 2))
 
     //--------------- Gateway ----------------//
     const gatewayImpl = m.contract("QuantumPortalGatewayUpgradeable", ["0x0000000000000000000000000000000000000000"], { id: "QPGatewayImpl"})

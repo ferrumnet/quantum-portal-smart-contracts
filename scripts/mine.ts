@@ -12,7 +12,6 @@ import { loadQpDeployConfig, QpDeployConfig } from "../../utils/DeployUtils";
 import { Signer, getDefaultProvider } from "ethers";
 import { QuantumPortalFeeConverterDirect } from "../../../typechain-types/QuantumPortalFeeConverterDirect";
 import { QuantumPortalState } from "../../../typechain-types/QuantumPortalState";
-import { TEST_MNEMONICS } from "../../../test/common/TestAccounts";
 import { QuantumPortalUtils } from "../../../test/quantumPortal/poc/QuantumPortalUtils";
 const DEFAULT_QP_CONFIG_FILE = 'QpDeployConfig.yaml';
 
@@ -146,12 +145,12 @@ async function prep(conf: QpDeployConfig) {
     // [ctx.chain2.autorityMgr, newAut] = await attach(conf, conf.QuantumPortalAuthorityMgr, 'QuantumPortalAuthorityMgr', conf.Owner, authMgrInitData, qpWallet,);
 
     const chainId = (await ethers.provider.getNetwork()).chainId;
-    ctx.chain1.chainId = chainId;
+    ctx.chain1.chainId = Number(chainId.toString());
     return ctx;
 }
 
 async function main() {
-    const conf = loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
+    const conf = await loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
     const ctx = await prep(conf);
 
     let lastMinedBlock = await ctx.state.getLastMinedBlock(ctx.chainId);
