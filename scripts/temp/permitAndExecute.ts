@@ -8,7 +8,6 @@ require("dotenv").config({path: __dirname + '/localConfig/.env'});
 
 
 async function main() {
-    const conf: QpDeployConfig = loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
     const BETA_QUORUM_ID = "0x0000000000000000000000000000000000000457"
     
     const wallet1 = new hre.ethers.Wallet(process.env.TEMP_SIGNER2_KEY!, hre.ethers.provider)

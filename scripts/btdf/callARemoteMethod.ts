@@ -147,7 +147,7 @@ async function sendFee(conf: QpDeployConfig) {
 
 async function main() {
     console.log('Make sure to deplooy QP, then deploy BTFD')
-    const conf = loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
+    const conf = await loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
     await deocdeLogs(conf);
     // await prep(conf);
     // await inspect(conf);

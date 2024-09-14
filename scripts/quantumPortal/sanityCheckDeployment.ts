@@ -128,7 +128,7 @@ async function runCheck(conf: QpDeployConfig) {
 }
 
 async function main() {
-    const conf = loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
+    const conf = await loadQpDeployConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
     const ctx = await runCheck(conf);
 }
   
