@@ -128,7 +128,23 @@ contract QuantumPortalAuthorityMgrUpgradeable is
         // if QPN testnet or mainnet, ensure the precompile is called
         if (LibChainCheck.isFerrumChain()) {
             for (uint i=0; i<addresses.length; i++) {
-                IQuantumPortalFinalizerPrecompile(QUANTUM_PORTAL_PRECOMPILE).registerFinalizer(block.chainid, addresses[i]);
+                bytes memory payload = abi.encodeWithSelector(
+                    IQuantumPortalFinalizerPrecompile.registerFinalizer.selector,
+                    block.chainid,
+                    addresses[i]
+                );
+
+                (bool success, bytes memory returnData) = QUANTUM_PORTAL_PRECOMPILE.call(payload);
+                if (!success) {
+                    if (returnData.length > 0) { // Bubble up the revert reason
+                        assembly {
+                            let returnDataSize := mload(returnData)
+                            revert(add(32, returnData), returnDataSize)
+                        }
+                    } else {
+                        revert("QPAM: fail register");
+                    }
+                }
             }
         }
     }
