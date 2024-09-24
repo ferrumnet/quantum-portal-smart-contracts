@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-import "../QuantumPortalPoc.sol";
-import "../QuantumPortalLedgerMgr.sol";
-import "foundry-contracts/contracts/common/SafeAmount.sol";
+import "../QuantumPortalPocUpgradeable.sol";
+import "../QuantumPortalLedgerMgrUpgradeable.sol";
+import "foundry-contracts/contracts/contracts/common/SafeAmount.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
 import "hardhat/console.sol";
@@ -17,13 +17,14 @@ interface IDummyMultiChainApp {
  */
 contract DummyMultiChainApp is IDummyMultiChainApp {
     using SafeERC20 for IERC20;
-    QuantumPortalPoc public portal;
-    QuantumPortalLedgerMgr public mgr;
+    QuantumPortalPocUpgradeable public portal;
+    QuantumPortalLedgerMgrUpgradeable public mgr;
     address public feeToken;
+    uint counter;
 
     constructor(address _portal, address _mgr, address _feeToken) {
-        portal = QuantumPortalPoc(_portal);
-        mgr = QuantumPortalLedgerMgr(_mgr);
+        portal = QuantumPortalPocUpgradeable(_portal);
+        mgr = QuantumPortalLedgerMgrUpgradeable(_mgr);
         feeToken = _feeToken;
     }
 
@@ -74,6 +75,7 @@ contract DummyMultiChainApp is IDummyMultiChainApp {
     function receiveCall() external override {
         (uint netId, address sourceMsgSender, address beneficiary) = portal
             .msgSender();
+        counter = counter + 1;
         console.log(
             "DummyMultiChainApp: Remote msg called",
             netId,

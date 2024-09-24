@@ -1,0 +1,15 @@
+{
+  "solidity": {
+        "settings": {
+          "optimizer": {
+            "enabled": true,
+            "runs": 200
+          }
+        }
+  },
+  "remappings": [
+    "@openzeppelin/=node_modules/@openzeppelin/",
+    "foundry-contracts/=node_modules/foundry-contracts/",
+    "hardhat/=node_modules/hardhat/"
+  ]
+}

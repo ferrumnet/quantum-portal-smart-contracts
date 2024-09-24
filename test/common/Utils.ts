@@ -1,7 +1,7 @@
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { expect } from "chai";
 import { randomBytes } from "crypto";
-import { Signer } from "ethers";
+import { Contract, EventLog, Signer } from "ethers";
 import { ethers } from "hardhat";
 import { DummyToken } from "../../typechain/DummyToken";
 import { DirectMinimalErc20 } from "foundry-contracts/typechain-types/DirectMinimalErc20";
@@ -9,7 +9,7 @@ import { IVersioned } from "../../typechain/IVersioned";
 export const ZeroAddress = '0x' + '0'.repeat(40);
 export const Salt = '0x' + '12'.repeat(32);
 
-export const abi = ethers.utils.defaultAbiCoder;
+export const abi = new ethers.AbiCoder();
 
 export const _WETH: {[k: number]: string} = {
 	4: '0xc778417e063141139fce010982780140aa0cd5ab',
@@ -119,7 +119,7 @@ export async function deployWithOwner(ctx: TestContext, contract: string, owner:
 
 export async function getTransactionReceipt(id: string) {
 	let reci = await ethers.provider.getTransactionReceipt(id);
-	for(let i=0; i<100; i++) {
+	for(let i=0; i<1000; i++) {
 		console.log('No tx. Trying again ', i);
 		await sleep(1000);
 		reci = await ethers.provider.getTransactionReceipt(id);
@@ -130,36 +130,30 @@ export async function getTransactionReceipt(id: string) {
 	return reci;
 }
 
-export async function getTransactionLog(id: string, contract: any, eventName: string) {
-	const reci = await getTransactionReceipt(id);
-	const log = reci.logs.find(l => l.address.toLowerCase() === contract.address.toLocaleLowerCase());
-	if (!reci || !log) {
-		throw new Error('Could not get transaction ' + id + ' or logs were messed up. ' + (reci || ''));
+export async function getTransactionLog(txHash: string, contract: Contract, eventName: string) {
+
+	const logs = await contract.queryFilter(eventName)
+	const filteredLogs = logs.filter(l => l.transactionHash === txHash);
+	if (filteredLogs.length === 0) {
+		throw new Error('Could not get transaction ' + txHash);
 	}
-	if (reci) {
-		let events = contract.interface.decodeEventLog(
-			eventName,
-			log.data,
-			log.topics);
-		console.log('Received event: ', events);
-		if (!events) {
-			throw new Error('Event not found! ' + id);
-		}
-		return events;
-	} else {
-		throw new Error('Tx not found! ' + id);
-	}
+
+	return filteredLogs;	
 }
 
 export async function contractExists(contractName: string, contract: string) {
 	const depFac = await ethers.getContractFactory(contractName);
 	const deployer = await depFac.attach(contract) as IVersioned;
+	console.log(`Checking if contract ${contractName}:${contract} exists.`);
     try {
         const isThere = await deployer.VERSION();
+		console.log("isThere", isThere);
         if ( isThere && isThere.toString().length > 0) {
             return true;
         }
     } catch(e) {
+		// console.log("Error from exists", e);
+		console.log("Contract does not exist");
         return false;
     }
 }
@@ -172,33 +166,20 @@ export async function deployUsingDeployer(contract: string, owner: string, initD
     console.log('DEPLOYADDR IS ', deployerAddr);
 	console.log("owner is", owner);
 
-	const res = siger ? await deployer.connect(siger).deployOwnable(salt, owner, initData, contr.bytecode)
+	const res = siger ? await deployer.connect(siger).deployOwnable(salt, owner, initData, contr.bytecode, {gasLimit: 6000000})
 		: await deployer.deployOwnable(salt, owner, initData, contr.bytecode);
 	console.log(`Deploy tx hash: ${res.hash}`)
-	const events = await getTransactionLog(res.hash, deployer, 'DeployedWithData');
-	// let reci = await getTransactionReceipt(res.hash);
-	// let eventAddr = '';
-	// const log = reci.logs.find(l => l.address.toLowerCase() === deployer.address.toLocaleLowerCase());
-	// if (!reci || !log) {
-	// 	throw new Error('Could not get transaction ' + res.hash + ' or logs were messed up. ' + (reci || ''));
-	// }
-	// if (reci) {
-	// 	let events = deployer.interface.decodeEventLog(
-	// 		'DeployedWithData',
-	// 		log.data,
-	// 		log.topics);
-	// 	console.log('Received event: ', events);
-		const eventAddr = events.conAddr;
-		// if (!eventAddr) {
-		// 	throw new Error('Event address was not found! ' + res.hash);
-		// }
-	// }
+	console.log("Passing in deployer")
+	console.log(deployer)
+	const logs = await getTransactionLog(res.hash, deployer, 'DeployedWithData') as any as EventLog;
+	const eventAddr = logs[0].args[0];
+	console.log('Event address ', eventAddr);
 
-	const bytecodeHash = ethers.utils.keccak256(contr.bytecode);
-	const addr = await deployer.computeAddressOwnable(Salt, owner, initData, bytecodeHash);
+	const bytecodeHash = ethers.keccak256(contr.bytecode);
+	const addr = await deployer.computeAddressOwnable(salt, owner, initData, bytecodeHash);
 	console.log('Deployed address ', {addr, eventAddr});
 	if (eventAddr !== addr) {
-		console.log('Address was diferent! Sad!')
+		console.log('Address was diferent!')
 	}
 
 	return contr.attach(eventAddr);
@@ -290,6 +271,7 @@ export async function distributeTestTokensIfTest(targets: string[], amount: stri
 		const tokF = await ethers.getContractFactory('DirectMinimalErc20');
 		const tok = await tokF.deploy() as DirectMinimalErc20;
 		await tok.init(owner.address, 'Test Token', 'TST', Wei.from('1000000000'));;
+		console.log(`${owner.address} has ${await ethers.provider.getBalance(owner.address)} tokens`);
 		console.log(`Deployed a token at ${tok.address}`);
 		for(let i=0; i<targets.length; i++) {
 			if (targets[i]) {
@@ -297,9 +279,22 @@ export async function distributeTestTokensIfTest(targets: string[], amount: stri
 				await owner.sendTransaction({
 					to: targets[i],
 					value: Wei.from(amount),
+					gasLimit: 100000,
 				});
-				await tok.transfer(targets[i], Wei.from('10000'));
+				console.log('Transferred');
+				await tok.transfer(targets[i], Wei.from('10000'), {gasLimit: 200000});
 			}
 		}
+
+		return tok;
+	} else {
+		return null;
 	}
+}
+
+export function printSeparator() {
+	console.log('--------------------------------------------------');
+	console.log('--------------------------------------------------');
+	console.log('--------------------------------------------------');
+	console.log('--------------------------------------------------');
 }

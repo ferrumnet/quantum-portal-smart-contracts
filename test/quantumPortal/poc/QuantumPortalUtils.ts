@@ -1,20 +1,17 @@
 import { ethers } from "hardhat";
-import { DummyToken } from "../../../typechain-types/DummyToken";
-import { QuantumPortalLedgerMgrTest } from "../../../typechain-types/QuantumPortalLedgerMgrTest";
-import { QuantumPortalPocTest } from "../../../typechain-types/QuantumPortalPocTest";
-import { QuantumPortalAuthorityMgr } from '../../../typechain-types/QuantumPortalAuthorityMgr';
+import { DummyToken, WFRM,  } from "../../../typechain-types";
 import { randomSalt } from "foundry-contracts/dist/test/common/Eip712Utils";
 import { abi, deployWithOwner, expiryInFuture, getCtx, isAllZero, Salt, TestContext, Wei, ZeroAddress} from 
     'foundry-contracts/dist/test/common/Utils';
 import { getBridgeMethodCall } from 'foundry-contracts/dist/test/common/Eip712Utils';
-import { keccak256 } from "ethers/lib/utils";
 import { delpoyStake, deployMinerMgr } from "./poa/TestQuantumPortalStakeUtils";
-import { QuantumPortalStake } from "../../../typechain-types/QuantumPortalStake";
 import { ERC20 } from "foundry-contracts/dist/test/common/UniswapV2";
-import { Signer } from "ethers";
-import { QuantumPortalMinerMgr } from "../../../typechain-types/QuantumPortalMinerMgr";
-import { QuantumPortalFeeConverterDirect } from "../../../typechain-types/QuantumPortalFeeConverterDirect";
-import { QuantumPortalState } from '../../../typechain-types/QuantumPortalState';
+import { keccak256, Signer } from "ethers";
+import { QuantumPortalState, QuantumPortalLedgerMgrUpgradeableTest, QuantumPortalGatewayUpgradeable,
+        QuantumPortalPocUpgradeableTest, QuantumPortalFeeConverterDirectUpgradeable, QuantumPortalMinerMgrUpgradeable,
+        QuantumPortalStakeWithDelegateUpgradeable, QuantumPortalAuthorityMgrUpgradeable,
+        QuantumPortalNativeFeeRepoBasicUpgradeable,
+ } from '../../../typechain-types';
 import { advanceTimeAndBlock } from "../../common/TimeTravel";
 
 export const FERRUM_TOKENS = {
@@ -27,19 +24,18 @@ export class QuantumPortalUtils {
     static async mine(
         chain1: number,
         chain2: number,
-        source: QuantumPortalLedgerMgrTest,
+        source: QuantumPortalLedgerMgrUpgradeableTest,
         sourceState: QuantumPortalState,
-        target: QuantumPortalLedgerMgrTest,
-        targetState: QuantumPortalState,
+        target: QuantumPortalLedgerMgrUpgradeableTest,
         minerSk: string,
     ): Promise<boolean> {
         const blockReady = await source.isLocalBlockReady(chain2);
         console.log('Local block ready?', blockReady)
         if (!blockReady) { return false; }
         const lastB = await sourceState.getLastLocalBlock(chain2);
-        const nonce = lastB.nonce.toNumber();
+        const nonce = Number(lastB.nonce.toString());
         const lastMinedBlock = await target.lastRemoteMinedBlock(chain1);
-        const minedNonce = lastMinedBlock.nonce.toNumber();
+        const minedNonce = Number(lastMinedBlock.nonce.toString());
         console.log(`Local block (chain ${chain1}) nonce is ${nonce}. Remote mined block (chain ${chain2}) is ${minedNonce}`)
         if (minedNonce >= nonce) {
             console.log('Nothing to mine.');
@@ -59,7 +55,7 @@ export class QuantumPortalUtils {
             sourceBeneficiary: tx.sourceBeneficiary.toString(),
             token: tx.token.toString(),
             amount: tx.amount.toString(),
-            method: tx.method.toString(),
+            methods: [tx.methods[0].toString()],
             fixedFee: tx.fixedFee.toString(),
             gas: tx.gas.toString(),
         }));
@@ -91,15 +87,15 @@ export class QuantumPortalUtils {
     }
 
     static async generateSignatureForMining(
-        target: QuantumPortalLedgerMgrTest,
+        target: QuantumPortalLedgerMgrUpgradeableTest,
         sourceChainId: string,
         nonce: string,
         txs: any,
         minerSk: string,
     ) {
         const mineAddress = await target.minerMgr();
-        const mineD = await ethers.getContractFactory('QuantumPortalMinerMgr');
-        const mine = await mineD.attach(mineAddress) as QuantumPortalMinerMgr;
+        const mineD = await ethers.getContractFactory('QuantumPortalMinerMgrUpgradeable');
+        const mine = await mineD.attach(mineAddress) as any as QuantumPortalMinerMgrUpgradeable;
         const msgHash = await target.calculateBlockHash(
             sourceChainId,
             nonce,
@@ -115,8 +111,8 @@ export class QuantumPortalUtils {
         const multiSig = await getBridgeMethodCall(
             await mine.NAME(),
             await mine.VERSION(),
-            ethers.provider.network.chainId,
-            mine.address,
+            Number((await ethers.provider.getNetwork()).chainId),
+            mine.target.toString(),
             'MinerSignature',
             [
                 { type: 'bytes32', name: 'msgHash', value: msgHash},
@@ -130,15 +126,14 @@ export class QuantumPortalUtils {
 
     static async finalize(
         sourceChainId: number,
-        mgr: QuantumPortalLedgerMgrTest,
-        state: QuantumPortalState,
+        mgr: QuantumPortalLedgerMgrUpgradeableTest,
         finalizerSk: string,
         invalidBlocks: string[] = [],
     ) {
         const block = await mgr.lastRemoteMinedBlock(sourceChainId);
-        const lastFin = await state.getLastFinalizedBlock(sourceChainId);
-        const blockNonce = block.nonce.toNumber();
-        const fin = lastFin.nonce.toNumber();
+        const lastFin = await mgr.getLastFinalizedBlock(sourceChainId);
+        const blockNonce = Number(block.nonce);
+        const fin = Number(lastFin.nonce);
         if (blockNonce > fin) {
             console.log(`Calling mgr.finalize(${sourceChainId}, ${blockNonce.toString()})`);
             const expiry = expiryInFuture().toString();
@@ -146,21 +141,21 @@ export class QuantumPortalUtils {
             const finalizersHash = randomSalt();
             const FINALIZE_METHOD = 
                 keccak256(
-                    Buffer.from("Finalize(uint256 remoteChainId,uint256 blockNonce,bytes32 finalizersHash,address[] finalizers,bytes32 salt,uint64 expiry)", 'utf-8')
+                    Buffer.from("Finalize(uint256 remoteChainId,uint256 blockNonce,uint256[] invalidBlockNonces,bytes32 salt,uint64 expiry)", 'utf-8')
                 );
-            const msgHash = keccak256(abi.encode(['bytes32', 'uint256', 'uint256', 'bytes32', 'address[]', 'bytes32', 'uint64'],
-                [FINALIZE_METHOD, sourceChainId, blockNonce, finalizersHash, [], salt, expiry]));
+            const msgHash = keccak256(abi.encode(['bytes32', 'uint256', 'uint256', 'uint256[]', 'bytes32', 'uint64'],
+                [FINALIZE_METHOD, sourceChainId, blockNonce, [], salt, expiry]));
             console.log('Fin method msgHash', msgHash);
             
             const authorityAddr = await mgr.authorityMgr();
-            const authorityF = await ethers.getContractFactory('QuantumPortalAuthorityMgr');
-            const authority = await authorityF.attach(authorityAddr) as QuantumPortalAuthorityMgr;
+            const authorityF = await ethers.getContractFactory('QuantumPortalAuthorityMgrUpgradeable');
+            const authority = authorityF.attach(authorityAddr) as unknown as  QuantumPortalAuthorityMgrUpgradeable;
 
             const name = await authority.NAME();
             const version = await authority.VERSION();
             // Create the signature for the authority mgr contract
             let multiSig = await getBridgeMethodCall(
-                name, version, (await ethers.provider.getNetwork()).chainId,
+                name, version, Number((await ethers.provider.getNetwork()).chainId),
                 authorityAddr,
                 'ValidateAuthoritySignature',
                 [
@@ -170,12 +165,18 @@ export class QuantumPortalUtils {
                     { type: 'uint64', name: 'expiry', value: expiry },
                 ]
                 , [finalizerSk]);
-            console.log("Returned from bridgeMethodCall", multiSig.hash);
+            console.log("Returned from bridgeMethodCall", multiSig.hash, name, version);
+            const gas = await mgr.finalize.estimateGas(sourceChainId,
+                blockNonce,
+                invalidBlocks,
+                salt,
+                expiry,
+                multiSig.signature!,
+                );
+            console.log("Gas required to finalize is:", gas.toString());
             await mgr.finalize(sourceChainId,
                 blockNonce,
                 invalidBlocks,
-                finalizersHash,
-                [], // TODO: Remove this parameter
                 salt,
                 expiry,
                 multiSig.signature!,
@@ -188,7 +189,7 @@ export class QuantumPortalUtils {
     static async callFinalizeWithSignature(
         realChainId: number, // used for EIP-712 signature generation
         remoteChainId: number,
-        mgr: QuantumPortalLedgerMgrTest,
+        mgr: QuantumPortalLedgerMgrUpgradeableTest,
         state: QuantumPortalState,
         authMgrAddr: string,
         finalizers: string[],
@@ -198,8 +199,8 @@ export class QuantumPortalUtils {
         const block = await mgr.lastRemoteMinedBlock(remoteChainId);
         const lastFin = await state.getLastFinalizedBlock(remoteChainId);
         console.log(block);
-        const blockNonce = block.nonce.toNumber();
-        const fin = lastFin.nonce.toNumber();
+        const blockNonce = Number(block.nonce.toString());
+        const fin = Number(lastFin.nonce.toString());
         if (blockNonce > fin) {
         console.log(`Calling mgr.finalize(${remoteChainId}, ${blockNonce})`);
         const expiry = expiryInFuture().toString();
@@ -239,11 +240,9 @@ export class QuantumPortalUtils {
 			, finalizersSk);
         console.log("This is the multisig : ", multiSig);
         console.log("Returned from bridgeMethodCall");
-        await mgr.finalizeSingleSigner(remoteChainId,
+        await mgr.finalize(remoteChainId,
             blockNonce,
             invalidBlocks,
-            finalizersHash,
-            finalizers,
             salt,
             expiry,
             multiSig.signature!,
@@ -251,6 +250,56 @@ export class QuantumPortalUtils {
         }else {
             console.log('Nothing to finalize...')
         }
+    }
+
+    static async mineAndFinilizeOneToOne(ctx: PortalContext, nonce: number, invalid: boolean = false) {
+        let isBlRead = await ctx.chain1.ledgerMgr.isLocalBlockReady(ctx.chain1.chainId);
+        if (!isBlRead) {
+            await advanceTimeAndBlock(10000);
+            console.log('Local block was not ready... Advancing time.');
+        }
+        isBlRead = await ctx.chain1.ledgerMgr.isLocalBlockReady(ctx.chain1.chainId);
+        console.log('Local block is ready? ', isBlRead);
+
+        let key = (await ctx.chain1.ledgerMgr.getBlockIdx(ctx.chain1.chainId, nonce)).toString();
+        const txLen = await ctx.chain1.ledgerMgr.getLocalBlockTransactionLength(key);
+        console.log('Tx len for block', key, 'is', txLen.toString());
+        let tx = await ctx.chain1.ledgerMgr.getLocalBlockTransaction(key, 0); 
+        await QuantumPortalUtils.stakeAndDelegate(ctx.chain1.ledgerMgr, ctx.chain1.autorityMgr, ctx.chain1.stake, '10', ctx.owner, ctx.wallets[0], ctx.signers.owner, ctx.sks[0]);
+        console.log('Staked and delegated...');
+        const txs = [{
+                    token: tx.token.toString(),
+                    amount: tx.amount.toString(),
+                    gas: tx.gas.toString(),
+                    fixedFee: tx.fixedFee.toString(),
+                    methods: tx.methods.length ? [tx.methods[0].toString()] : [],
+                    remoteContract: tx.remoteContract.toString(),
+                    sourceBeneficiary: tx.sourceBeneficiary.toString(),
+                    sourceMsgSender: tx.sourceMsgSender.toString(),
+                    timestamp: tx.timestamp.toString(),
+            }];
+        const [salt, expiry, signature] = await QuantumPortalUtils.generateSignatureForMining(
+            ctx.chain1.ledgerMgr,
+            ctx.chain1.chainId.toString(),
+            nonce.toString(),
+            txs,
+            ctx.sks[0], // Miner...
+        );
+        await ctx.chain1.ledgerMgr.mineRemoteBlock(
+            ctx.chain1.chainId,
+            nonce.toString(),
+            txs,
+            salt,
+            expiry,
+            signature,
+        );
+        console.log('Now finalizing on chain1', invalid ? [nonce.toString()] : []);
+        await QuantumPortalUtils.finalize(
+            ctx.chain1.chainId,
+            ctx.chain1.ledgerMgr,
+            ctx.sks[0],
+            invalid ? [nonce.toString()] : []
+        );
     }
 
     static async mineAndFinilizeOneToTwo(ctx: PortalContext, nonce: number, invalid: boolean = false) {
@@ -263,17 +312,17 @@ export class QuantumPortalUtils {
         console.log('Local block is ready? ', isBlRead);
 
         let key = (await ctx.chain1.ledgerMgr.getBlockIdx(ctx.chain2.chainId, nonce)).toString();
-        const txLen = await ctx.chain1.state.getLocalBlockTransactionLength(key);
+        const txLen = await ctx.chain1.ledgerMgr.getLocalBlockTransactionLength(key);
         console.log('Tx len for block', key, 'is', txLen.toString());
-        let tx = await ctx.chain1.state.getLocalBlockTransaction(key, 0); 
-        await QuantumPortalUtils.stakeAndDelegate(ctx.chain2.ledgerMgr, ctx.chain2.stake, '10', ctx.owner, ctx.wallets[0], ctx.signers.owner, ctx.sks[0]);
+        let tx = await ctx.chain1.ledgerMgr.getLocalBlockTransaction(key, 0); 
+        await QuantumPortalUtils.stakeAndDelegate(ctx.chain2.ledgerMgr, ctx.chain2.autorityMgr, ctx.chain2.stake, '10', ctx.owner, ctx.wallets[0], ctx.signers.owner, ctx.sks[0]);
         console.log('Staked and delegated...');
         const txs = [{
                     token: tx.token.toString(),
                     amount: tx.amount.toString(),
                     gas: tx.gas.toString(),
                     fixedFee: tx.fixedFee.toString(),
-                    method: tx.method.toString(),
+                    methods: tx.methods.length ? [tx.methods[0].toString()] : [],
                     remoteContract: tx.remoteContract.toString(),
                     sourceBeneficiary: tx.sourceBeneficiary.toString(),
                     sourceMsgSender: tx.sourceMsgSender.toString(),
@@ -298,7 +347,6 @@ export class QuantumPortalUtils {
         await QuantumPortalUtils.finalize(
             ctx.chain1.chainId,
             ctx.chain2.ledgerMgr,
-            ctx.chain2.state,
             ctx.sks[0],
             invalid ? [nonce.toString()] : []
         );
@@ -306,16 +354,16 @@ export class QuantumPortalUtils {
 
     static async mineAndFinilizeTwoToOne(ctx: PortalContext, nonce: number, invalid: boolean = false) {
         let key = (await ctx.chain2.ledgerMgr.getBlockIdx(ctx.chain1.chainId, nonce)).toString();
-        let tx = await ctx.chain2.state.getLocalBlockTransaction(key, nonce - 1); 
+        let tx = await ctx.chain2.ledgerMgr.getLocalBlockTransaction(key, nonce - 1); 
         // Commenting out because stake contract is shared in this test
         await ctx.chain1.token.transfer(ctx.acc1, Wei.from('10'));
-        await QuantumPortalUtils.stakeAndDelegate(ctx.chain1.ledgerMgr, ctx.chain2.stake, '10', ctx.acc1, ctx.wallets[1], ctx.signers.acc1, ctx.sks[1]);
+        await QuantumPortalUtils.stakeAndDelegate(ctx.chain1.ledgerMgr, ctx.chain1.autorityMgr, ctx.chain2.stake, '10', ctx.acc1, ctx.wallets[1], ctx.signers.acc1, ctx.sks[1]);
         const txs = [{
                     token: tx.token.toString(),
                     amount: tx.amount.toString(),
                     gas: tx.gas.toString(),
                     fixedFee: tx.fixedFee.toString(),
-                    method: tx.method.toString(),
+                    methods: [tx.methods[0].toString()],
                     remoteContract: tx.remoteContract.toString(),
                     sourceBeneficiary: tx.sourceBeneficiary.toString(),
                     sourceMsgSender: tx.sourceMsgSender.toString(),
@@ -340,8 +388,7 @@ export class QuantumPortalUtils {
         await QuantumPortalUtils.finalize(
             ctx.chain2.chainId,
             ctx.chain1.ledgerMgr,
-            ctx.chain1.state,
-            ctx.sks[0],
+            ctx.sks[1],
             invalid ? [nonce.toString()] : []
         );
     }
@@ -349,137 +396,153 @@ export class QuantumPortalUtils {
     static async minedBlockHash(
         chain: number,
         nonce: number,
-        mgr: QuantumPortalLedgerMgrTest,
+        mgr: QuantumPortalLedgerMgrUpgradeableTest,
     ): Promise<string | undefined> {
         const existingBlock = await mgr.minedBlockByNonce(chain, nonce);
         const block = existingBlock[0].blockHash.toString();
         return isAllZero(block) ? undefined : block;
     }
 
-    static async stakeAndDelegate(mgr: QuantumPortalLedgerMgrTest, stake: QuantumPortalStake, amount: string, staker: string, delegatee: string, signer: Signer, delegateeSk: string) {
+    static async stakeAndDelegate(mgr: QuantumPortalLedgerMgrUpgradeableTest,
+        auth: QuantumPortalAuthorityMgrUpgradeable,
+        stake: QuantumPortalStakeWithDelegateUpgradeable,
+        amount: string, staker: string, nodeOp: string, signer: Signer, nodeOpSk: string) {
         const id = await stake.STAKE_ID();
         const tokenAddress = await stake.baseToken(id);
         const token = new ERC20(tokenAddress);
+        console.log(`Stake base token is: ${tokenAddress}`);
 
-        const curentDel = await stake.delegation(staker);
-        if (curentDel.toString() === delegatee) {
-            console.log('Stake is already delegated. Skipping...');
-            return;
+        // Instead of using a separate delegat, we use nodeOp address as delegate too
+        const relationship = await stake.getDelegateForOperator(nodeOp);
+        console.log(`Current delegate is ${relationship.delegate}`);
+        const wallet = new ethers.Wallet(nodeOpSk, ethers.provider);
+        if (relationship.delegate == ZeroAddress) {
+            console.log(`Assigning operator to ${nodeOp}`);
+            await stake.connect(wallet).assignOperator(nodeOp, {gasLimit: 2000000});
+            console.log('Operator after', await stake.getDelegateForOperator(nodeOp));
         }
 
-        await (await token.token()).connect(signer).transfer(stake.address, await token.amountToMachine(amount));
-        await stake.stake(staker, await stake.STAKE_ID());
+        await (await token.token()).connect(signer).transfer(stake, await token.amountToMachine(amount));
+        await stake.connect(signer).stakeToDelegate(staker, nodeOp);
         console.log(`- Staked ${amount} for ${staker}`)
-        await stake.connect(signer).delegate(delegatee);
-        console.log(`- Delegated to ${delegatee}`);
         console.log('Registering miner...');
-        const wallet = new ethers.Wallet(delegateeSk, ethers.provider);
-        await mgr.connect(wallet).registerMiner();
+        await mgr.connect(wallet).registerMiner({gasLimit: 2000000});
+
+        console.log('Registering the operator: ', nodeOp, 'for validator', wallet.address)
+        await auth.connect(wallet).assignOperator(nodeOp, {gasLimit: 2000000});
     }
 }
 
 export interface PortalContext extends TestContext {
     chain1: {
+        gateway: QuantumPortalGatewayUpgradeable;
         chainId: number;
-        ledgerMgr: QuantumPortalLedgerMgrTest;
-        poc: QuantumPortalPocTest;
+        ledgerMgr: QuantumPortalLedgerMgrUpgradeableTest;
+        poc: QuantumPortalPocUpgradeableTest;
         token: DummyToken;
-        autorityMgr: QuantumPortalAuthorityMgr;
-        state: QuantumPortalState,
-        minerMgr: QuantumPortalMinerMgr;
-        stake: QuantumPortalStake;
-        feeConverter: QuantumPortalFeeConverterDirect;
+        autorityMgr: QuantumPortalAuthorityMgrUpgradeable;
+        minerMgr: QuantumPortalMinerMgrUpgradeable;
+        stake: QuantumPortalStakeWithDelegateUpgradeable;
+        feeConverter: QuantumPortalFeeConverterDirectUpgradeable;
     },
     chain2: {
+        gateway: QuantumPortalGatewayUpgradeable;
         chainId: number;
-        ledgerMgr: QuantumPortalLedgerMgrTest;
-        poc: QuantumPortalPocTest;
+        ledgerMgr: QuantumPortalLedgerMgrUpgradeableTest;
+        poc: QuantumPortalPocUpgradeableTest;
         token: DummyToken;
-        autorityMgr: QuantumPortalAuthorityMgr;
-        state: QuantumPortalState,
-        minerMgr: QuantumPortalMinerMgr;
-        stake: QuantumPortalStake;
-        feeConverter: QuantumPortalFeeConverterDirect;
+        autorityMgr: QuantumPortalAuthorityMgrUpgradeable;
+        minerMgr: QuantumPortalMinerMgrUpgradeable;
+        stake: QuantumPortalStakeWithDelegateUpgradeable;
+        feeConverter: QuantumPortalFeeConverterDirectUpgradeable;
     },
 }
 
 export async function deployAll(): Promise<PortalContext> {
-    const chainId1 = 2600;
-    const chainId2 = 2;
+    const gatewayTimelockPeriod = 60 * 60 * 24; // 1 day
+    console.log('Signers: ', (await ethers.getSigners()).map(s => s.address));
 	const ctx = await getCtx();
-	const mgrFac = await ethers.getContractFactory("QuantumPortalLedgerMgrTest");
+    console.log('Owner address: ', ctx.owner);
+    const gateFac = await ethers.getContractFactory("QuantumPortalGatewayUpgradeable");
+    const gate1 = await gateFac.deploy(ZeroAddress) as unknown as QuantumPortalGatewayUpgradeable;
+    await gate1.initialize(gatewayTimelockPeriod, ctx.owner, ctx.owner);
+    const gate2 = await gateFac.deploy(ZeroAddress) as unknown as QuantumPortalGatewayUpgradeable;
+    await gate2.initialize(gatewayTimelockPeriod, ctx.owner, ctx.owner);
+
+	const mgrFac = await ethers.getContractFactory("QuantumPortalLedgerMgrUpgradeableTest");
 	console.log('About to deploy the ledger managers');
-    const mgr1 = await mgrFac.deploy(26000) as QuantumPortalLedgerMgrTest;
-    const mgr2 = await mgrFac.deploy(2) as QuantumPortalLedgerMgrTest;
+    const mgr1 = await mgrFac.deploy(26000, {gasLimit: 8000000}) as unknown as QuantumPortalLedgerMgrUpgradeableTest;
+    await mgr1.initialize(ctx.owner, ctx.owner, Wei.from('1'));
+    console.log('MGR LAUNCHED', await mgr1.VERSION());
+    const mgr2 = await mgrFac.deploy(2) as unknown as QuantumPortalLedgerMgrUpgradeableTest;
+    await mgr2.initialize(ctx.owner, ctx.owner, Wei.from('1'));
+
+    const chainId1 = 31337 // (await mgr1.realChainId()).toNumber();
+    const chainId2 = 2;
+    console.log(`Chain IDS: ${chainId1} / ${chainId2}`);
 
     console.log('Setting min stakes');
     await mgr1.updateMinerMinimumStake(Wei.from('10'));
     await mgr2.updateMinerMinimumStake(Wei.from('10'));
 
-	const pocFac = await ethers.getContractFactory("QuantumPortalPocTest");
+	const pocFac = await ethers.getContractFactory("QuantumPortalPocUpgradeableTest");
 	console.log('About to deploy the pocs');
-    const poc1 = await pocFac.deploy(26000) as QuantumPortalPocTest;
-    const poc2 = await pocFac.deploy(2) as QuantumPortalPocTest;
+    const poc1 = await pocFac.deploy(26000) as unknown as QuantumPortalPocUpgradeableTest;
+    await poc1.initialize(ctx.owner, ctx.owner);
+    const poc2 = await pocFac.deploy(2) as unknown as QuantumPortalPocUpgradeableTest;
+    await poc2.initialize(ctx.owner, ctx.owner);
 
     // By default, both test ledger mgrs use the same authority mgr.
-	const autorityMgrF = await ethers.getContractFactory("QuantumPortalAuthorityMgr");
-	console.log('About to deploy the ledger managers');
-    const autorityMgr1 = await autorityMgrF.deploy() as QuantumPortalAuthorityMgr;
-    const autorityMgr2 = await autorityMgrF.connect(ctx.signers.acc1).deploy() as QuantumPortalAuthorityMgr;
+	console.log('About to deploy the authority managers');
+	const autorityMgrFac = await ethers.getContractFactory("QuantumPortalAuthorityMgrUpgradeable");
+    const autorityMgr1 = await autorityMgrFac.deploy() as unknown as QuantumPortalAuthorityMgrUpgradeable;
+    await autorityMgr1.initialize(mgr1.target, poc1.target, ctx.acc1, ctx.acc1)
+    const autorityMgr2 = await autorityMgrFac.deploy() as unknown as QuantumPortalAuthorityMgrUpgradeable;
+    await autorityMgr2.initialize(mgr2.target, poc2.target, ctx.acc2, ctx.acc2)
 
     console.log('Deploying some tokens');
 	const tokenData = abi.encode(['address'], [ctx.owner]);
-    const tok1 = await deployWithOwner(ctx, 'DummyToken', ZeroAddress, tokenData);
+    const tok1 = await deployWithOwner(ctx, 'DummyToken', ZeroAddress, tokenData) as unknown as DummyToken;
 
     console.log('Deploying direc fee converter');
-    const feeConverterF = await ethers.getContractFactory('QuantumPortalFeeConverterDirect');
-    const feeConverter = await feeConverterF.deploy();
+    const feeConverterF = await ethers.getContractFactory('QuantumPortalFeeConverterDirectUpgradeable');
+    const feeConverter = await feeConverterF.deploy() as unknown as QuantumPortalFeeConverterDirectUpgradeable;
+    await feeConverter.initialize(ctx.owner);
     await feeConverter.updateFeePerByte(Wei.from('0.001'));
 
     console.log('Deploying staking');
-    const stake = await delpoyStake(ctx, tok1.address);
+    const stake = await delpoyStake(ctx, autorityMgr1.target.toString(), ZeroAddress, tok1.target.toString());
     // const stake = await delpoyStake(ctx, FERRUM_TOKENS[ctx.chainId] || panick(`No FRM token is configured for chain ${ctx.chainId}`));
     console.log('Deploying mining mgr');
-    const miningMgr1 = await deployMinerMgr(ctx, stake, ctx.owner);
-    const miningMgr2 = await deployMinerMgr(ctx, stake, ctx.acc1); // To deploy a different contract.
+    const miningMgr1 = await deployMinerMgr(stake, poc1.target.toString(), mgr1.target.toString(), ctx.owner);
+    const miningMgr2 = await deployMinerMgr(stake, poc2.target.toString(), mgr2.target.toString(), ctx.acc1); // To deploy a different contract.
 
     console.log(`Registering a single authority ("${ctx.wallets[0]}"`);
-    await autorityMgr1.initialize(ctx.owner, 1, 1, 0, [ctx.wallets[0]]); 
-    await autorityMgr2.initialize(ctx.owner, 1, 1, 0, [ctx.wallets[0], ctx.wallets[1]]); 
+    await autorityMgr1.connect(ctx.signers.acc1).initializeQuorum(ctx.owner, 1, 1, 0, [ctx.wallets[0]]); 
+    await autorityMgr1.connect(ctx.signers.acc1).initializeQuorum(ctx.acc1, 2, 1, 0, [ctx.wallets[1]]); 
+    await autorityMgr2.connect(ctx.signers.acc2).initializeQuorum(ctx.owner, 1, 1, 0, [ctx.wallets[0]]); 
+    await autorityMgr2.connect(ctx.signers.acc2).initializeQuorum(ctx.acc1, 2, 1, 0, [ctx.wallets[1]]); 
 
-    console.log(`Settting authority mgr (${autorityMgr1.address}/${autorityMgr2.address}) and miner mgr ${miningMgr1.address} / ${miningMgr2.address} on both QP managers, and fee converter`);
-    await mgr1.updateAuthorityMgr(autorityMgr1.address);
-    await mgr1.updateMinerMgr(miningMgr1.address);
-    await mgr1.updateFeeConvertor(feeConverter.address);
-    await miningMgr1.initServer(poc1.address, mgr1.address, tok1.address);
-    await miningMgr1.setRemote(chainId2, miningMgr2.address);
-    await autorityMgr1.updateMgr(mgr1.address);
-    await mgr2.updateAuthorityMgr(autorityMgr2.address);
-    await mgr2.updateMinerMgr(miningMgr2.address);
-    await mgr2.updateFeeConvertor(feeConverter.address);
-    await miningMgr2.connect(ctx.signers.acc1).initServer(poc2.address, mgr2.address, tok1.address);
-    await miningMgr2.connect(ctx.signers.acc1).setRemote(chainId1, miningMgr1.address);
-    await autorityMgr2.connect(ctx.signers.acc1).updateMgr(mgr2.address);
+    console.log(`Settting authority mgr (${autorityMgr1.target}/${autorityMgr2.target}) and miner mgr ${miningMgr1.target} / ${miningMgr2.target} on both QP managers, and fee converter`);
+    await mgr1.updateAuthorityMgr(autorityMgr1.target);
+    await mgr1.updateMinerMgr(miningMgr1.target);
+    await mgr1.updateFeeConvertor(feeConverter.target);
+    await miningMgr1.updateRemotePeers([chainId2], [miningMgr2.target]);
+    await mgr2.updateAuthorityMgr(autorityMgr2.target);
+    await mgr2.updateMinerMgr(miningMgr2.target);
+    await mgr2.updateFeeConvertor(feeConverter.target);
+    await miningMgr2.connect(ctx.signers.acc1).updateRemotePeers([chainId1], [miningMgr1.target]);
 
-    console.log(`Deploying QP State`);
-    const stateF = await ethers.getContractFactory('QuantumPortalState');
-    const state1 = await stateF.deploy() as QuantumPortalState;
-    await state1.setMgr(mgr1.address);
-    await state1.setLedger(poc1.address);
-    const state2 = await stateF.deploy() as QuantumPortalState;
-    await state2.setMgr(mgr2.address);
-    await state2.setLedger(poc2.address);
-
-    await poc1.setManager(mgr1.address, state1.address);
-    await poc1.setFeeTarget(miningMgr1.address);
-    await poc1.setFeeToken(tok1.address);
-    await poc2.setManager(mgr2.address, state2.address);
-    await poc2.setFeeTarget(miningMgr2.address);
-    await poc2.setFeeToken(tok1.address);
-    await mgr1.updateLedger(poc1.address);
-    await mgr1.updateState(state1.address);
-    await mgr2.updateLedger(poc2.address);
-    await mgr2.updateState(state2.address);
+    await poc1.setManager(mgr1.target);
+    await poc1.updateFeeTarget();
+    await poc1.setFeeToken(tok1.target);
+    await miningMgr1.updateBaseToken(tok1.target);
+    await poc2.setManager(mgr2.target);
+    await poc2.updateFeeTarget();
+    await poc2.setFeeToken(tok1.target);
+    await miningMgr2.connect(ctx.signers.acc1).updateBaseToken(tok1.target);
+    await mgr1.updateLedger(poc1.target);
+    await mgr2.updateLedger(poc2.target);
     console.log('Set.');
 
     console.log('Sending eth to the miner wallet');
@@ -494,7 +557,6 @@ export async function deployAll(): Promise<PortalContext> {
             poc: poc1,
             autorityMgr: autorityMgr1,
             minerMgr: miningMgr1,
-            state: state1,
             token: tok1,
             stake,
             feeConverter,
@@ -505,10 +567,52 @@ export async function deployAll(): Promise<PortalContext> {
             poc: poc2,
             autorityMgr: autorityMgr2,
             minerMgr: miningMgr2,
-            state: state2,
             token: tok1,
             stake,
             feeConverter,
         }
     } as PortalContext;
+}
+
+export async function deployNativeFeeRepo(ctx: PortalContext) {
+    const nativeFeeF = await ethers.getContractFactory('QuantumPortalNativeFeeRepoBasicUpgradeable');
+    const nativeFee1 = await nativeFeeF.deploy() as any as QuantumPortalNativeFeeRepoBasicUpgradeable;
+    await nativeFee1.initialize(ctx.chain1.poc.target, ctx.chain1.feeConverter.target, ctx.owner, ctx.owner);
+    const nativeFee2 = await nativeFeeF.deploy() as any as QuantumPortalNativeFeeRepoBasicUpgradeable;
+    await nativeFee2.initialize(ctx.chain2.poc.target, ctx.chain1.feeConverter.target, ctx.owner, ctx.owner);
+    console.log(`Deployed native fee token repos: ${nativeFee1.target}, ${nativeFee2.target}`);
+    await ctx.chain1.token.transfer(nativeFee1.target, Wei.from('100'));
+    await ctx.chain1.token.transfer(nativeFee2.target, Wei.from('100'));
+    console.log('Transferred 100 FRM to each native fee repo');
+    await ctx.chain1.poc.setNativeFeeRepo(nativeFee1.target);
+    await ctx.chain2.poc.setNativeFeeRepo(nativeFee2.target);
+}
+
+export async function estimateGasUsingEthCall(contract: string, encodedAbiForEstimateGas: string) {
+    try {
+        await ethers.provider.call({
+            data: encodedAbiForEstimateGas,
+            to: contract,
+        })
+        // This should not succeed
+        throw new Error('Estimate gas method call must fail, but this call succeeded')
+    } catch (error: any) {
+        // Handle the revert reason
+        const revertReason = error.data
+
+        // Extract the gas used from the revert reason
+        if (revertReason && revertReason.startsWith("0x08c379a0")) {
+            const decodedReason = ethers.AbiCoder.defaultAbiCoder().decode(['string'], '0x' + revertReason.substring(10))
+            const gasUsed = Number(decodedReason[0])
+            return gasUsed
+        } else {
+            throw error
+        }
+    }
+}
+
+export async function deployWFRM() {
+    const wfrmF = await ethers.getContractFactory("WFRM");
+    const frm = await wfrmF.deploy();
+    return frm as any as WFRM;
 }

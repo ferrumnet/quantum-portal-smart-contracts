@@ -22,7 +22,7 @@ export const BLOCK_TIME = 6 * SECONDS;
 
 export const FERRUM_CHAIN_ENDPOINT = "ws://127.0.0.1:9933";
 
-export const EVM_CHAIN_ENDPOINT = "http://127.0.0.1:8545/";
+export const EVM_CHAIN_ENDPOINT = "https://bsc-testnet.publicnode.com";
 export const HARDHAT_ACCOUNT_ADDRESS = "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266";
 export const HARDHAT_ACCOUNT_PVT_KEY = "0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80";
 

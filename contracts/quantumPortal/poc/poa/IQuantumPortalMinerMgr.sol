@@ -46,7 +46,7 @@ interface IQuantumPortalMinerMgr {
         bytes memory signature,
         uint256 msgValue,
         uint256 minStakeAllowed
-    ) external view returns (ValidationResult res, address signer);
+    ) external view returns (ValidationResult res, address signer, uint256 stake);
 
     /**
      * @notice Slash a miner stake because their fraud has been proved.

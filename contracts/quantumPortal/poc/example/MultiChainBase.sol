@@ -2,9 +2,9 @@
 
 pragma solidity ^0.8.0;
 import "../IQuantumPortalPoc.sol";
-import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
+import "foundry-contracts/contracts/contracts/common/IFerrumDeployer.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /**
  * @title The example multi chain base contract that contains 

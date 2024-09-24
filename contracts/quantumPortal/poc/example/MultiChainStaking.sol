@@ -1,13 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 import "../IQuantumPortalPoc.sol";
-import "foundry-contracts/contracts/common/IFerrumDeployer.sol";
-import "foundry-contracts/contracts/token/ERC20/ERC20.sol";
-import "foundry-contracts/contracts/common/SafeAmount.sol";
-import "foundry-contracts/contracts/math/FullMath.sol";
+import "foundry-contracts/contracts/contracts/common/IFerrumDeployer.sol";
+import "foundry-contracts/contracts/contracts/token/ERC20/ERC20.sol";
+import "foundry-contracts/contracts/contracts/common/SafeAmount.sol";
+import "foundry-contracts/contracts/contracts/math/FullMath.sol";
 import "./MultiChainBase.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /*
   Multi-chain staking, allows users to stake a token from any chain. And take their rewards from a different chain.
@@ -27,6 +27,8 @@ contract MultiChainStakingMaster is MultiChainMasterBase {
     uint256 public totalStakes; // Total stakes
     bool public stakeClosed; // A flag to set when the staking is closed. Set this only on master chain
     bool public distributeRewards; // A flag to set when we are ready to distribute rewards. Only on master chain
+
+    constructor() Ownable(msg.sender) {}
 
     /**
      * @notice Owner can call to close the staking period
@@ -192,6 +194,9 @@ contract MultiChainStakingMaster is MultiChainMasterBase {
 }
 
 contract MultiChainStakingClient is MultiChainClientBase {
+
+    constructor() Ownable(msg.sender) {}
+
     /**
      @notice It is up to UI to make sure the token is correct. Otherwise the tx will fail.
      */
