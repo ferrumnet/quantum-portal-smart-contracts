@@ -116,6 +116,7 @@ const deployModule = buildModule("DeployModule", (m) => {
     
 	m.call(minerMgr, "updateBaseToken", [conf.FRM[currentChainId!]])
 	m.call(ledgerMgr, "updateLedger", [poc], { id: "UpdateLedgerOnLedgerMgr"})
+    m.call(staking, "setAdmin", [gateway])
 
     const settings  = [
         {
