@@ -91,7 +91,7 @@ const config: HardhatUserConfig = {
     },
     bsc: {
       chainId: 56,
-      url: "https://bsc-dataseed2.defibit.io",
+      url: "https://binance.llamarpc.com",
       accounts,
     },
     moonbeam: {
@@ -135,6 +135,7 @@ const config: HardhatUserConfig = {
       accounts,
     },
     arbitrumOne: {
+      chainId: 42161,
       url: process.env.ARBITRUM_RPC!,
       accounts,
     },
@@ -149,6 +150,13 @@ const config: HardhatUserConfig = {
       allowUnlimitedContractSize: true,
       gas: 10000000, // this override is required for Substrate based evm chains
     },
+    ferrum_mainnet: {
+      chainId: 26100,
+      url: "https://qpn.svcs.ferrumnetwork.io/",
+      accounts,
+      allowUnlimitedContractSize: true,
+      gas: 3000000, // this override is required for Substrate based evm chains
+    }
   },
   etherscan: {
     // Your API key for Etherscan
@@ -159,7 +167,8 @@ const config: HardhatUserConfig = {
       arbitrumOne: process.env.ARBISCAN_API_KEY!,
       base: process.env.BASESCAN_API_KEY!,
       bsc: process.env.BSCSCAN_API_KEY!,
-      ferrum_testnet: 'empty'
+      ferrum_testnet: 'empty',
+      ferrum_mainnet: 'empty',
   },
   customChains: [
     {
@@ -177,6 +186,14 @@ const config: HardhatUserConfig = {
         apiURL: "https://testnet-explorer.svcs.ferrumnetwork.io/api",
         browserURL: "http://https://testnet-explorer.svcs.ferrumnetwork.io"
       }
+    },
+    {
+      network: "ferrum_mainnet",
+      chainId: 26100,
+      urls: {
+        apiURL: "https://explorer.svcs.ferrumnetwork.io/api",
+        browserURL: "http://explorer.svcs.ferrumnetwork.io/"
+      }
     }
   ]
   },
@@ -191,8 +208,8 @@ const config: HardhatUserConfig = {
     strategyConfig: {
       create2: {
         // To learn more about salts, see the CreateX documentation
-        salt: "0x0000000000000000000000000000000000000000000000000000000000000007"
-        // salt: "0x46657272756D4E6574776F726B2D746573746E65743A30312E3030312E303037",
+        salt: "0x0000000000000000000000000000000000001000000000000000000000000001"
+        // salt: "0x46657272756d4e6574776f726b2d6d61696e6e65743a30312e3030312e303031", // FerrumNetwork-mainnet:01.001.001
       },
     },
   },
