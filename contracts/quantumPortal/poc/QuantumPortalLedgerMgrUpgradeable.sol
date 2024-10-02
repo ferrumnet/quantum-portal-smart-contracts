@@ -1097,8 +1097,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
         IQuantumPortalLedgerMgr.MinedBlock memory b = getMinedBlock(key);
         PortalLedgerUpgradeable qp = PortalLedgerUpgradeable($.ledger);
-        uint256 gasPrice = IQuantumPortalFeeConvertor($.feeConvertor)
-            .localChainGasTokenPriceX128();
+        uint256 frmPrice = IQuantumPortalFeeConvertor($.feeConvertor).localChainGasTokenPriceX128(); // "X FRM per 1 unit of local chain native token"
         QuantumPortalLib.RemoteTransaction[] memory transactions = getMinedBlockTransactions(key);
         for (uint i = 0; i < transactions.length; i++) {
             QuantumPortalLib.RemoteTransaction memory t = transactions[i];
@@ -1106,12 +1105,9 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
             for (uint j=0; j<t.methods.length; j++) {
                 totalMineWork += t.methods[j].length;
             }
-            uint256 txGas = FullMath.mulDiv(
-                gasPrice,
-                t.gas,
-                FixedPoint128.Q128
-            );
-            txGas = txGas / tx.gasprice;
+
+            uint256 txGasLimit = t.gas / frmPrice / IQuantumPortalFeeConvertor($.feeConvertor).localChainGasTokenPriceX128() / FixedPoint128.Q128;
+
             uint256 baseGasUsed;
             if (t.remoteContract == QuantumPortalLib.FRAUD_PROOF) {
                 // What if the FraudProof is fradulent itself?
@@ -1125,7 +1121,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
                     i,
                     b.blockMetadata,
                     t,
-                    txGas
+                    txGasLimit
                 );
             }
             totalVarWork += baseGasUsed;

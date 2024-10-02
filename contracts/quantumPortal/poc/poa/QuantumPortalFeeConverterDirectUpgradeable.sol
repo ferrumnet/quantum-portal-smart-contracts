@@ -2,9 +2,9 @@
 pragma solidity ^0.8.24;
 
 import {Initializable, UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
-import {FixedPoint128} from "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
 import {WithAdminUpgradeable} from "foundry-contracts/contracts/contracts-upgradeable/common/WithAdminUpgradeable.sol";
 import {IQuantumPortalFeeConvertor} from "./IQuantumPortalFeeConvertor.sol";
+import "hardhat/console.sol";
 
 
 /**
@@ -17,13 +17,13 @@ contract QuantumPortalFeeConverterDirectUpgradeable is
     WithAdminUpgradeable
 {
     string public constant VERSION = "000.001";
-    uint constant DEFAULT_PRICE = 0x100000000000000000000000000000000; //FixedPoint128.Q128;
 
     /// @custom:storage-location erc7201:ferrum.storage.quantumportalfeeconverterdirect.001
     struct QuantumPortalFeeConverterDirectStorageV001 {
         address qpFeeToken;
         uint256 feePerByte;
         mapping(uint256 => uint256) feeTokenPriceList;
+        mapping(uint256 => uint256) targetChainGasPriceList;
     }
 
     // keccak256(abi.encode(uint256(keccak256("ferrum.storage.quantumportalfeeconverterdirect.001")) - 1)) & ~bytes32(uint256(0xff))
@@ -44,6 +44,10 @@ contract QuantumPortalFeeConverterDirectUpgradeable is
         return _getQuantumPortalFeeConverterDirectStorageV001().feeTokenPriceList[chainId];
     }
 
+    function targetChainGasPriceList(uint256 chainId) external view returns (uint256) {
+        return _getQuantumPortalFeeConverterDirectStorageV001().targetChainGasPriceList[chainId];
+    }
+
     function initialize(address initialOwnerAdmin) public initializer {
         __WithAdmin_init(initialOwnerAdmin, initialOwnerAdmin);
         __UUPSUpgradeable_init();
@@ -54,7 +58,7 @@ contract QuantumPortalFeeConverterDirectUpgradeable is
      * Note: When updating fpb on Eth network, remember FRM has only 6 decimals there
      * @param fpb The fee per byte
      */
-    function updateFeePerByte(uint256 fpb) external onlyAdmin {
+    function updateFeePerByteX128(uint256 fpb) external onlyAdmin {
         _getQuantumPortalFeeConverterDirectStorageV001().feePerByte = fpb;
     }
 
@@ -75,7 +79,7 @@ contract QuantumPortalFeeConverterDirectUpgradeable is
         QuantumPortalFeeConverterDirectStorageV001 storage $ = _getQuantumPortalFeeConverterDirectStorageV001();
         uint price = $.feeTokenPriceList[block.chainid];
         if (price == 0) {
-            return DEFAULT_PRICE;
+            return 1;
         }
         return price;
     }
@@ -83,16 +87,21 @@ contract QuantumPortalFeeConverterDirectUpgradeable is
     /**
      * @notice Sets the local chain gas token price.
      */
-    function setChainGasTokenPriceX128(
+    function setChainGasPricesX128(
         uint256[] memory chainIds,
-        uint256[] memory pricesX128
+        uint256[] memory nativeTokenPricesX128,
+        uint256[] memory gasPricesX128
     ) external onlyAdmin {
         QuantumPortalFeeConverterDirectStorageV001 storage $ = _getQuantumPortalFeeConverterDirectStorageV001();
-        require(chainIds.length == pricesX128.length, "QPFCD: Invalid args");
+        require(chainIds.length == nativeTokenPricesX128.length, "QPFCD: Invalid args");
+        require(chainIds.length == gasPricesX128.length, "QPFCD: Invalid args");
         for(uint i=0; i<chainIds.length; i++) {
-            uint256 price = pricesX128[i];
-            require(price != 0, "QPFCD: price is zero");
-            $.feeTokenPriceList[chainIds[i]] = price;
+            uint256 nativePrice = nativeTokenPricesX128[i];
+            uint256 gasPrice = gasPricesX128[i];
+            require(nativePrice != 0, "QPFCD: native price is zero");
+            require(gasPrice != 0, "QPFCD: fee price is zero");
+            $.feeTokenPriceList[chainIds[i]] = nativePrice;
+            $.targetChainGasPriceList[chainIds[i]] = gasPrice;
         }
     }
 
@@ -113,12 +122,37 @@ contract QuantumPortalFeeConverterDirectUpgradeable is
         uint256 targetChainId,
         uint256 size
     ) external view override returns (uint256) {
+        return _fixedFee(size);
+    }
+
+    function targetChainGasFee(
+        uint256 targetChainId,
+        uint256 gasLimit
+    ) external view returns (uint256) {
+        return _targetChainGasFee(targetChainId, gasLimit);
+    }
+
+    function targetChainFee(
+        uint256 targetChainId,
+        uint256 size,
+        uint256 gasLimit
+    ) external view returns (uint256) {
+        return _fixedFee(size) + _targetChainGasFee(targetChainId, gasLimit);
+    }
+
+    function _fixedFee(
+        uint256 size
+    ) internal view returns (uint256) {
         QuantumPortalFeeConverterDirectStorageV001 storage $ = _getQuantumPortalFeeConverterDirectStorageV001();
-        uint256 price = _targetChainGasTokenPriceX128(targetChainId);
-        if (price == 0) {
-            price = DEFAULT_PRICE;
-        }
-        return (price * size * $.feePerByte) / FixedPoint128.Q128;
+        return size * $.feePerByte;
+    }
+
+    function _targetChainGasFee(
+        uint256 targetChainId,
+        uint256 gasLimit
+    ) internal view returns (uint256) {
+        QuantumPortalFeeConverterDirectStorageV001 storage $ = _getQuantumPortalFeeConverterDirectStorageV001();
+        return gasLimit * $.targetChainGasPriceList[targetChainId] * _targetChainGasTokenPriceX128(targetChainId);
     }
 
     /**
