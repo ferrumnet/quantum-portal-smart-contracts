@@ -1,11 +1,10 @@
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { SignerWithAddress } from "@nomicfoundation/hardhat-ethers/signers";
 import { expect } from "chai";
 import { randomBytes } from "crypto";
 import { Contract, EventLog, Signer } from "ethers";
 import { ethers } from "hardhat";
-import { DummyToken } from "../../typechain/DummyToken";
-import { DirectMinimalErc20 } from "foundry-contracts/typechain-types/DirectMinimalErc20";
-import { IVersioned } from "../../typechain/IVersioned";
+import { DummyToken, IVersioned } from "../../typechain-types";
+import { DirectMinimalErc20 } from "foundry-contracts/typechain-types";
 export const ZeroAddress = '0x' + '0'.repeat(40);
 export const Salt = '0x' + '12'.repeat(32);
 
@@ -52,17 +51,17 @@ export interface TestContext {
 
 export class Wei {
 	static from(v: string) {
-		return ethers.utils.parseEther(v).toString();
+		return ethers.parseEther(v).toString();
 	}
 	static to(v: string) {
-		return ethers.utils.formatEther(v);
+		return ethers.formatEther(v);
 	}
 	static async toP(v: Promise<any>) {
 		return Wei.to((await v).toString());
 	}
 	static async balance(tokAddr: string, addr: string) {
         const tf = await ethers.getContractFactory('DummyToken');
-        const tok = await tf.attach(tokAddr) as DummyToken;
+        const tok = await tf.attach(tokAddr) as any as DummyToken;
 		const b = await tok.balanceOf(addr);
 		return Wei.to(b.toString());
 	}
@@ -74,7 +73,7 @@ export class Wei {
 
 export async function getCtx(): Promise<TestContext> {
 	const [owner, acc1, acc2, acc3, acc4, acc5] = await ethers.getSigners();
-	const chainId = (await ethers.provider.getNetwork()).chainId;
+	const chainId = Number((await ethers.provider.getNetwork()).chainId);
 	console.log('Using chain ID ', chainId);
 	const depFac = await ethers.getContractFactory("FerrumDeployer");
 	const deployer = await depFac.deploy();
@@ -109,7 +108,7 @@ export async function deploy(ctx: TestContext, contract: string, initData: strin
 
 export async function getGasLimit(tx: any) {
 	const reci = await ethers.provider.getTransactionReceipt(tx.hash);
-	return reci.gasUsed.toString();
+	return reci!.gasUsed.toString();
 }
 
 export async function deployWithOwner(ctx: TestContext, contract: string, owner: string, initData: string) {
@@ -143,7 +142,7 @@ export async function getTransactionLog(txHash: string, contract: Contract, even
 
 export async function contractExists(contractName: string, contract: string) {
 	const depFac = await ethers.getContractFactory(contractName);
-	const deployer = await depFac.attach(contract) as IVersioned;
+	const deployer = await depFac.attach(contract) as any as IVersioned;
 	console.log(`Checking if contract ${contractName}:${contract} exists.`);
     try {
         const isThere = await deployer.VERSION();
@@ -186,7 +185,7 @@ export async function deployUsingDeployer(contract: string, owner: string, initD
 }
 
 export async function deployDummyToken(ctx: TestContext, name: string = 'DummyToken', owner: string = ZeroAddress) {
-	const abiCoder = ethers.utils.defaultAbiCoder;
+	const abiCoder = ethers.AbiCoder.defaultAbiCoder();
 	var initData = abiCoder.encode(['address'], [ctx.owner]);
 	const tok = await deployWithOwner(ctx, name, owner, initData);
 	if (!ctx.token) {
@@ -269,7 +268,7 @@ export async function distributeTestTokensIfTest(targets: string[], amount: stri
 	if (process.env.LOCAL_NODE) {
 		const [owner] = await ethers.getSigners();
 		const tokF = await ethers.getContractFactory('DirectMinimalErc20');
-		const tok = await tokF.deploy() as DirectMinimalErc20;
+		const tok = await tokF.deploy() as any as DirectMinimalErc20;
 		await tok.init(owner.address, 'Test Token', 'TST', Wei.from('1000000000'));;
 		console.log(`${owner.address} has ${await ethers.provider.getBalance(owner.address)} tokens`);
 		console.log(`Deployed a token at ${tok.address}`);

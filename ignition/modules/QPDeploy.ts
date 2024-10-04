@@ -14,7 +14,6 @@ const deployModule = buildModule("DeployModule", (m) => {
     const currentChainId = hre.network.config.chainId
     const conf: QpDeployConfig = loadQpDeployConfigSync(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
     const owner = m.getAccount(0)
-    console.log('CONF', JSON.stringify(conf, null, 2))
 
     //--------------- Gateway ----------------//
     const gatewayImpl = m.contract("QuantumPortalGatewayUpgradeable", ["0x0000000000000000000000000000000000000000"], { id: "QPGatewayImpl"})
