@@ -28,7 +28,7 @@ describe("Test qp with native fees", function () {
     const ctx = await deployAll();
     await deployNativeFeeRepo(ctx);
     await ctx.chain1.token.transfer(ctx.chain1.poc.target, Wei.from('20')); // X-chain balance tx
-    let feeAmount = await ctx.chain1.feeConverter.targetChainFixedFee(ctx.chain2.chainId, QuantumPortalUtils.FIXED_FEE_SIZE + 0 /* No method call*/)
+    let feeAmount = await ctx.chain1.feeConverter.fixedFee(QuantumPortalUtils.FIXED_FEE_SIZE + 0 /* No method call*/)
     feeAmount = feeAmount + 10_000_000_000_000n // plus some var fee
     await ctx.chain1.poc.runWithValueNativeFee(
         ctx.chain2.chainId,

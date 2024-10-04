@@ -6,7 +6,6 @@ import "../quantumPortal/poc/IQuantumPortalPoc.sol";
 import "../quantumPortal/poc/poa/IQuantumPortalFeeConvertor.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "foundry-contracts/contracts/contracts/math/FullMath.sol";
-import "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
 
 error OnlyFactory();
 error OnlyBtc();
@@ -49,13 +48,9 @@ contract FeeStore is IFeeStore {
     function swapBtcWithFee(bytes32 txId, uint btcAmount) external override {
         if (msg.sender != factory.btc()) { revert OnlyBtc(); }
         // Price of FRM based on BTC
-        uint256 gasPriceX128 = IQuantumPortalFeeConvertor(factory.feeConvertor())
-            .localChainGasTokenPriceX128();
-        uint256 txGas = FullMath.mulDiv(
-                btcAmount,
-                FixedPoint128.Q128,
-                gasPriceX128
-            );
+        uint256 gasTokenPrice = IQuantumPortalFeeConvertor(factory.feeConvertor())
+            .localChainGasTokenPrice();
+        uint256 txGas = btcAmount / gasTokenPrice;
         collectedFee[txId] = txGas;
     }
 }

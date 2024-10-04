@@ -436,8 +436,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
     ) private view returns (uint256) {
         QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
         return
-            IQuantumPortalFeeConvertor($.feeConvertor).targetChainFixedFee(
-                targetChainId,
+            IQuantumPortalFeeConvertor($.feeConvertor).fixedFee(
                 FIX_TX_SIZE + varSize
             );
     }
@@ -1097,8 +1096,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         QuantumPortalLedgerMgrStorageV001 storage $ = _getQuantumPortalLedgerMgrStorageV001();
         IQuantumPortalLedgerMgr.MinedBlock memory b = getMinedBlock(key);
         PortalLedgerUpgradeable qp = PortalLedgerUpgradeable($.ledger);
-        uint256 gasPrice = IQuantumPortalFeeConvertor($.feeConvertor)
-            .localChainGasTokenPriceX128();
+        uint256 frmPrice = IQuantumPortalFeeConvertor($.feeConvertor).localChainGasTokenPrice(); // "X FRM per 1 unit of local chain native token"
         QuantumPortalLib.RemoteTransaction[] memory transactions = getMinedBlockTransactions(key);
         for (uint i = 0; i < transactions.length; i++) {
             QuantumPortalLib.RemoteTransaction memory t = transactions[i];
@@ -1106,12 +1104,9 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
             for (uint j=0; j<t.methods.length; j++) {
                 totalMineWork += t.methods[j].length;
             }
-            uint256 txGas = FullMath.mulDiv(
-                gasPrice,
-                t.gas,
-                FixedPoint128.Q128
-            );
-            txGas = txGas / tx.gasprice;
+
+            uint256 txGasLimit = t.gas / frmPrice / IQuantumPortalFeeConvertor($.feeConvertor).localChainGasTokenPrice();
+
             uint256 baseGasUsed;
             if (t.remoteContract == QuantumPortalLib.FRAUD_PROOF) {
                 // What if the FraudProof is fradulent itself?
@@ -1125,7 +1120,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
                     i,
                     b.blockMetadata,
                     t,
-                    txGas
+                    txGasLimit
                 );
             }
             totalVarWork += baseGasUsed;
@@ -1144,7 +1139,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
         IQuantumPortalLedgerMgr.MinedBlock memory b = getMinedBlock(key);
         PortalLedgerUpgradeable qp = PortalLedgerUpgradeable($.ledger);
         uint256 gasPrice = IQuantumPortalFeeConvertor($.feeConvertor)
-            .localChainGasTokenPriceX128();
+            .localChainGasTokenPrice();
         QuantumPortalLib.RemoteTransaction[] memory transactions = getMinedBlockTransactions(key);
         for (uint i = 0; i < transactions.length; i++) {
             QuantumPortalLib.RemoteTransaction memory t = transactions[i];
@@ -1153,12 +1148,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
                 totalMineWork += t.methods[j].length;
             }
             totalMineWork += FIXED_REJECT_SIZE;
-            uint256 txGas = FullMath.mulDiv(
-                gasPrice,
-                t.gas,
-                FixedPoint128.Q128
-            );
-            txGas = txGas / tx.gasprice;
+            
             qp.rejectRemoteTransaction(b.blockMetadata.chainId, t);
         }
         qp.clearContext();
@@ -1209,7 +1199,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
      @param token The token
      @return The price
      */
-    function tokenPriceX128(
+    function tokenPrice(
         address token
     ) internal view virtual returns (uint256) {
         return 0;
@@ -1269,11 +1259,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
     function _transactionValue(
         QuantumPortalLib.RemoteTransaction memory transaction
     ) private view returns (uint256 value) {
-        value += FullMath.mulDiv(
-            tokenPriceX128(transaction.token),
-            transaction.amount,
-            FixedPoint128.Q128
-        );
+        value += tokenPrice(transaction.token) * transaction.amount;
     }
 
     function minerMgr() public view returns (address) {

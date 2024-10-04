@@ -123,13 +123,11 @@ contract QuantumPortalFeeConverterUpgradeable is Initializable, UUPSUpgradeable,
     /**
      * @notice Get the fee for the target network
      */
-    function targetChainFixedFee(
-        uint256 targetChainId,
+    function fixedFee(
         uint256 size
     ) external view returns (uint256) {
         QuantumPortalFeeConverterStorageV001 storage $ = _getQuantumPortalFeeConverterStorageV001();
-        uint256 price = _targetChainGasTokenPriceX128(targetChainId);
-        return (price * size * $.feePerByte) / FixedPoint128.Q128;
+        return (size * $.feePerByte) / FixedPoint128.Q128;
     }
 
     /**
