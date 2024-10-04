@@ -29,7 +29,7 @@ describe("Test qp", function () {
             '0x'), 'QPWPS: Not enough fee');
 
         const feeTarget = await ctx.chain1.poc.feeTarget();
-        let feeAmount = await ctx.chain1.feeConverter.targetChainFixedFee(ctx.chain2.chainId, QuantumPortalUtils.FIXED_FEE_SIZE + 0 /* No method call*/)
+        let feeAmount = await ctx.chain1.feeConverter.fixedFee(QuantumPortalUtils.FIXED_FEE_SIZE + 0 /* No method call*/)
         feeAmount = feeAmount + 10_000_000_000_000n // plus some var fee
         await ctx.chain1.token.transfer(feeTarget, feeAmount);
         console.log(`Sent fee to ${feeTarget} - Worth ${feeAmount}. Now we can register the tx`);
@@ -144,7 +144,7 @@ describe("Test qp", function () {
         const ctx = await deployAll();
         await ctx.chain1.token.transfer(ctx.chain1.poc.target, Wei.from('20'));
         const feeTarget = await ctx.chain1.poc.feeTarget();
-        let feeAmount = await ctx.chain1.feeConverter.targetChainFixedFee(ctx.chain2.chainId, QuantumPortalUtils.FIXED_FEE_SIZE + 0 /* No method call*/)
+        let feeAmount = await ctx.chain1.feeConverter.fixedFee(QuantumPortalUtils.FIXED_FEE_SIZE + 0 /* No method call*/)
         feeAmount = feeAmount + 10_000_000_000_000n // plus some var fee
         await ctx.chain1.token.transfer(feeTarget, feeAmount);
         await ctx.chain1.poc.runWithValue(
@@ -156,7 +156,7 @@ describe("Test qp", function () {
         await QuantumPortalUtils.mineAndFinilizeOneToTwo(ctx, 1);
         console.log('Mined and finalized');
         console.log("Now lets check our miner's balance");
-        feeAmount = await ctx.chain2.feeConverter.targetChainFixedFee(ctx.chain1.chainId, QuantumPortalUtils.FIXED_FEE_SIZE + 300 /* withdraw call estimate */);
+        feeAmount = await ctx.chain2.feeConverter.fixedFee(QuantumPortalUtils.FIXED_FEE_SIZE + 300 /* withdraw call estimate */);
         await ctx.chain2.token.approve(ctx.chain2.minerMgr.target, feeAmount);
         await ctx.chain2.minerMgr.withdraw(ctx.chain1.chainId, ctx.wallets[0], ctx.owner, feeAmount);
         console.log('Called withdraw. Now we need to mine and finalize');

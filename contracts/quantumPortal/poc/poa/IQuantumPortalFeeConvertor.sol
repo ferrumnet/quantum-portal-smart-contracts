@@ -12,26 +12,22 @@ interface IQuantumPortalFeeConvertor {
      * @notice Loal chain gas token price versus FRM
      * @return The token price
      */
-    function localChainGasTokenPriceX128() external returns (uint256);
+    function localChainGasTokenPrice() external returns (uint256);
 
     /**
      * @notice Target chain gas token price versus FRM
      * @param targetChainId The target chain ID
      */
-    function targetChainGasTokenPriceX128(
+    function targetChainGasTokenPrice(
         uint256 targetChainId
     ) external view returns (uint256);
 
     /**
      * @notice Fixed fee in FRM for the target chain
-     * @param targetChainId The target chain ID
      * @param size Data size
      * @return The fixed fee required
      */
-    function targetChainFixedFee(
-        uint256 targetChainId,
-        uint256 size
-    ) external view returns (uint256);
+    function fixedFee(uint256 size) external view returns (uint256);
 
     /**
      * @notice The QP Fee Token address for the local chain (FRM)

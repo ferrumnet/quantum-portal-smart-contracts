@@ -39,7 +39,7 @@ describe("Proxy version", function () {
             // await ctx.chain1.poc.updateFeeTarget()
             const feeTarget = await ctx.chain1.poc.feeTarget();
             console.log(`Fee target is ${feeTarget}`);
-            let feeAmount = await ctx.chain1.feeConverter.targetChainFixedFee(ctx.chain2.chainId, QuantumPortalUtils.FIXED_FEE_SIZE + 0 /* No method call*/)
+            let feeAmount = await ctx.chain1.feeConverter.fixedFee(QuantumPortalUtils.FIXED_FEE_SIZE + 0 /* No method call*/)
             feeAmount = feeAmount + 10000000000000n // plus some var fee
             await ctx.chain1.token.transfer(feeTarget, feeAmount);
             console.log(`Sent fee to ${feeTarget} - Worth ${feeAmount}. Now we can register the tx`);

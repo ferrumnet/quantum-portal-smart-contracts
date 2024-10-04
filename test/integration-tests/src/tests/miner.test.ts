@@ -29,7 +29,7 @@ it("Blocks are mined on destination/source chain", async () => {
   await ctx.chain1.token.transfer(ctx.chain1.poc.address, Wei.from('20'));
 
   const feeTarget = await ctx.chain1.poc.feeTarget();
-  let feeAmount = await ctx.chain1.feeConverter.targetChainFixedFee(ctx.chain2.chainId, QuantumPortalUtils.FIXED_FEE_SIZE + 0)
+  let feeAmount = await ctx.chain1.feeConverter.fixedFee(QuantumPortalUtils.FIXED_FEE_SIZE + 0)
   feeAmount = feeAmount.add(Wei.from('0.00001')); // plus some var fee
   await ctx.chain1.token.transfer(feeTarget, feeAmount);
 

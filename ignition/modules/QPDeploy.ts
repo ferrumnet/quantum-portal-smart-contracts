@@ -1,7 +1,7 @@
 import hre from "hardhat"
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules"
 import { ZeroAddress, FunctionFragment } from "ethers";
-import { loadQpDeployConfig, loadQpDeployConfigSync, QpDeployConfig } from "../../scripts/utils/DeployUtils";
+import { loadConfig, loadQpDeployConfig, loadQpDeployConfigSync, QpDeployConfig } from "../../scripts/utils/DeployUtils";
 const DEFAULT_QP_CONFIG_FILE = 'QpDeployConfig.yaml';
 
 
@@ -11,8 +11,8 @@ const TIMELOCKED_PROD_QUORUM_ID = "0x0000000000000000000000000000000000000d05"
 
 const deployModule = buildModule("DeployModule", (m) => {
     
-    const currentChainId = hre.network.config.chainId
-    const conf: QpDeployConfig = loadQpDeployConfigSync(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
+    const currentChainId = 42161
+    const conf: QpDeployConfig = loadConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
     const owner = m.getAccount(0)
 
     //--------------- Gateway ----------------//
@@ -119,22 +119,22 @@ const deployModule = buildModule("DeployModule", (m) => {
 
     const settings  = [
         {
-            quorumId: PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: gateway,
             funcSelector: FunctionFragment.getSelector("initializeQuorum", ["address", "uint64", "uint16", "uint8", "address[]"]),
         },
         {
-            quorumId: PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: gateway,
             funcSelector: FunctionFragment.getSelector("updateQpAddresses", ["address", "address", "address"]),
         },
         {
-            quorumId: TIMELOCKED_PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: gateway,
             funcSelector: FunctionFragment.getSelector("setCallAuthLevels", ["(address,address,bytes4)[]"]),
         },
         {
-            quorumId: TIMELOCKED_PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: gateway,
             funcSelector: FunctionFragment.getSelector("updateTimelockPeriod", ["uint256"]),
         },
@@ -154,32 +154,32 @@ const deployModule = buildModule("DeployModule", (m) => {
             funcSelector: FunctionFragment.getSelector("setFeeToken", ["address"]),
         },
         {
-            quorumId: PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: poc,
             funcSelector: FunctionFragment.getSelector("setNativeFeeRepo", ["address"]),
         },
         {
-            quorumId: TIMELOCKED_PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: poc,
             funcSelector: FunctionFragment.getSelector("setManager", ["address"]),
         },
         {
-            quorumId: TIMELOCKED_PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: ledgerMgr,
             funcSelector: FunctionFragment.getSelector("updateLedger", ["address"]),
         },
         {
-            quorumId: TIMELOCKED_PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: ledgerMgr,
             funcSelector: FunctionFragment.getSelector("updateAuthorityMgr", ["address"]),
         },
         {
-            quorumId: TIMELOCKED_PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: ledgerMgr,
             funcSelector: FunctionFragment.getSelector("updateMinerMg", ["address"]),
         },
         {
-            quorumId: TIMELOCKED_PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: ledgerMgr,
             funcSelector: FunctionFragment.getSelector("updateFeeConvertor", ["address"]),
         },
@@ -189,12 +189,12 @@ const deployModule = buildModule("DeployModule", (m) => {
             funcSelector: FunctionFragment.getSelector("updateFeeTargets", ["address", "address"]),
         },
         {
-            quorumId: PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: ledgerMgr,
             funcSelector: FunctionFragment.getSelector("updateMinerMinimumStake", ["uint256"]),
         },
         {
-            quorumId: PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: ledgerMgr,
             funcSelector: FunctionFragment.getSelector("unregisterMiner", ["address"]),
         },
@@ -209,22 +209,22 @@ const deployModule = buildModule("DeployModule", (m) => {
             funcSelector: FunctionFragment.getSelector("setChainGasTokenPriceX128", ["uint256[]", "uint256[]"]),
         },
         {
-            quorumId: TIMELOCKED_PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: authMgr,
             funcSelector: FunctionFragment.getSelector("updateLedgerMgr", ["address"]),
         },
         {
-            quorumId: TIMELOCKED_PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: authMgr,
             funcSelector: FunctionFragment.getSelector("updatePortal", ["address"]),
         },
         {
-            quorumId: PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: authMgr,
             funcSelector: FunctionFragment.getSelector("updateRemotePeers", ["uint256[]", "address[]"]),
         },
         {
-            quorumId: PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: authMgr,
             funcSelector: FunctionFragment.getSelector("removeRemotePeers", ["uint256[]"]),
         },
@@ -234,22 +234,22 @@ const deployModule = buildModule("DeployModule", (m) => {
             funcSelector: FunctionFragment.getSelector("updateBaseToken", ["address"]),
         },
         {
-            quorumId: TIMELOCKED_PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: authMgr,
             funcSelector: FunctionFragment.getSelector("initializeQuorum", ["address", "uint64", "uint16", "uint8", "address[]"]),
         },
         {
-            quorumId: PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: authMgr,
             funcSelector: FunctionFragment.getSelector("forceRemoveFromQuorum", ["address"]),
         },
         {
-            quorumId: PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: staking,
             funcSelector: FunctionFragment.getSelector("updateStakeVerifyer", ["address"]),
         },
         {
-            quorumId: PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: staking,
             funcSelector: FunctionFragment.getSelector("init", ["address", "string", "address[]"]),
         },
@@ -264,32 +264,32 @@ const deployModule = buildModule("DeployModule", (m) => {
             funcSelector: FunctionFragment.getSelector("freezeSweep", []),
         },
         {
-            quorumId: PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: staking,
             funcSelector: FunctionFragment.getSelector("setCreationSigner", ["address"]),
         },
         {
-            quorumId: PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: staking,
             funcSelector: FunctionFragment.getSelector("setLockSeconds", ["address", "uint256"]),
         },
         {
-            quorumId: TIMELOCKED_PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: minerMgr,
             funcSelector: FunctionFragment.getSelector("updateLedgerMgr", ["address"]),
         },
         {
-            quorumId: TIMELOCKED_PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: minerMgr,
             funcSelector: FunctionFragment.getSelector("updatePortal", ["address"]),
         },
         {
-            quorumId: PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: minerMgr,
             funcSelector: FunctionFragment.getSelector("updateRemotePeers", ["uint256[]", "address[]"]),
         },
         {
-            quorumId: PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: minerMgr,
             funcSelector: FunctionFragment.getSelector("removeRemotePeers", ["uint256[]"]),
         },
@@ -300,40 +300,121 @@ const deployModule = buildModule("DeployModule", (m) => {
         },
         // Upgrade calls
         {
-            quorumId: TIMELOCKED_PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: gateway,
             funcSelector: FunctionFragment.getSelector("upgradeToAndCall", ["address", "bytes"]),
         },
         {
-            quorumId: TIMELOCKED_PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: poc,
             funcSelector: FunctionFragment.getSelector("upgradeToAndCall", ["address", "bytes"]),
         },
         {
-            quorumId: TIMELOCKED_PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: ledgerMgr,
             funcSelector: FunctionFragment.getSelector("upgradeToAndCall", ["address", "bytes"]),
         },
         {
-            quorumId: TIMELOCKED_PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: feeConverterDirect,
             funcSelector: FunctionFragment.getSelector("upgradeToAndCall", ["address", "bytes"]),
         },
         {
-            quorumId: TIMELOCKED_PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: authMgr,
             funcSelector: FunctionFragment.getSelector("upgradeToAndCall", ["address", "bytes"]),
         },
         {
-            quorumId: TIMELOCKED_PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: staking,
             funcSelector: FunctionFragment.getSelector("upgradeToAndCall", ["address", "bytes"]),
         },
         {
-            quorumId: TIMELOCKED_PROD_QUORUM_ID,
+            quorumId: BETA_QUORUM_ID,
             target: minerMgr,
             funcSelector: FunctionFragment.getSelector("upgradeToAndCall", ["address", "bytes"]),
-        }
+        },
+        // Admin calls
+        {
+            quorumId: BETA_QUORUM_ID,
+            target: gateway,
+            funcSelector: FunctionFragment.getSelector("setAdmin", ["address"]),
+        },
+        {
+            quorumId: BETA_QUORUM_ID,
+            target: gateway,
+            funcSelector: FunctionFragment.getSelector("transferOwnership", ["address"]),
+        },
+        {
+            quorumId: BETA_QUORUM_ID,
+            target: ledgerMgr,
+            funcSelector: FunctionFragment.getSelector("setAdmin", ["address"]),
+        },
+        {
+            quorumId: BETA_QUORUM_ID,
+            target: ledgerMgr,
+            funcSelector: FunctionFragment.getSelector("transferOwnership", ["address"]),
+        },
+        {
+            quorumId: BETA_QUORUM_ID,
+            target: poc,
+            funcSelector: FunctionFragment.getSelector("setAdmin", ["address"]),
+        },
+        {
+            quorumId: BETA_QUORUM_ID,
+            target: poc,
+            funcSelector: FunctionFragment.getSelector("transferOwnership", ["address"]),
+        },
+        {
+            quorumId: BETA_QUORUM_ID,
+            target: authMgr,
+            funcSelector: FunctionFragment.getSelector("setAdmin", ["address"]),
+        },
+        {
+            quorumId: BETA_QUORUM_ID,
+            target: authMgr,
+            funcSelector: FunctionFragment.getSelector("transferOwnership", ["address"]),
+        },
+        {
+            quorumId: BETA_QUORUM_ID,
+            target: feeConverterDirect,
+            funcSelector: FunctionFragment.getSelector("setAdmin", ["address"]),
+        },
+        {
+            quorumId: BETA_QUORUM_ID,
+            target: feeConverterDirect,
+            funcSelector: FunctionFragment.getSelector("transferOwnership", ["address"]),
+        },
+        {
+            quorumId: BETA_QUORUM_ID,
+            target: staking,
+            funcSelector: FunctionFragment.getSelector("setAdmin", ["address"]),
+        },
+        {
+            quorumId: BETA_QUORUM_ID,
+            target: staking,
+            funcSelector: FunctionFragment.getSelector("transferOwnership", ["address"]),
+        },
+        {
+            quorumId: BETA_QUORUM_ID,
+            target: minerMgr,
+            funcSelector: FunctionFragment.getSelector("setAdmin", ["address"]),
+        },
+        {
+            quorumId: BETA_QUORUM_ID,
+            target: minerMgr,
+            funcSelector: FunctionFragment.getSelector("transferOwnership", ["address"]),
+        },
+        {
+            quorumId: BETA_QUORUM_ID,
+            target: nativeFeeRepo,
+            funcSelector: FunctionFragment.getSelector("setAdmin", ["address"]),
+        },
+        {
+            quorumId: BETA_QUORUM_ID,
+            target: nativeFeeRepo,
+            funcSelector: FunctionFragment.getSelector("transferOwnership", ["address"]),
+        },
     ]
 
     m.call(gateway, "setCallAuthLevels", [settings])

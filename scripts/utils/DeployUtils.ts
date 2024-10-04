@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as yaml from 'js-yaml';
 import { parse } from 'yaml'
 import { panick } from '../../test/common/Utils';
 import { Secrets } from 'foundry-contracts/dist/test/common/Secrets';
@@ -70,6 +71,17 @@ async function updateDeployerKey(conf: QpDeployConfig, key: string) {
         }
     }
 }
+
+export const loadConfig = (filePath: string) => {
+    try {
+      const fileContents = fs.readFileSync(filePath, 'utf8');
+      const data = yaml.load(fileContents);
+      return data;
+    } catch (error) {
+      console.error(`Error loading YAML file: ${error}`);
+      return null;
+    }
+  };
 
 export function loadQpDeployConfigSync(path: string) {
     let configFile = { val: {} as any, loaded: false };

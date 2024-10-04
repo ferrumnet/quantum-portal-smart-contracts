@@ -77,17 +77,11 @@ abstract contract QuantumPortalNativeFeeRepoUpgradeable is
         // Send the fee to feeTarget
         require(msg.sender == address($.portal), "QPNFR: not allowed");
         uint amount = msg.value;
-        uint256 gasPrice = IQuantumPortalFeeConvertor($.feeConvertor)
-            .localChainGasTokenPriceX128();
-        uint256 txGas = FullMath.mulDiv(
-                gasPrice,
-                amount,
-                FixedPoint128.Q128
-            );
-        IERC20($.portal.feeToken()).safeTransfer($.portal.feeTarget(), txGas);
+        uint256 frmPrice = IQuantumPortalFeeConvertor($.feeConvertor).localChainGasTokenPrice();
+        uint256 frmAmount = frmPrice * amount;
+        IERC20($.portal.feeToken()).safeTransfer($.portal.feeTarget(), frmAmount);
     }
 }
-
 
 contract QuantumPortalNativeFeeRepoBasicUpgradeable is QuantumPortalNativeFeeRepoUpgradeable {
     function initialize(address _portal, address _feeConvertor, address initialOwner, address initialAdmin) public virtual initializer {
