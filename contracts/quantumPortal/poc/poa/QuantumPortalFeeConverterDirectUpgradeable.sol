@@ -49,7 +49,11 @@ contract QuantumPortalFeeConverterDirectUpgradeable is
     }
 
     function targetChainGasPrice(uint256 chainId) external view returns (uint256) {
-        return _getQuantumPortalFeeConverterDirectStorageV001().chainDataList[chainId].gasPrice;
+        uint256 price = _getQuantumPortalFeeConverterDirectStorageV001().chainDataList[chainId].gasPrice;
+        if (price == 0) {
+            return 1;
+        }
+        return price;
     }
 
     function initialize(address initialOwnerAdmin) public initializer {

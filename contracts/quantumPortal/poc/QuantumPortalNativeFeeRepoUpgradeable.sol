@@ -3,6 +3,7 @@ pragma solidity ^0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {UUPSUpgradeable, Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IVersioned} from "foundry-contracts/contracts/contracts/common/IVersioned.sol";
 import {FullMath} from "foundry-contracts/contracts/contracts/math/FullMath.sol";
 import {FixedPoint128} from "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
@@ -20,6 +21,8 @@ import {IQuantumPortalNativeFeeRepo} from "./IQuantumPortalNativeFeeRepo.sol";
 abstract contract QuantumPortalNativeFeeRepoUpgradeable is
     IQuantumPortalNativeFeeRepo,
     IVersioned,
+    Initializable,
+    UUPSUpgradeable,
     WithAdminUpgradeable
 {
     using SafeERC20 for IERC20;
@@ -50,6 +53,8 @@ abstract contract QuantumPortalNativeFeeRepoUpgradeable is
         $.portal = IQuantumPortalPoc(_portal);
         $.feeConvertor = _feeConvertor;
     }
+
+    function _authorizeUpgrade(address) internal override onlyAdmin {}
 
     function feeConvertor() external view returns (address) {
         return _getQuantumPortalNativeFeeRepoStorageV001().feeConvertor;

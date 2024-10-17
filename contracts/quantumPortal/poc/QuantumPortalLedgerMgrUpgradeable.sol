@@ -1105,7 +1105,7 @@ contract QuantumPortalLedgerMgrUpgradeable is Initializable, UUPSUpgradeable, Wi
                 totalMineWork += t.methods[j].length;
             }
 
-            uint256 txGasLimit = t.gas / frmPrice / IQuantumPortalFeeConvertor($.feeConvertor).localChainGasTokenPrice();
+            uint256 txGasLimit = t.gas / frmPrice / IQuantumPortalFeeConvertor($.feeConvertor).targetChainGasPrice(block.chainid);
 
             uint256 baseGasUsed;
             if (t.remoteContract == QuantumPortalLib.FRAUD_PROOF) {
