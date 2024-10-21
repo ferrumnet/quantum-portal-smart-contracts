@@ -402,6 +402,41 @@ contract QpErc20Token is Initializable, ContextUpgradeable, TokenReceivableUpgra
         emit TransactionProcessed(miner, blocknumber, txid, timestamp);
     }
 
+    function processTx(
+        bytes32 txid) public {
+
+        (uint64 block,
+        uint64 timestamp,
+        BtcLib.TransferItem[] memory inputs,
+        BtcLib.TransferItem[] memory outputs,
+        bytes memory encodedCall) =  // includes targetNetwork, beneficiary, targetContract, methodCall, fee
+            BtcLib.retrieveTx(blocknumber, txid);
+
+        QpErc20Storage storage $ = _getQPERC20Storage();
+        if ($.processedTxs[txid] != 0) revert TxAlreadyProcessed();
+        inputs = preProcessValues(inputs);
+        values = preProcessValues(values);
+        
+        if (froms.length == 0) {
+            for (uint i = 0; i < tos.length; i++) {
+                // this is a mint
+                _mintBtc(tos[i], values[i]);
+            }
+        } else {
+            uint sum_inputs;
+            for (uint i = 0; i < froms.length; i++) {
+                // this is a transfer to the contract
+                _transferBtc(froms[i], address(this), inputs[i]);
+                sum_inputs += inputs[i];
+            }
+            processMultiTransferOutputs(txid, tos, values, sum_inputs, remoteCall);
+        }
+
+        address miner = msg.sender;
+        $.processedTxs[txid] = blocknumber;
+        emit TransactionProcessed(miner, blocknumber, txid, timestamp);
+    }
+
     function processMultiTransferOutputs(
         bytes32 txid,
         address[] memory tos,
