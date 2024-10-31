@@ -129,9 +129,7 @@ contract EntanglementManager is Ownable {
         (, data) = bitcoinRelay.getProcessedTransaction(abi.encodePacked(txHash));
 
         (
-            uint64 blockNumber,
-            uint64 timestamp,
-            TxDecoder.Input[] memory inputs,
+            ,,,
             TxDecoder.Output[] memory outputs,
             bytes memory encodedCall
         ) = data.parseRetrieveTx();
@@ -169,7 +167,6 @@ contract EntanglementManager is Ownable {
         stakers[staker].totalCapacity -= amount;
 
         // Mint QpBTC to user via QP
-        // Do we need to burn the QpBTC from the staker?
         portal.run(uint64(remoteChainId), remoteContract, beneficiary, remoteMethodCall);
 
         // Mark txHash as processed
@@ -229,9 +226,7 @@ contract EntanglementManager is Ownable {
         (, data) = bitcoinRelay.getProcessedTransaction(abi.encodePacked(txHash));
 
         (
-            uint64 blockNumber,
-            uint64 timestamp,
-            TxDecoder.Input[] memory inputs,
+            ,,,
             TxDecoder.Output[] memory outputs,
         ) = data.parseRetrieveTx();
 
