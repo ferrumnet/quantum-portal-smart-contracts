@@ -15,6 +15,13 @@ interface IQuantumPortalFeeConvertor {
     function localChainGasTokenPrice() external returns (uint256);
 
     /**
+     * 
+     * @param chainId The target chain ID
+     * @return The tx execution gas price for the target chain
+     */
+    function targetChainGasPrice(uint256 chainId) external view returns (uint256);
+
+    /**
      * @notice Target chain gas token price versus FRM
      * @param targetChainId The target chain ID
      */
