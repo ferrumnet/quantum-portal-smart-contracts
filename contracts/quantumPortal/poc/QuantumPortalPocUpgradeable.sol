@@ -37,6 +37,8 @@ abstract contract QuantumPortalPocUpgradeable is
     // keccak256(abi.encode(uint256(keccak256("ferrum.storage.quantumportalpoc.001")) - 1)) & ~bytes32(uint256(0xff))
     bytes32 private constant QuantumPortalPocStorageV001Location = 0x3efde86585235858ed707e4bfec31c6043b9cbe60e54ce19376b9c89b48f7600;
 
+    receive() external payable {}
+
     function initialize(address initialOwner, address initialAdmin) public initializer {
         __PortalLedger_init(initialOwner, initialAdmin);
         __TokenReceivable_init();

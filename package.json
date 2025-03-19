@@ -15,13 +15,14 @@
     "@uniswap/v2-core": "^1.0.1",
     "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "deasync": "^0.1.30",
-    "foundry-contracts": "git+https://github.com/lukmaan-ferrum/foundry-contracts#develop"
+    "foundry-contracts": "git+https://github.com/lukmaan-ferrum/foundry-contracts#develop",
+    "hardhat-tracer": "^3.1.0"
   },
   "devDependencies": {
     "@nomicfoundation/hardhat-chai-matchers": "^2.0.0",
     "@nomicfoundation/hardhat-ethers": "^3.0.0",
-    "@nomicfoundation/hardhat-ignition": "^0.15.0",
-    "@nomicfoundation/hardhat-ignition-ethers": "^0.15.0",
+    "@nomicfoundation/hardhat-ignition": "^0.15.9",
+    "@nomicfoundation/hardhat-ignition-ethers": "^0.15.9",
     "@nomicfoundation/hardhat-network-helpers": "^1.0.0",
     "@nomicfoundation/hardhat-toolbox": "^5.0.0",
     "@nomicfoundation/hardhat-verify": "^2.0.9",

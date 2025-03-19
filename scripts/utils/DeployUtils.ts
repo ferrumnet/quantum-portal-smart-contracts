@@ -36,6 +36,19 @@ export interface QpDeployConfig {
     }
     DirectFee: {
         feePerByte: string
+        botAddress: string
+    },
+    AuthorityMgrConfig: {
+        minSignatures: number;
+        addresses: string[];
+    }
+    ChainGasPrices: {
+        [chainId: number]: {
+            chainIds: string[];
+            feeTokenPrice: string[];
+            gasPrice: string[];
+            isL2: boolean[];
+        }
     }
 }
 
@@ -48,9 +61,9 @@ export async function loadQpDeployConfig(path: string) {
     await updateDeployerKey(rv, 'DeployerContract');
     await updateDeployerKey(rv, 'Qp');
     await updateDeployerKey(rv, 'Owner');
-    if (!rv.DeployerKeys.Owner && !rv.Owner) {
-        throw new Error(`Invalid config. Owner, or its DeployerKey is required`);
-    }
+    // if (!rv.DeployerKeys.Owner && !rv.Owner) {
+    //     throw new Error(`Invalid config. Owner, or its DeployerKey is required`);
+    // }
     return rv;
 }
 

@@ -60,7 +60,6 @@ contract QuantumPortalStakeWithDelegateUpgradeable is
     }
 
     function initialize(
-        address _token,
         address _authority,
         address _stakeVerifyer,
         address initialOwnerAdmin
@@ -68,15 +67,19 @@ contract QuantumPortalStakeWithDelegateUpgradeable is
         __WithAdmin_init(initialOwnerAdmin, initialOwnerAdmin);
         __BaseStakingV2_init();
 
-        address[] memory tokens = new address[](1);
-        tokens[0] = _token;
-        _init(_token, "QP Stake", tokens);
-
         QuantumPortalStakeWithDelegateStorageV001 storage $ = _getQuantumPortalStakeWithDelegateStorageV001();
-        $.STAKE_ID = _token;
         $.auth = IQuantumPortalAuthorityMgr(_authority);
         $.stakeVerifyer = IQuantumPortalAuthorityMgr(_stakeVerifyer);
     }
+
+    function initStake(address _token) public onlyAdmin { 
+        QuantumPortalStakeWithDelegateStorageV001 storage $ = _getQuantumPortalStakeWithDelegateStorageV001();
+        address[] memory tokens = new address[](1);
+        tokens[0] = _token;
+        $.STAKE_ID = _token;
+        _init(_token, "QP Stake", tokens);
+    }
+
 
     function STAKE_ID() external view returns (address) {
         QuantumPortalStakeWithDelegateStorageV001 storage $ = _getQuantumPortalStakeWithDelegateStorageV001();
@@ -345,7 +348,7 @@ contract QuantumPortalStakeWithDelegateUpgradeable is
         if (currentDelegate == address(0)) {
             $.delegations[delegator] = delegate;
         } else {
-            require(currentDelegate == delegate, "QPS:re-del not allowed");
+            require(currentDelegate == delegate, "QPS:re-deleg not allowed");
         }
     }
 

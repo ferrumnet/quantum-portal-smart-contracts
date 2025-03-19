@@ -1,4 +1,4 @@
-import hre from "hardhat"
+import hre, { ethers } from "hardhat"
 import { buildModule } from "@nomicfoundation/hardhat-ignition/modules"
 import { ZeroAddress, FunctionFragment } from "ethers";
 import { loadConfig, loadQpDeployConfig, loadQpDeployConfigSync, QpDeployConfig } from "../../scripts/utils/DeployUtils";
@@ -10,13 +10,23 @@ const PROD_QUORUM_ID = "0x00000000000000000000000000000000000008AE"
 const TIMELOCKED_PROD_QUORUM_ID = "0x0000000000000000000000000000000000000d05"
 
 const deployModule = buildModule("DeployModule", (m) => {
-    
-    const currentChainId = 42161
+    const currentChainId = hre.network.config.chainId!;
+    if (!currentChainId) {
+        throw new Error("Chain ID not found. Configure it in hardhat.config.ts");
+    }
     const conf: QpDeployConfig = loadConfig(process.env.QP_CONFIG_FILE || DEFAULT_QP_CONFIG_FILE);
     const owner = m.getAccount(0)
+    const wfrm = conf.WFRM[currentChainId] || conf.WFRM['26100'];
+    if (!wfrm) {
+        console.log(conf)
+        throw new Error("WFRM not found. Configure it in QpDeployConfig.yaml");
+    }
+    if (!conf.FRM[currentChainId!]) {
+        throw new Error(`FRM not found. Chain ID: ${currentChainId}. Configure it in QpDeployConfig.yaml`);
+    }
 
     //--------------- Gateway ----------------//
-    const gatewayImpl = m.contract("QuantumPortalGatewayUpgradeable", ["0x0000000000000000000000000000000000000000"], { id: "QPGatewayImpl"})
+    const gatewayImpl = m.contract("QuantumPortalGatewayUpgradeable", [wfrm], { id: "QPGatewayImpl"})
 
     const timelockPeriod = 60 * 60 * 24 * 1 // 1 day
 
@@ -33,7 +43,7 @@ const deployModule = buildModule("DeployModule", (m) => {
     initializeCalldata = m.encodeFunctionCall(ledgerMgrImpl, "initialize", [
         owner,
         owner,
-        conf.QuantumPortalMinStake!,
+        conf.QuantumPortalMinStake! || 0,
     ]);
     const ledgerMgrProxy = m.contract("ERC1967Proxy", [ledgerMgrImpl, initializeCalldata], { id: "LedgerMgrProxy"})
     const ledgerMgr = m.contractAt("QuantumPortalLedgerMgrImplUpgradeable", ledgerMgrProxy, { id: "LedgerMgr"})
@@ -63,6 +73,7 @@ const deployModule = buildModule("DeployModule", (m) => {
 
     //--------------- FeeConverterDirect ------------//
     const feeConverterDirectImpl = m.contract("QuantumPortalFeeConverterDirectUpgradeable", [], { id: "FeeConverterDirectImpl"})
+    // const feeConverterDirectImpl = m.contractAt("QuantumPortalFeeConverterDirectUpgradeable", "0x207EfA6D5B53337a55573449A8B60Dd32062fd3A", { id: "FeeConverterDirectImpl_at"})
     initializeCalldata = m.encodeFunctionCall(feeConverterDirectImpl, "initialize", [
         owner
     ]);
@@ -84,8 +95,7 @@ const deployModule = buildModule("DeployModule", (m) => {
 
     //--------------- StakeWithDelegate -------//
     const stakingImpl = m.contract("QuantumPortalStakeWithDelegateUpgradeable", [], { id: "StakingImpl"})
-    initializeCalldata = m.encodeFunctionCall(stakingImpl, "initialize(address,address,address,address)", [
-        conf.FRM[currentChainId!],
+    initializeCalldata = m.encodeFunctionCall(stakingImpl, "initialize(address,address,address)", [
         authMgr,
         ZeroAddress,
         owner
@@ -115,6 +125,7 @@ const deployModule = buildModule("DeployModule", (m) => {
     
 	m.call(minerMgr, "updateBaseToken", [conf.FRM[currentChainId!]])
 	m.call(ledgerMgr, "updateLedger", [poc], { id: "UpdateLedgerOnLedgerMgr"})
+    m.call(staking, "initStake", [conf.FRM[currentChainId!]])
     m.call(staking, "setAdmin", [gateway])
 
     const settings  = [
@@ -417,7 +428,7 @@ const deployModule = buildModule("DeployModule", (m) => {
         },
     ]
 
-    m.call(gateway, "setCallAuthLevels", [settings])
+    // m.call(gateway, "setCallAuthLevels", [settings])
 
     // SET FEEPERBYTE ON FEECONVERTERDIRECT
 
@@ -444,6 +455,7 @@ const configModule = buildModule("ConfigModule", (m) => {
         nativeFeeRepo
     } = m.useModule(deployModule)
 
+    console.log("Updating fee target")
     m.call(poc, "updateFeeTarget")
     m.call(gateway, "updateQpAddresses", [poc, ledgerMgr, staking])
 

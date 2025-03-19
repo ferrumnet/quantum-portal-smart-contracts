@@ -3,6 +3,8 @@ pragma solidity ^0.8.24;
 
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
+import {Initializable} from "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 import {IVersioned} from "foundry-contracts/contracts/contracts/common/IVersioned.sol";
 import {FullMath} from "foundry-contracts/contracts/contracts/math/FullMath.sol";
 import {FixedPoint128} from "foundry-contracts/contracts/contracts/math/FixedPoint128.sol";
@@ -18,6 +20,8 @@ import {IQuantumPortalNativeFeeRepo} from "./IQuantumPortalNativeFeeRepo.sol";
  * @notice The quantum portal main contract for multi-chain dApps
  */
 abstract contract QuantumPortalNativeFeeRepoUpgradeable is
+    Initializable, 
+    UUPSUpgradeable,
     IQuantumPortalNativeFeeRepo,
     IVersioned,
     WithAdminUpgradeable
@@ -51,8 +55,14 @@ abstract contract QuantumPortalNativeFeeRepoUpgradeable is
         $.feeConvertor = _feeConvertor;
     }
 
+    receive() external payable {}
+
     function feeConvertor() external view returns (address) {
         return _getQuantumPortalNativeFeeRepoStorageV001().feeConvertor;
+    }
+
+    function portal() external view returns (address) {
+        return address(_getQuantumPortalNativeFeeRepoStorageV001().portal);
     }
 
     function _getQuantumPortalNativeFeeRepoStorageV001() internal pure returns (QuantumPortalNativeFeeRepoStorageV001 storage $) {
@@ -84,6 +94,8 @@ abstract contract QuantumPortalNativeFeeRepoUpgradeable is
 }
 
 contract QuantumPortalNativeFeeRepoBasicUpgradeable is QuantumPortalNativeFeeRepoUpgradeable {
+    function _authorizeUpgrade(address newImplementation) internal override onlyAdmin {}
+
     function initialize(address _portal, address _feeConvertor, address initialOwner, address initialAdmin) public virtual initializer {
         QuantumPortalNativeFeeRepoUpgradeable.__QuantumPortalNativeFeeRepo_init(_portal, _feeConvertor, initialOwner, initialAdmin);
     }

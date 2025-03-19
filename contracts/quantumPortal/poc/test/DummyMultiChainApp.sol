@@ -22,7 +22,7 @@ contract DummyMultiChainApp is IDummyMultiChainApp {
     address public feeToken;
     uint counter;
 
-    constructor(address _portal, address _mgr, address _feeToken) {
+    constructor(address payable _portal, address _mgr, address _feeToken) {
         portal = QuantumPortalPocUpgradeable(_portal);
         mgr = QuantumPortalLedgerMgrUpgradeable(_mgr);
         feeToken = _feeToken;

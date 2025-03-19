@@ -113,3 +113,4 @@ typechain
 .DS_Store
 typechain-types
 localConfig
+ignition/deployments

@@ -1,43 +1,62 @@
 import { HardhatUserConfig } from "hardhat/config";
 import "@nomicfoundation/hardhat-toolbox";
 import "@nomicfoundation/hardhat-ignition-ethers";
-import "hardhat-contract-sizer"
+import "hardhat-contract-sizer";
 import "@nomicfoundation/hardhat-verify";
 import { Secrets } from "foundry-contracts/dist/test/common/Secrets";
-import deasync from 'deasync';
+import deasync from "deasync";
 import { TEST_MNEMONICS } from "./test/common/TestAccounts";
+import "hardhat-tracer";
+
 import { ethers } from "ethers";
-require("dotenv").config({path: __dirname + '/localConfig/.env'});
+require("dotenv").config({ path: __dirname + "/localConfig/.env" });
+console.log(__dirname + "/localConfig/.env");
 
 function logLocalAccount(accounts: any) {
   if (accounts?.mnemonic) {
-      let mnemonicWallet = ethers.HDNodeWallet.fromPhrase(accounts.mnemonic);
-      console.log('Test account used from MNEMONIC', mnemonicWallet.privateKey, mnemonicWallet.address);
+    let mnemonicWallet = ethers.HDNodeWallet.fromPhrase(accounts.mnemonic);
+    console.log(
+      "Test account used from MNEMONIC",
+      mnemonicWallet.privateKey,
+      mnemonicWallet.address
+    );
   } else {
     let wallet = new ethers.Wallet(accounts[0]);
-    console.log('Single test account used:', wallet.address);
+    console.log("Single test account used:", wallet.address);
   }
 }
 
 let accounts: any = undefined;
 if (process.env.PAIVATE_KEY_SECRET_ARN) {
-  console.log('Getting secret from AWS Secret Manager');
+  console.log(
+    "Getting secret from AWS Secret Manager: ",
+    process.env.PAIVATE_KEY_SECRET_ARN
+  );
   let done = false;
-  Secrets.fromAws().then((secret) => {
-    console.log('Secret received...')
-    // Use the default mnemonics
-    accounts = { mnemonic: secret.DEV_MNEMONICS };
-    // Or use a single account. Check available keys from the secret manager
-    // accounts = [secret.PRIVATEKEY_TEST_VALIDATOR];
-    done = true;
-  }).catch((e) => {;
-    console.error('Failed to get secret from PAIVATE_KEY_SECRET_ARN environment', e);
-    done = true;
-  });
+  Secrets.fromAws()
+    .then((secret) => {
+      console.log("Secret received...");
+      // Use the default mnemonics
+      accounts = { mnemonic: secret.DEV_MNEMONICS };
+      // Or use a single account. Check available keys from the secret manager
+      // accounts = [secret.PRIVATEKEY_TEST_VALIDATOR];
+      done = true;
+    })
+    .catch((e) => {
+      console.error(
+        "Failed to get secret from PAIVATE_KEY_SECRET_ARN environment",
+        e
+      );
+      done = true;
+    });
 
-  while (!done) { deasync.sleep(100); } // Sync the secrets call
+  while (!done) {
+    deasync.sleep(100);
+  } // Sync the secrets call
 } else {
-  accounts = process.env.TEST_ACCOUNT_PRIVATE_KEY ? [process.env.TEST_ACCOUNT_PRIVATE_KEY] : { mnemonic: TEST_MNEMONICS };
+  accounts = process.env.TEST_ACCOUNT_PRIVATE_KEY
+    ? [process.env.TEST_ACCOUNT_PRIVATE_KEY]
+    : { mnemonic: TEST_MNEMONICS };
 }
 logLocalAccount(accounts);
 
@@ -46,11 +65,11 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: "0.8.24",
+        version: "0.8.28",
         settings: {
           optimizer: {
             enabled: true,
-            runs: 50,
+            runs: 10,
           },
         },
       },
@@ -60,11 +79,23 @@ const config: HardhatUserConfig = {
     hardhat: {
       blockGasLimit: 3000000000,
       allowUnlimitedContractSize: true,
-      accounts: accounts.constructor.name == "Array" ? { privateKey: accounts[0], balance: ethers.parseEther("1000").toString() } : accounts,
+      accounts:
+        accounts.constructor.name == "Array"
+          ? {
+              privateKey: accounts[0],
+              balance: ethers.parseEther("1000").toString(),
+            }
+          : accounts,
     },
     local: {
-      // chainId: 97,
-      url: 'http://127.0.0.1:8545',
+      chainId: 31337,
+      url: "http://127.0.0.1:8545",
+      accounts,
+      // gas: 1000000,
+      // gasPrice: 20000000000,
+    },
+    local_frm: {
+      url: "http://127.0.0.1:9944",
       accounts,
       // gas: 1000000,
       // gasPrice: 20000000000,
@@ -144,7 +175,7 @@ const config: HardhatUserConfig = {
       accounts,
     },
     ferrum_testnet: {
-      chainId: 26100,
+      chainId: 26026,
       url: "https://testnet.dev.svcs.ferrumnetwork.io",
       accounts,
       allowUnlimitedContractSize: true,
@@ -155,8 +186,15 @@ const config: HardhatUserConfig = {
       url: "https://qpn.svcs.ferrumnetwork.io/",
       accounts,
       allowUnlimitedContractSize: true,
-      gas: 3000000, // this override is required for Substrate based evm chains
-    }
+      //gas: 1000000, // this override is required for Substrate based evm chains
+    },
+    sepolia: {
+      chainId: 11155111,
+      url: `https://eth-sepolia.g.alchemy.com/v2/${process.env.ALCHEMY_API_KEY}`,
+      accounts,
+      gas: 30000000, // this override is required for Substrate based evm chains
+      gasPrice: 10000000000,
+    },
   },
   etherscan: {
     // Your API key for Etherscan
@@ -167,49 +205,51 @@ const config: HardhatUserConfig = {
       arbitrumOne: process.env.ARBISCAN_API_KEY!,
       base: process.env.BASESCAN_API_KEY!,
       bsc: process.env.BSCSCAN_API_KEY!,
-      ferrum_testnet: 'empty',
-      ferrum_mainnet: 'empty',
-  },
-  customChains: [
-    {
-      network: "btfd_ghostnet",
-      chainId: 42,
-      urls: {
-        apiURL: "https://ghostnet.dev.svcs.ferrumnetwork.io/api/",
-        browserURL: "https://ghostnet.dev.svcs.ferrumnetwork.io/"
-      }
+      ferrum_testnet: "empty",
+      ferrum_mainnet: "empty",
     },
-    {
-      network: "ferrum_testnet",
-      chainId: 26100,
-      urls: {
-        apiURL: "https://testnet-explorer.svcs.ferrumnetwork.io/api",
-        browserURL: "http://https://testnet-explorer.svcs.ferrumnetwork.io"
+    customChains: [
+      {
+        network: "btfd_ghostnet",
+        chainId: 42,
+        urls: {
+          apiURL: "https://ghostnet.dev.svcs.ferrumnetwork.io/api/",
+          browserURL: "https://ghostnet.dev.svcs.ferrumnetwork.io/",
+        },
+      },
+      // {
+      //   network: "ferrum_testnet",
+      //   chainId: 26100,
+      //   urls: {
+      //     apiURL: "https://testnet-explorer.svcs.ferrumnetwork.io/api",
+      //     browserURL: "http://https://testnet-explorer.svcs.ferrumnetwork.io"
+      //   }
+      // },
+      {
+        network: "ferrum_mainnet",
+        chainId: 26100,
+        urls: {
+          apiURL: "https://explorer.ferrumnetwork.io/api",
+          browserURL: "http://explorer.ferrumnetwork.io/"
+        }
       }
-    },
-    {
-      network: "ferrum_mainnet",
-      chainId: 26100,
-      urls: {
-        apiURL: "https://explorer.svcs.ferrumnetwork.io/api",
-        browserURL: "http://explorer.svcs.ferrumnetwork.io/"
-      }
-    }
-  ]
+    ],
   },
   sourcify: {
     // Disabled by default
     // Doesn't need an API key
     enabled: true,
-    apiUrl: "https://sourcify.dev/server",
-    browserUrl: "https://repo.sourcify.dev",
+    // apiUrl: "https://sourcify.dev/server",
+    // browserUrl: "https://repo.sourcify.dev",
   },
   ignition: {
+    requiredConfirmations: 1,
+    blockPollingInterval: 300,
     strategyConfig: {
       create2: {
         // To learn more about salts, see the CreateX documentation
-        salt: "0x0000000000000000000000000000000000001000000000000000000000000001"
-        // salt: "0x46657272756d4e6574776f726b2d6d61696e6e65743a30312e3030312e303031", // FerrumNetwork-mainnet:01.001.001
+        // salt: "0x0000000000000000000000000000000000001000000000000000000000000002"
+        salt: "0x46657272756D4E6574776F726B2D6D61696E6E65743A30312E3030312E303032", // FerrumNetwork-mainnet:01.001.002
       },
     },
   },
